@@ -1,0 +1,12 @@
+[submodule "ur_msgs"]
+	path = ur_msgs
+	url = https://github.com/ros-industrial/ur_msgs.git
+[submodule "universal_robot"]
+	path = universal_robot
+	url = https://github.com/fmauch/universal_robot
+[submodule "Universal_Robots_ROS_Driver"]
+	path = Universal_Robots_ROS_Driver
+	url = https://github.com/UniversalRobots/Universal_Robots_ROS_Driver.git
+[submodule "robotiq"]
+	path = robotiq
+	url = https://github.com/jr-robotics/robotiq.git
