@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="stand">
+  <xacro:macro name="stand">
+    <link name="stand">
+      <visual>
+        <origin rpy="0 0 -1.57079632679" xyz="0 1.0668 0.313537"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/stand/visual/stand.dae"/>
+        </geometry>
+      </visual>
+      <collision>
+        <origin rpy="0 0 -1.57079632679" xyz="0 1.0668 0.313537"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/stand/collision/stand.stl"/>
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+</robot>

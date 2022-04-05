@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>tahoma_description</name>
+  <version>0.1.0</version>
+  <description>
+    Model of AURMR's U16e workcell.
+  </description>
+
+  <maintainer email="amazon-manipulation@cs.washington.edu">AURMR Contributors</maintainer>
+  <author email="amazon-manipulation@cs.washington.edu">AURMR Contributors</author>
+
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roslaunch</build_depend>
+
+  <exec_depend>ur_description</exec_depend>
+  <exec_depend>robotiq_2f_85_gripper_visualization</exec_depend>
+  <exec_depend>joint_state_publisher</exec_depend>
+  <exec_depend>joint_state_publisher_gui</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>rviz</exec_depend>
+  <exec_depend>urdf</exec_depend>
+  <exec_depend>xacro</exec_depend>
+</package>
