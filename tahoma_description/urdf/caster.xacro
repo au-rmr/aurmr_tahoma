@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="caster">
+  <xacro:macro name="caster" params="prefix">
+    <xacro:arg name="prefix" default=""/>
+    <!--material name="guard">
+      <color rgba="1 .97 .89 1"/>
+    </material-->
+
+    <link name="${prefix}caster">
+      <visual>
+        <origin rpy="1.56 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/stand/visual/caster.stl"/>
+        </geometry>
+        <material name="wheel">
+          <color rgba=".2 .2 .2 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin rpy="1.56 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/stand/visual/caster.stl"/>
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+</robot>

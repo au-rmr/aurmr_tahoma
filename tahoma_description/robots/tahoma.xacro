@@ -1,37 +1,35 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="tahoma">
-
   <xacro:include filename="$(find ur_description)/urdf/inc/ur16e_macro.xacro"/>
   <xacro:include filename="$(find tahoma_description)/urdf/stand.xacro"/>
-  <xacro:include filename="$(find robotiq_2f_85_gripper_visualization)/urdf/robotiq_arg2f_85_macro.xacro" />
+  <xacro:include filename="$(find robotiq_2f_85_gripper_visualization)/urdf/robotiq_arg2f_85_macro.xacro"/>
 
   <!-- parameters -->
   <xacro:arg name="transmission_hw_interface" default="hardware_interface/EffortJointInterface"/>
 
-  <xacro:stand />
-  <xacro:ur16e_robot prefix="arm_" />
+  <xacro:stand/>
+  <xacro:ur16e_robot prefix="arm_"/>
   <xacro:robotiq_arg2f_85
-    prefix="gripper_"
-    transmission_hw_interface="$(arg transmission_hw_interface)"/>
+          prefix="gripper_"
+          transmission_hw_interface="$(arg transmission_hw_interface)"/>
 
   <link name="base_link"/>
   <joint name="base_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <origin rpy="0 0 0" xyz="0 0 0.15"/>
     <parent link="base_link"/>
     <child link="stand"/>
   </joint>
 
-  <joint name="stand-tahoma_base_link_joint" type="fixed">
-    <parent link="stand"/>
+  <joint name="robot_plate_arm_base_link_joint" type="fixed">
+    <parent link="robot_plate"/>
     <child link="arm_base_link"/>
-    <origin rpy="1.56 1.56 0" xyz="0 -0.01 0"/>
+    <origin rpy="0 3.14 3.14" xyz="0 -0.01 0"/>
   </joint>
 
   <joint name="arm_tool0-gripper_robotiq_arg2f_base_link" type="fixed">
-    <parent link="arm_tool0" />
-    <child link="gripper_base_link" />
+    <parent link="arm_tool0"/>
+    <child link="gripper_base_link"/>
   </joint>
-
 
 </robot>
 

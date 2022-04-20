@@ -1,20 +1,175 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="stand">
+  <xacro:include filename="$(find tahoma_description)/urdf/caster.xacro"/>
+  <xacro:include filename="$(find tahoma_description)/urdf/light_panel.xacro"/>
   <xacro:macro name="stand">
+    <material name="aluminum">
+      <color rgba=".27 .45 .68 1"/>
+    </material>
+
     <link name="stand">
       <visual>
-        <origin rpy="0 0 -1.57079632679" xyz="0 1.0668 0.313537"/>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
         <geometry>
-          <mesh filename="package://tahoma_description/meshes/stand/visual/stand.dae"/>
+          <mesh filename="package://tahoma_description/meshes/stand/visual/stand_base.stl"/>
         </geometry>
+        <material name="aluminum"/>
       </visual>
       <collision>
-        <origin rpy="0 0 -1.57079632679" xyz="0 1.0668 0.313537"/>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
         <geometry>
-          <mesh filename="package://tahoma_description/meshes/stand/collision/stand.stl"/>
+          <mesh filename="package://tahoma_description/meshes/stand/visual/stand_base.stl"/>
         </geometry>
       </collision>
     </link>
+    <link name="stand_upright">
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/stand/visual/stand_upright.stl"/>
+        </geometry>
+        <material name="aluminum"/>
+      </visual>
+      <collision>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/stand/visual/stand_upright.stl"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="stand_brace">
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/stand/visual/stand_brace.stl"/>
+        </geometry>
+        <material name="aluminum"/>
+      </visual>
+      <collision>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/stand/visual/stand_brace.stl"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="robot_beam">
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/stand/visual/robot_beam.stl"/>
+        </geometry>
+        <material name="aluminum"/>
+      </visual>
+      <collision>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/stand/visual/robot_beam.stl"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="control_box_mount">
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/stand/visual/control_box_mount.stl"/>
+        </geometry>
+        <material name="aluminum"/>
+
+      </visual>
+      <collision>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/stand/visual/control_box_mount.stl"/>
+        </geometry>
+      </collision>
+    </link>
+    <link name="robot_plate">
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/stand/visual/robot_plate.stl"/>
+        </geometry>
+        <material name="aluminum"/>
+      </visual>
+      <collision>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/stand/visual/robot_plate.stl"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <xacro:caster prefix="front_right_"/>
+    <xacro:caster prefix="front_left_"/>
+    <xacro:caster prefix="back_left_"/>
+    <xacro:caster prefix="back_right_"/>
+    <xacro:light_panel prefix="left_"/>
+    <xacro:light_panel prefix="right_"/>
+
+
+    <joint name="stand_stand_upright_joint" type="fixed">
+      <parent link="stand"/>
+      <child link="stand_upright"/>
+      <origin rpy="0 0 0" xyz="-.12 0 .95"/>
+    </joint>
+
+    <joint name="stand_upright_stand_brace_joint" type="fixed">
+      <parent link="stand_upright"/>
+      <child link="stand_brace"/>
+      <origin rpy="0 0 0" xyz="-.24 0 -.59"/>
+    </joint>
+
+    <joint name="stand_upright_robot_control_box_mount_joint" type="fixed">
+      <parent link="stand_upright"/>
+      <child link="control_box_mount"/>
+      <origin rpy="0 0 0" xyz="-.1725 .7475 0"/>
+    </joint>
+
+    <joint name="stand_robot_beam_joint" type="fixed">
+      <parent link="stand_upright"/>
+      <child link="robot_beam"/>
+      <origin rpy="0 0 0" xyz=".0775 0  0.9475"/>
+    </joint>
+
+    <joint name="robot_beam_robot_plate_joint" type="fixed">
+      <parent link="robot_beam"/>
+      <child link="robot_plate"/>
+      <origin rpy="0 0 0" xyz="0.2 0 0"/>
+    </joint>
+
+    <joint name="stand_front_right_caster_joint" type="fixed">
+      <parent link="stand"/>
+      <child link="front_right_caster"/>
+      <origin rpy="0 0 0" xyz=".405 -.7375 -0.1"/>
+    </joint>
+
+    <joint name="stand_front_left_caster_joint" type="fixed">
+      <parent link="stand"/>
+      <child link="front_left_caster"/>
+      <origin rpy="0 0 0" xyz=".405 .7025 -0.1"/>
+    </joint>
+    <joint name="stand_back_right_caster_joint" type="fixed">
+      <parent link="stand"/>
+      <child link="back_right_caster"/>
+      <origin rpy="0 0 0" xyz="-.405 -.7375 -0.1"/>
+    </joint>
+
+    <joint name="stand_back_left_caster_joint" type="fixed">
+      <parent link="stand"/>
+      <child link="back_left_caster"/>
+      <origin rpy="0 0 0" xyz="-.405 .7025 -0.1"/>
+    </joint>
+
+    <joint name="stand_left_light_panel_joint" type="fixed">
+      <parent link="stand_upright"/>
+      <child link="left_light_panel"/>
+      <origin rpy="0 1.56 0" xyz="-.26 .35 .25"/>
+    </joint>
+    <joint name="stand_left_right_panel_joint" type="fixed">
+      <parent link="stand_upright"/>
+      <child link="right_light_panel"/>
+      <origin rpy="0 1.56 0" xyz="-.26 -.35 .25"/>
+    </joint>
   </xacro:macro>
 
 </robot>

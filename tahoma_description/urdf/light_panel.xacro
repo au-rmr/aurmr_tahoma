@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="light_panel">
+  <!-- LED72W2X4PANEL -->
+  <xacro:macro name="light_panel" params="prefix">
+    <xacro:arg name="prefix" default=""/>
+    <link name="${prefix}light_panel">
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <box size="1.21 .602 .01"/>
+        </geometry>
+         <material name="white">
+           <color rgba=".9 .9 .9 1"/>
+         </material>
+      </visual>
+      <collision>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <box size="1.21 .602 .01"/>
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+</robot>
