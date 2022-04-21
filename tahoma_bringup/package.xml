@@ -1,0 +1,24 @@
+<package format="2">
+  <name>tahoma_bringup</name>
+  <version>0.1.0</version>
+  <description>
+    Top-level ROS launch and configuration scripts for the Tahoma and the AURMR project.
+  </description>
+
+  <license>MIT</license>
+
+  <maintainer email="amazon-manipulation@cs.washington.edu">AURMR Contributors</maintainer>
+  <author email="amazon-manipulation@cs.washington.edu">AURMR Contributors</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <exec_depend>rviz</exec_depend>
+  <exec_depend>tahoma_description</exec_depend>
+  <exec_depend>tahoma_moveit_config</exec_depend>
+  <exec_depend>ur_robot_driver</exec_depend>
+
+
+  <test_depend>roslaunch</test_depend>
+
+</package>
+
