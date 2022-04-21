@@ -24,7 +24,7 @@
   <joint name="stand-tahoma_base_link_joint" type="fixed">
     <parent link="stand"/>
     <child link="arm_base_link"/>
-    <origin rpy="1.57079632679 0 0" xyz="0 1.017975 0.5602"/>
+    <origin rpy="1.56 1.56 0" xyz="0 -0.01 0"/>
   </joint>
 
   <joint name="arm_tool0-gripper_robotiq_arg2f_base_link" type="fixed">
