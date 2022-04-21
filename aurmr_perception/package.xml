@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>aurmr_perception</name>
+  <version>1.0.0</version>
+  <description>
+    Object recognition, grasp pose detection
+  </description>
+  <license>MIT</license>
+  <maintainer email="amazon-manipulation@cs.washington.edu">AURMR Contributors</maintainer>
+  <author email="amazon-manipulation@cs.washington.edu">AURMR Contributors</author>
+
+  <build_depend>roslint</build_depend>
+  <buildtool_depend>catkin</buildtool_depend>
+  <exec_depend>rospy</exec_depend>
+
+</package>
