@@ -1,1 +1,66 @@
 #!/usr/bin/env python
+
+import smach_ros
+
+from smach import State, StateMachine
+
+import rospy
+
+from aurmr_tasks.common import states
+from aurmr_tasks.common.tahoma import Tahoma
+import aurmr_tasks.common.control_flow as cf
+from aurmr_tasks.common import motion
+import numpy as np
+
+POSES = []
+
+X,Y = np.mgrid[-0.5:0.5:10j, 0.91:2.0:10j]
+for x, y in zip(np.hstack(X),np.hstack(Y)):
+    POSES.append({"xyz": (.4, x, y), "rpy": (1.57, 1.57, 1.57)})
+def main():
+    rospy.loginfo('Getting robot resources')
+    rospy.init_node("pick")
+    robot = Tahoma()
+
+    simulation = rospy.get_param("~simulation", False)
+
+    State.simulation = simulation
+
+    pick_sm = StateMachine(["succeeded", "preempted", "aborted"],
+                           input_keys=[],
+                           output_keys=[])
+
+    with pick_sm:
+        cf.inject_userdata_auto("LOAD_POSES", "poses", POSES)
+        StateMachine.add("PICK_POSE", cf.IterateList("poses", "pose"),
+                         {"repeat": "MOVE_TO_POSE", "done": "aborted"})
+        StateMachine.add_auto('MOVE_TO_POSE',
+                              motion.MoveEndEffectorToPose(robot),
+                              ['succeeded', 'preempted', 'aborted'],
+                              {
+                                  # NOTE: This fails most of the time due to tight position tolerances. Ignore for now
+                                 # 'aborted': 'MOVE_TO_POSE'
+                              })
+        StateMachine.add("PAUSE", states.Wait(2), {'succeeded': "PICK_POSE"})
+
+
+    # Create top state machine
+    sm = StateMachine(outcomes=['succeeded', "preempted", 'aborted'])
+
+    # Endless loop
+    with sm:
+        StateMachine.add('PLAY_POSE_SEQUENCE', pick_sm, {"succeeded": "PLAY_POSE_SEQUENCE", "aborted": "PLAY_POSE_SEQUENCE"})
+
+    rospy.loginfo('Beginning pick SM')
+
+    sis = smach_ros.IntrospectionServer('pick_sm', sm, '/pick')
+    sis.start()
+
+    outcome = sm.execute()
+
+    rospy.spin()
+    sis.stop()
+
+
+if __name__ == '__main__':
+    main()
