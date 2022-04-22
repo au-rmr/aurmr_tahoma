@@ -13,4 +13,4 @@ to keep track of pointers to the correct versions of these dependencies.
 
 To clone with submodules:
 
-  git clone --recurse-submodules git@github.com:au-rmr/aurmr_tahoma.git
+    git clone --recurse-submodules git@github.com:au-rmr/aurmr_tahoma.git
