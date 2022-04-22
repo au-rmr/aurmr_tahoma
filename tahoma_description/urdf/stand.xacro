@@ -3,7 +3,11 @@
   <xacro:include filename="$(find tahoma_description)/urdf/caster.xacro"/>
   <xacro:include filename="$(find tahoma_description)/urdf/light_panel.xacro"/>
   <xacro:macro name="stand">
-    <material name="aluminum">
+  <xacro:property name="M_PI" value="3.1415926535897931"/>
+  <xacro:property name="M_PI_2" value="1.57079632679489661923"/>
+
+
+    <material name="blue_aluminum">
       <color rgba=".27 .45 .68 1"/>
     </material>
 
@@ -13,7 +17,7 @@
         <geometry>
           <mesh filename="package://tahoma_description/meshes/stand/visual/stand_base.stl"/>
         </geometry>
-        <material name="aluminum"/>
+        <material name="blue_aluminum"/>
       </visual>
       <collision>
         <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -28,7 +32,7 @@
         <geometry>
           <mesh filename="package://tahoma_description/meshes/stand/visual/stand_upright.stl"/>
         </geometry>
-        <material name="aluminum"/>
+        <material name="blue_aluminum"/>
       </visual>
       <collision>
         <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -43,7 +47,7 @@
         <geometry>
           <mesh filename="package://tahoma_description/meshes/stand/visual/stand_brace.stl"/>
         </geometry>
-        <material name="aluminum"/>
+        <material name="blue_aluminum"/>
       </visual>
       <collision>
         <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -58,7 +62,7 @@
         <geometry>
           <mesh filename="package://tahoma_description/meshes/stand/visual/robot_beam.stl"/>
         </geometry>
-        <material name="aluminum"/>
+        <material name="blue_aluminum"/>
       </visual>
       <collision>
         <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -73,7 +77,7 @@
         <geometry>
           <mesh filename="package://tahoma_description/meshes/stand/visual/control_box_mount.stl"/>
         </geometry>
-        <material name="aluminum"/>
+        <material name="blue_aluminum"/>
 
       </visual>
       <collision>
@@ -89,7 +93,7 @@
         <geometry>
           <mesh filename="package://tahoma_description/meshes/stand/visual/robot_plate.stl"/>
         </geometry>
-        <material name="aluminum"/>
+        <material name="blue_aluminum"/>
       </visual>
       <collision>
         <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -134,7 +138,7 @@
     <joint name="robot_beam_robot_plate_joint" type="fixed">
       <parent link="robot_beam"/>
       <child link="robot_plate"/>
-      <origin rpy="0 0 0" xyz="0.2 0 0"/>
+      <origin rpy="0 0 0" xyz="0.2 0 -.015"/>
     </joint>
 
     <joint name="stand_front_right_caster_joint" type="fixed">
@@ -163,12 +167,12 @@
     <joint name="stand_left_light_panel_joint" type="fixed">
       <parent link="stand_upright"/>
       <child link="left_light_panel"/>
-      <origin rpy="0 1.56 0" xyz="-.26 .35 .25"/>
+      <origin rpy="0 ${M_PI_2} 0" xyz="-.2625 .35 .25"/>
     </joint>
     <joint name="stand_left_right_panel_joint" type="fixed">
       <parent link="stand_upright"/>
       <child link="right_light_panel"/>
-      <origin rpy="0 1.56 0" xyz="-.26 -.35 .25"/>
+      <origin rpy="0 ${M_PI_2} 0" xyz="-.2625 -.35 .25"/>
     </joint>
   </xacro:macro>
 
