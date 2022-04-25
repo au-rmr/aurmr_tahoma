@@ -7,10 +7,15 @@
     </material-->
 
     <link name="${prefix}caster">
+      <inertial>
+        <!-- Roughly caster, plate and bolts -->
+        <mass value="1.0"/>
+        <inertia ixx="0.0002835" ixy="0.0" ixz="0.0" iyy="0.0002835" iyz="0.0" izz="0.0002835"/>
+      </inertial>
       <visual>
         <origin rpy="1.56 0 0" xyz="0 0 0"/>
         <geometry>
-          <mesh filename="package://tahoma_description/meshes/stand/visual/caster.stl"/>
+          <mesh filename="package://tahoma_description/meshes/stand/caster.stl"/>
         </geometry>
         <material name="wheel">
           <color rgba=".2 .2 .2 1"/>
@@ -19,7 +24,7 @@
       <collision>
         <origin rpy="1.56 0 0" xyz="0 0 0"/>
         <geometry>
-          <mesh filename="package://tahoma_description/meshes/stand/visual/caster.stl"/>
+          <box size="0.09 0.1040 0.1225"/>
         </geometry>
       </collision>
     </link>

@@ -4,14 +4,18 @@
   <xacro:macro name="light_panel" params="prefix">
     <xacro:arg name="prefix" default=""/>
     <link name="${prefix}light_panel">
+      <inertial>
+        <mass value="1.0"/>
+        <inertia ixx="0.0002835" ixy="0.0" ixz="0.0" iyy="0.0002835" iyz="0.0" izz="0.0002835"/>
+      </inertial>
       <visual>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <geometry>
           <box size="1.21 .602 .01"/>
         </geometry>
-         <material name="white">
-           <color rgba=".9 .9 .9 1"/>
-         </material>
+        <material name="gray">
+          <color rgba=".3 .3 .3 1"/>
+        </material>
       </visual>
       <collision>
         <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -20,5 +24,27 @@
         </geometry>
       </collision>
     </link>
+
+    <link name="${prefix}light_panel_emitter">
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 .005"/>
+        <geometry>
+          <box size="1.17 .562 .00251"/>
+        </geometry>
+        <material name="white">
+          <color rgba=".9 .9 .9 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <box size="1.17 .562 .00251"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="${prefix}light_panel_${prefix}light_panel_emitter_joint" type="fixed">
+      <parent link="${prefix}light_panel"/>
+      <child link="${prefix}light_panel_emitter"/>
+    </joint>
   </xacro:macro>
 </robot>

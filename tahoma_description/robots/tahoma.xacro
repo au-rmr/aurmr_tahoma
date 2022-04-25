@@ -4,7 +4,7 @@
   <xacro:include filename="$(find tahoma_description)/urdf/stand.xacro"/>
   <xacro:include filename="$(find robotiq_2f_85_gripper_visualization)/urdf/robotiq_arg2f_85_macro.xacro"/>
 
-  <xacro:include filename="$(find realsense2_description)/urdf/_d415.urdf.xacro"/>
+  <xacro:include filename="$(find realsense2_description)/urdf/_l515.urdf.xacro"/>
 
   <xacro:arg name="realsense" default="true" />
   <xacro:arg name="transmission_hw_interface" default="hardware_interface/EffortJointInterface"/>
@@ -41,10 +41,9 @@
       <origin rpy="0 0 0" xyz="-.2 0 0"/>
   </joint>
 
-
-  <xacro:sensor_d415 name="mid_camera" parent="mid_camera_mount" use_nominal_extrinsics="true">
+  <xacro:sensor_l515 name="stand_camera" parent="mid_camera_mount" use_nominal_extrinsics="true">
       <origin xyz="0.025 -0.025 0.003" rpy="0 0 0"/>
-  </xacro:sensor_d415>
+  </xacro:sensor_l515>
 
 </robot>
 

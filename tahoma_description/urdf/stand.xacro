@@ -3,102 +3,180 @@
   <xacro:include filename="$(find tahoma_description)/urdf/caster.xacro"/>
   <xacro:include filename="$(find tahoma_description)/urdf/light_panel.xacro"/>
   <xacro:macro name="stand">
-  <xacro:property name="M_PI" value="3.1415926535897931"/>
-  <xacro:property name="M_PI_2" value="1.57079632679489661923"/>
+    <xacro:property name="M_PI" value="3.1415926535897931"/>
+    <xacro:property name="M_PI_2" value="1.57079632679489661923"/>
 
 
     <material name="blue_aluminum">
-      <color rgba=".27 .45 .68 1"/>
+      <!-- more accurate but less pretty :) -->
+      <!--color rgba=".14 .24 .31 1"/>
+      <color rgba=".26 .44 .545 1"/-->
+      <color rgba=".23 .42 .64 1"/>
     </material>
 
     <link name="stand">
+      <inertial>
+        <mass value="10.0"/>
+        <inertia ixx="0.0002835" ixy="0.0" ixz="0.0" iyy="0.0002835" iyz="0.0" izz="0.000324"/>
+      </inertial>
       <visual>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <geometry>
-          <mesh filename="package://tahoma_description/meshes/stand/visual/stand_base.stl"/>
+          <mesh filename="package://tahoma_description/meshes/stand/stand_base.stl"/>
         </geometry>
         <material name="blue_aluminum"/>
       </visual>
       <collision>
-        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <!-- across -->
+        <origin rpy="0 0 0" xyz=".4050 0 .0281"/>
         <geometry>
-          <mesh filename="package://tahoma_description/meshes/stand/visual/stand_base.stl"/>
+          <box size=".09 1.53 .045"/>
+        </geometry>
+      </collision>
+      <collision>
+        <!-- right -->
+        <origin rpy="0 0 0" xyz="0 -.72 -.0225"/>
+        <geometry>
+          <box size=".9 .09 .0562"/>
+        </geometry>
+      </collision>
+      <collision>
+        <!-- left -->
+        <origin rpy="0 0 0" xyz="0 .72 -.0225"/>
+        <geometry>
+          <box size=".9 .09 .0562"/>
         </geometry>
       </collision>
     </link>
+
     <link name="stand_upright">
+      <inertial>
+        <mass value="34"/>
+        <inertia ixx="0.0002835" ixy="0.0" ixz="0.0" iyy="0.0002835" iyz="0.0" izz="0.000324"/>
+      </inertial>
       <visual>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <geometry>
-          <mesh filename="package://tahoma_description/meshes/stand/visual/stand_upright.stl"/>
+          <mesh filename="package://tahoma_description/meshes/stand/stand_upright.stl"/>
         </geometry>
         <material name="blue_aluminum"/>
       </visual>
       <collision>
-        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <!-- right upright -->
+        <origin rpy="0 0 0" xyz="-.1709 0.6975 0"/>
         <geometry>
-          <mesh filename="package://tahoma_description/meshes/stand/visual/stand_upright.stl"/>
+          <box size=".2298 .0450 1.89"/>
+        </geometry>
+      </collision>
+      <collision>
+        <!-- left upright -->
+        <origin rpy="0 0 0" xyz="-.1709 -0.6975 0"/>
+        <geometry>
+          <box size=".2298 .0450 1.89"/>
+        </geometry>
+      </collision>
+
+      <collision>
+        <!-- top beam -->
+        <origin rpy="0 0 0" xyz="-.1733 0 .9012"/>
+        <geometry>
+          <box size=".2370 1.44 .0960"/>
         </geometry>
       </collision>
     </link>
     <link name="stand_brace">
+      <inertial>
+        <mass value="5"/>
+        <inertia ixx="0.0002835" ixy="0.0" ixz="0.0" iyy="0.0002835" iyz="0.0" izz="0.000324"/>
+      </inertial>
       <visual>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <geometry>
-          <mesh filename="package://tahoma_description/meshes/stand/visual/stand_brace.stl"/>
+          <mesh filename="package://tahoma_description/meshes/stand/stand_brace.stl"/>
         </geometry>
         <material name="blue_aluminum"/>
       </visual>
       <collision>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <geometry>
-          <mesh filename="package://tahoma_description/meshes/stand/visual/stand_brace.stl"/>
+          <box size=".102 1.4390 .4934"/>
         </geometry>
       </collision>
     </link>
-    <link name="robot_beam">
+    <link name="cantilever">
+      <inertial>
+        <mass value="8"/>
+        <inertia ixx="0.0002835" ixy="0.0" ixz="0.0" iyy="0.0002835" iyz="0.0" izz="0.000324"/>
+      </inertial>
       <visual>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <geometry>
-          <mesh filename="package://tahoma_description/meshes/stand/visual/robot_beam.stl"/>
+          <mesh filename="package://tahoma_description/meshes/stand/cantilever.stl"/>
         </geometry>
         <material name="blue_aluminum"/>
       </visual>
       <collision>
-        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <origin xyz="0 0 .0415"/>
         <geometry>
-          <mesh filename="package://tahoma_description/meshes/stand/visual/robot_beam.stl"/>
+          <box size=".7260 .225 .09"/>
         </geometry>
       </collision>
     </link>
     <link name="control_box_mount">
+      <inertial>
+        <mass value="3"/>
+        <inertia ixx="0.0002835" ixy="0.0" ixz="0.0" iyy="0.0002835" iyz="0.0" izz="0.000324"/>
+      </inertial>
       <visual>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <geometry>
-          <mesh filename="package://tahoma_description/meshes/stand/visual/control_box_mount.stl"/>
+          <mesh filename="package://tahoma_description/meshes/stand/control_box_mount.stl"/>
         </geometry>
         <material name="blue_aluminum"/>
-
       </visual>
       <collision>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <geometry>
-          <mesh filename="package://tahoma_description/meshes/stand/visual/control_box_mount.stl"/>
+          <box size=".585 .0602 .1790"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="control_box">
+      <inertial>
+        <mass value="7"/>
+        <inertia ixx="0.0002835" ixy="0.0" ixz="0.0" iyy="0.0002835" iyz="0.0" izz="0.000324"/>
+      </inertial>
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/stand/control_box.stl"/>
+        </geometry>
+        <material name="aluminum"/>
+      </visual>
+      <collision>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <box size=".46 .25 .44"/>
         </geometry>
       </collision>
     </link>
     <link name="robot_plate">
+      <inertial>
+        <mass value=".5"/>
+        <inertia ixx="0.0002835" ixy="0.0" ixz="0.0" iyy="0.0002835" iyz="0.0" izz="0.000324"/>
+      </inertial>
       <visual>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <geometry>
-          <mesh filename="package://tahoma_description/meshes/stand/visual/robot_plate.stl"/>
+          <mesh filename="package://tahoma_description/meshes/stand/robot_plate.stl"/>
         </geometry>
         <material name="blue_aluminum"/>
       </visual>
       <collision>
         <origin rpy="0 0 0" xyz="0 0 0"/>
         <geometry>
-          <mesh filename="package://tahoma_description/meshes/stand/visual/robot_plate.stl"/>
+          <box size=".225 .225 .0225"/>
         </geometry>
       </collision>
     </link>
@@ -129,16 +207,22 @@
       <origin rpy="0 0 0" xyz="-.1725 .7475 0"/>
     </joint>
 
-    <joint name="stand_robot_beam_joint" type="fixed">
+    <joint name="control_box_mount_control_box_joint" type="fixed">
+      <parent link="control_box_mount"/>
+      <child link="control_box"/>
+      <origin rpy="0.05 0 ${M_PI}" xyz="-.003 .1375 -0.13"/>
+    </joint>
+
+    <joint name="stand_cantilever_joint" type="fixed">
       <parent link="stand_upright"/>
-      <child link="robot_beam"/>
+      <child link="cantilever"/>
       <origin rpy="0 0 0" xyz=".0775 0  0.9475"/>
     </joint>
 
-    <joint name="robot_beam_robot_plate_joint" type="fixed">
-      <parent link="robot_beam"/>
+    <joint name="cantilever_robot_plate_joint" type="fixed">
+      <parent link="cantilever"/>
       <child link="robot_plate"/>
-      <origin rpy="0 0 0" xyz="0.2 0 -.015"/>
+      <origin rpy="0 0 0" xyz="0.2505 0 -.015"/>
     </joint>
 
     <joint name="stand_front_right_caster_joint" type="fixed">
