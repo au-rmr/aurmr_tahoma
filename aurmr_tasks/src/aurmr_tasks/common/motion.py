@@ -33,16 +33,21 @@ class MoveEndEffectorToPose(State):
         else:
             pose = userdata["pose"]
 
-        pose_stamped = PoseStamped(header=std_msgs.msg.Header(frame_id="base_link"))
-        pose_stamped.pose.position.x = pose["xyz"][0]
-        pose_stamped.pose.position.y = pose["xyz"][1]
-        pose_stamped.pose.position.z = pose["xyz"][2]
-        quaternion = transformations.quaternion_from_euler(*pose["rpy"])
-        pose_stamped.pose.orientation.x = quaternion[0]
-        pose_stamped.pose.orientation.y = quaternion[1]
-        pose_stamped.pose.orientation.z = quaternion[2]
-        pose_stamped.pose.orientation.w = quaternion[3]
-        error = self.robot.move_to_pose_goal(pose_stamped)
+        success = self.robot.move_to_pose_goal(pose)
+        if success:
+            return "succeeded"
+        else:
+            return "aborted"
+
+
+class MoveEndEffectorInLineInOut(State):
+    def __init__(self, robot):
+        State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
+        self.robot = robot
+
+    def execute(self, userdata):
+        # FIXME(nickswalker): This is hacked together for basic demonstration. Fix this method later
+        error = self.robot.straight_move_to_pose(None)
         if error is None:
             return "succeeded"
         else:

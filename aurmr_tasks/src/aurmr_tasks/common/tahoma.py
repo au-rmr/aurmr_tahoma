@@ -1,3 +1,4 @@
+import copy
 import sys
 
 from control_msgs.msg import FollowJointTrajectoryAction
@@ -10,11 +11,11 @@ import control_msgs.msg
 import trajectory_msgs.msg
 import rospy
 import tf
-from aurmr_tasks.util.arm_joints import ArmJoints
-from aurmr_tasks.util.moveit_goal_builder import MoveItGoalBuilder
-from moveit_msgs.msg import MoveItErrorCodes, MoveGroupAction
+from aurmr_tasks.util import all_close
+from moveit_msgs.msg import MoveItErrorCodes, MoveGroupAction, DisplayTrajectory
 from moveit_msgs.srv import GetPositionIK, GetPositionIKRequest
 from tf.listener import TransformListener
+import moveit_commander
 
 ARM_GROUP_NAME = 'manipulator'
 JOINT_ACTION_SERVER = '/pos_joint_traj_controller/follow_joint_trajectory'
@@ -85,6 +86,23 @@ class Tahoma:
         self._compute_ik = rospy.ServiceProxy('compute_ik', GetPositionIK)
         self._tf_listener = TransformListener()
         self.tuck_pose = [1.32, 1.40, -0.2, 1.72, 0.0, 1.66, 0.0]
+        moveit_commander.roscpp_initialize(sys.argv)
+        self.commander = moveit_commander.RobotCommander()
+        self.scene = moveit_commander.PlanningSceneInterface()
+        self.move_group = moveit_commander.MoveGroupCommander(ARM_GROUP_NAME)
+        self.display_trajectory_publisher = rospy.Publisher(
+            "/move_group/display_planned_path",
+            DisplayTrajectory,
+            queue_size=20,
+        )
+        planning_frame = self.move_group.get_planning_frame()
+        eef_link = self.move_group.get_end_effector_link()
+        group_names = self.commander.get_group_names()
+
+        # Misc variables
+        self.planning_frame = planning_frame
+        self.eef_link = eef_link
+        self.group_names = group_names
 
     def move_to_pose(self, pose, return_before_done=False):
         joint_names = [key for key in pose]
@@ -132,7 +150,7 @@ class Tahoma:
         :return:
         """
         goal = control_msgs.msg.FollowJointTrajectoryGoal()
-        goal.trajectory.joint_names.extend(ArmJoints.names())
+        goal.trajectory.joint_names.extend(self.move_group.get_active_joints())
         point = trajectory_msgs.msg.JointTrajectoryPoint()
         point.positions.extend(joint_state.values())
         point.time_from_start = rospy.Duration(TIME_FROM_START)
@@ -175,31 +193,23 @@ class Tahoma:
         Returns:
             string describing the error if an error occurred, else None.
         """
-        goal_builder = MoveItGoalBuilder()
-        goal_builder.set_joint_goal(*zip(*joints))
-        goal_builder.allowed_planning_time = allowed_planning_time
-        goal_builder.num_planning_attempts = num_planning_attempts
-        goal_builder.plan_only = plan_only
-        goal_builder.planner_id = ''
-        goal_builder.replan = replan
-        goal_builder.replan_attempts = replan_attempts
-        goal_builder.tolerance = tolerance
-        goal = goal_builder.build()
-        if goal is not None:
-            self._move_group_client.send_goal(goal)
-            success = self._move_group_client.wait_for_result(
-                rospy.Duration(execution_timeout))
-            if not success:
-                return moveit_error_string(MoveItErrorCodes.TIMED_OUT)
-            result = self._move_group_client.get_result()
+        joint_goal = self.move_group.get_current_joint_values()
+        joint_goal[0] = -1.11
+        joint_goal[1] = -1.08
+        joint_goal[2] = -1.53
+        joint_goal[3] = -4.18
+        joint_goal[4] = -1.53
+        joint_goal[5] = 0
 
-        if result:
-            if result.error_code.val == MoveItErrorCodes.SUCCESS:
-                return None
-            else:
-                return moveit_error_string(result.error_code.val)
-        else:
-            return moveit_error_string(MoveItErrorCodes.TIMED_OUT)
+        # The go command can be called with joint values, poses, or without any
+        # parameters if you have already set the pose or joint target for the group
+        self.move_group.go(joint_goal, wait=True)
+
+        # Calling ``stop()`` ensures that there is no residual movement
+        self.move_group.stop()
+
+        current_joints = self.move_group.get_current_joint_values()
+        return all_close(joint_goal, current_joints, 0.01)
 
     def move_to_pose_goal(self,
                           pose_stamped,
@@ -239,33 +249,32 @@ class Tahoma:
         Returns:
             string describing the error if an error occurred, else None.
         """
-        goal_builder = MoveItGoalBuilder()
-        goal_builder.set_pose_goal(pose_stamped)
-        if orientation_constraint is not None:
-            goal_builder.add_path_orientation_contraint(orientation_constraint)
-        goal_builder.allowed_planning_time = allowed_planning_time
-        goal_builder.num_planning_attempts = num_planning_attempts
-        goal_builder.plan_only = plan_only
-        goal_builder.replan = replan
-        goal_builder.replan_attempts = replan_attempts
-        goal_builder.tolerance = tolerance
-        goal = goal_builder.build()
-        if goal is not None:
-            self._move_group_client.send_goal(goal)
-            self._move_group_client.wait_for_result(
-                rospy.Duration(execution_timeout))
-            result = self._move_group_client.get_result()
 
-        if result:
-            if result.error_code.val == MoveItErrorCodes.SUCCESS:
-                return None
-            else:
-                return moveit_error_string(result.error_code.val)
-        else:
-            return moveit_error_string(MoveItErrorCodes.TIMED_OUT)
+        self.move_group.set_pose_target(pose_stamped)
+        plan = self.move_group.plan()[1]
+
+
+        ## A `DisplayTrajectory`_ msg has two primary fields, trajectory_start and trajectory.
+        ## We populate the trajectory_start with our current robot state to copy over
+        ## any AttachedCollisionObjects and add our plan to the trajectory.
+        display_trajectory = DisplayTrajectory()
+        display_trajectory.trajectory_start = self.commander.get_current_state()
+        display_trajectory.trajectory.append(plan)
+        # Publish
+        self.display_trajectory_publisher.publish(display_trajectory)
+
+        ## Now, we call the planner to compute the plan and execute it.
+        plan = self.move_group.go(wait=True)
+        # Calling `stop()` ensures that there is no residual movement
+        self.move_group.stop()
+        # It is always good to clear your targets after planning with poses.
+        # Note: there is no equivalent function for clear_joint_value_targets()
+        self.move_group.clear_pose_targets()
+
+        current_pose = self.move_group.get_current_pose()
+        return all_close(pose_stamped, current_pose, 0.01)
 
     def straight_move_to_pose(self,
-                              group,
                               pose_stamped,
                               ee_step=0.025,
                               jump_threshold=2.0,
@@ -286,36 +295,27 @@ class Tahoma:
         Returns:
             string describing the error if an error occurred, else None.
         """
-        # Transform pose into planning frame
-        self._tf_listener.waitForTransform(pose_stamped.header.frame_id,
-                                           group.get_planning_frame(),
-                                           rospy.Time.now(),
-                                           rospy.Duration(1.0))
-        try:
-            pose_transformed = self._tf_listener.transformPose(
-                group.get_planning_frame(), pose_stamped)
-        except (tf.LookupException, tf.ConnectivityException):
-            rospy.logerr('Unable to transform pose from frame {} to {}'.format(
-                pose_stamped.header.frame_id, group.get_planning_frame()))
-            return moveit_error_string(
-                MoveItErrorCodes.FRAME_TRANSFORM_FAILURE)
+        #FIXME(nickswalker): Method hacked for quick demo. Fix later
+        waypoints = []
 
-        # Compute path
-        plan, fraction = group.compute_cartesian_path(
-            [group.get_current_pose().pose,
-             pose_transformed.pose], ee_step, jump_threshold, avoid_collisions)
-        if fraction < 1 and fraction > 0:
-            rospy.logerr(
-                'Only able to compute {}% of the path'.format(fraction * 100))
-        if fraction == 0:
-            return moveit_error_string(MoveItErrorCodes.PLANNING_FAILED)
+        wpose = self.move_group.get_current_pose().pose
+        wpose.position.x += 0.22
+        waypoints.append(copy.deepcopy(wpose))
 
-        # Execute path
-        result = group.execute(plan, wait=True)
-        if not result:
-            return moveit_error_string(MoveItErrorCodes.INVALID_MOTION_PLAN)
-        else:
-            return None
+        wpose.position.x -= 0.22  # Third move sideways (y)
+        waypoints.append(copy.deepcopy(wpose))
+
+        # We want the Cartesian path to be interpolated at a resolution of 1 cm
+        # which is why we will specify 0.01 as the eef_step in Cartesian
+        # translation.  We will disable the jump threshold by setting it to 0.0,
+        # ignoring the check for infeasible jumps in joint space, which is sufficient
+        # for this tutorial.
+        (plan, fraction) = self.move_group.compute_cartesian_path(
+            waypoints, 0.01, jump_threshold  # waypoints to follow  # eef_step
+        )
+        if fraction < .9:
+            return False
+        return self.move_group.execute(plan, wait=True)
 
     def check_pose(self,
                    pose_stamped,
@@ -355,7 +355,7 @@ class Tahoma:
         joint_state = response.solution.joint_state
         joints = []
         for name, position in zip(joint_state.name, joint_state.position):
-            if name in ArmJoints.names():
+            if name in self.commander.get_active_joint_names():
                 joints.append((name, position))
         return joints
 
