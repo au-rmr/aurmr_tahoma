@@ -1,0 +1,7 @@
+string bin_id
+string object_id
+---
+bool success
+string message
+string bin_id
+sensor_msgs/PointCloud2 points

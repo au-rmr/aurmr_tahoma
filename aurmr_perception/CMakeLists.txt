@@ -3,13 +3,35 @@ project(aurmr_perception)
 
 find_package(catkin REQUIRED COMPONENTS
     roslint
+    rospy
+    std_msgs
+    sensor_msgs
+    message_generation
 )
 
 
 catkin_python_setup()
 
+add_service_files(
+  FILES
+  CaptureObject.srv
+  RemoveObject.srv
+  GetObjectPoints.srv
+  ResetBin.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  sensor_msgs
+)
 
 catkin_package(
+)
+
+include_directories(
+# include
+  ${catkin_INCLUDE_DIRS}
 )
 
 
