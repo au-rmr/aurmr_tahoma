@@ -4,7 +4,8 @@ from distutils.core import setup
 from catkin_pkg.python_setup import generate_distutils_setup
 
 d = generate_distutils_setup(
-    packages=['aurmr_tasks'],
+    packages=['aurmr_tasks',
+              'aurmr_tasks.common'],
     package_dir={'': 'src'},
 )
 
