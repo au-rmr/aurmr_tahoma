@@ -8,7 +8,6 @@
 
   <xacro:arg name="realsense" default="true" />
   <xacro:arg name="transmission_hw_interface" default="hardware_interface/EffortJointInterface"/>
-  <xacro:property name="M_PI" value="3.1415926535897931"/>
 
   <xacro:stand/>
   <xacro:ur16e_robot prefix="arm_"/>
@@ -26,12 +25,36 @@
   <joint name="robot_plate_arm_base_link_joint" type="fixed">
     <parent link="robot_plate"/>
     <child link="arm_base_link"/>
-    <origin rpy="0 ${M_PI} ${M_PI}" xyz="0 -0.01 0"/>
+    <origin rpy="0 ${pi} ${pi}" xyz="0 -0.01 0"/>
   </joint>
 
-  <joint name="arm_tool0-gripper_robotiq_arg2f_base_link" type="fixed">
+
+  <link name="coupling">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 ${pi}" />
+      <geometry>
+        <mesh filename="package://tahoma_description/meshes/robotiq_gripper_coupling.stl"/>
+      </geometry>
+      <material name="">
+        <color rgba="0.1 0.1 0.1 1" />
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+          <cylinder radius=".0375" length=".0139"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="coupling_link_gripper_robotiq_arg2f_base_link_joint" type="fixed">
+    <origin xyz="0 0 0.008" rpy="0 0 ${pi/2}"/>
+    <parent link="coupling" />
+    <child link="gripper_base_link" />
+  </joint>
+
+  <joint name="arm_tool0-coupling_joint" type="fixed">
     <parent link="arm_tool0"/>
-    <child link="gripper_base_link"/>
+    <child link="coupling"/>
   </joint>
 
   <link name="mid_camera_mount"/>
