@@ -5,7 +5,7 @@
     <include file="$(find ur_robot_driver)/launch/ur16e_bringup.launch">
         <arg name="robot_ip" value="192.168.43.92" />
         <arg name="robot_description_file" value="$(find tahoma_description)/launch/load_tahoma.launch" />
-        <arg name="controller_config_file" default="$(find tahoma_description)/config/controllers.yaml" />
+        <arg name="controller_config_file" default="$(find tahoma_bringup)/config/controllers.yaml" />
         <arg name="kinematics_config" value="$(find tahoma_description)/config/calibration.yaml" />
         <arg name="use_tool_communication" value="true" />
         <arg name="tool_voltage" value="24" />
