@@ -230,8 +230,8 @@ class AURMRPerceptionNode():
                                 pos_x = robot_position[0],
                                 pos_y = robot_position[1],
                                 pos_z = robot_position[2],
-                                rot_x = robot_rotation[2],
-                                rot_y = robot_rotation[2],
+                                rot_x = robot_rotation[0],
+                                rot_y = robot_rotation[1],
                                 rot_z = robot_rotation[2],
                                 grasp = gripper_dist) # not sure how to define vec3 in ROS format (maybe pointcloud2?)
 
