@@ -253,7 +253,7 @@ class AURMRPerceptionNode():
 if __name__ == '__main__':
     try:
         parser = argparse.ArgumentParser(description='AURMR Perception Module')
-        parser.add_argument('-v', '--viz', action='store_true', default=True)
+        parser.add_argument('-v', '--viz', action='store_true', default=False)
         parser.add_argument('--diff_threshold', type=int, default=140)
         args, unknown = parser.parse_known_args()
         node = AURMRPerceptionNode(args)
