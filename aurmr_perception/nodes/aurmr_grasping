@@ -1,0 +1,85 @@
+#!/usr/bin/env python
+
+import argparse
+import cv2
+import numpy as np
+import rospy
+import message_filters
+
+from collections import defaultdict
+from sensor_msgs.msg import Image, CameraInfo, PointField, PointCloud2
+from std_msgs.msg import Header
+from aurmr_perception.srv import *
+
+
+class AURMRGraspingNode():
+    def __init__(self):
+        self.normal_vector = np.array([-1,0,0]) # eurler angle
+
+    def grasping_callback(self, request):
+        # get the average of the pointclouds
+
+        pts = PointCloud2.read_points(request.points, skip_nans=True, field_names=("x", "y", "z"))
+        pts = ros_numpy.numpify(pts).reshape(-1)
+        pts = np.stack([pts['x'],
+                       pts['y'],
+                       pts['z']], axis=1)
+
+        ################# hack for the first pick-up:#################
+        # compute the average point of the pointcloud
+        center = np.mean(pts, axis = 0)
+        # get the vector
+        extention_dir = self.normal_vector
+        dist = request.dist_th
+        robot_position = dist * extention_dir + center # center and extention_dir should be under the same coordiante!
+        # pick a orientation
+        pose_pool = [-self.normal_vector, np.array([0, 0, np.pi/2])] # assuming the robot keeps the same approaching vector
+
+        # pick a gripper closing distance
+        gripper_pool = [0, 0.01, 0.02, 0.05]
+
+        robot_rotation = pose_pool[request.pose_id]
+        gripper_dist = gripper_pool[request.grasp_id]
+
+        # todo after the first pick-up:
+        # train GraspNet that is given the pointclouds, outputs the grasping candidates, GraspNet doesn't output gripper_dist,
+        # assuming the gripper is flexible enough, we can just set a hard-code distance to close the finger.
+        # only get the most confident grasp
+        # might need to consider motion planning collision checking etc.
+
+
+        return GraspPoseResponse(success=True, message=f"Grasping Pose has been set", # The function name will be different
+                                pos_x = robot_position[0],
+                                pos_y = robot_position[1],
+                                pos_z = robot_position[2],
+                                rot_x = robot_rotation[0],
+                                rot_y = robot_rotation[1],
+                                rot_z = robot_rotation[2],
+                                grasp = gripper_dist) # not sure how to define vec3 in ROS format (maybe pointcloud2?)
+
+
+    def main(self):
+        rospy.init_node('aurmr_perception')
+        self.node_name = rospy.get_name()
+        rospy.loginfo("{0} started".format(self.node_name))
+
+        self.trigger_grasp = rospy.Service('/aurmr_perception/init_grasp', GraspPose, self.grasping_callback)
+
+        self.rate = 5.0
+        rate = rospy.Rate(self.rate)
+
+        while not rospy.is_shutdown():
+            rate.sleep()
+
+
+if __name__ == '__main__':
+    try:
+        parser = argparse.ArgumentParser(description='AURMR Perception Module')
+        parser.add_argument('-v', '--viz', action='store_true', default=True)
+        parser.add_argument('--diff_threshold', type=int, default=30)
+        args, unknown = parser.parse_known_args()
+        node = AURMRPerceptionNode(args)
+        node.main()
+        rospy.spin()
+    except KeyboardInterrupt:
+        print('interrupt received, so shutting down')

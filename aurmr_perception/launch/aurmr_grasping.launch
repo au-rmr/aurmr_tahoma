@@ -1,0 +1,10 @@
+<launch>
+
+  <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+    <arg name="align_depth"              default="true"/>
+  </include>
+
+  <node name="aurmr_grasping" pkg="aurmr_grasping" type="aurmr_grasping" output="screen">
+  </node>
+
+</launch>
