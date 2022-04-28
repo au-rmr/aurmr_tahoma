@@ -2,6 +2,7 @@
 
   <include file="$(find realsense2_camera)/launch/rs_camera.launch">
     <arg name="align_depth"              default="true"/>
+    <arg name="camera"                   default="stand_camera" />
   </include>
 
   <node name="aurmr_perception" pkg="aurmr_perception" type="aurmr_perception" output="screen">

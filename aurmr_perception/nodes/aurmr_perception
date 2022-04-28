@@ -94,10 +94,17 @@ class AURMRPerceptionNode():
         y = y[np.nonzero(z)]
         z = z[np.nonzero(z)]
 
+        # Rearrange axes to match ROS axes
+        # Camera: X- right, Y- down, Z- forward
+        # ROS: X- forward, Y- left, Z- up
+        x_ros = z
+        y_ros = -x
+        z_ros = -y
+
         if request.bin_id not in self.points_table:
             self.points_table[request.bin_id] = {}
 
-        self.points_table[request.bin_id][request.object_id] = np.vstack((x,y,z))
+        self.points_table[request.bin_id][request.object_id] = np.vstack((x_ros,y_ros,z_ros))
         self.object_bin_queues[request.object_id].put(request.bin_id)
 
         self.latest_captures[request.bin_id] = current_rgb
@@ -228,14 +235,14 @@ class AURMRPerceptionNode():
         self.trigger_retrieve = rospy.Service('/aurmr_perception/get_object_points', GetObjectPoints, self.get_object_callback)
         self.trigger_reset = rospy.Service('/aurmr_perception/reset_bin', ResetBin, self.reset_callback)
 
-        self.camera_depth_subscriber = message_filters.Subscriber('/camera/aligned_depth_to_color/image_raw', Image)
-        self.camera_rgb_subscriber = message_filters.Subscriber('/camera/color/image_raw', Image)
-        self.camera_info_subscriber = message_filters.Subscriber('/camera/color/camera_info', CameraInfo)
+        self.camera_depth_subscriber = message_filters.Subscriber('/stand_camera/aligned_depth_to_color/image_raw', Image)
+        self.camera_rgb_subscriber = message_filters.Subscriber('/stand_camera/color/image_raw', Image)
+        self.camera_info_subscriber = message_filters.Subscriber('/stand_camera/color/camera_info', CameraInfo)
 
         self.camera_synchronizer = message_filters.TimeSynchronizer([
             self.camera_depth_subscriber, self.camera_rgb_subscriber, self.camera_info_subscriber], 10)
         self.camera_synchronizer.registerCallback(self.camera_callback)
-        
+
         self.rate = 5.0
         rate = rospy.Rate(self.rate)
  
