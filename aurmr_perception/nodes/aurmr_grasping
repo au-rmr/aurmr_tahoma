@@ -278,7 +278,6 @@ class AURMRPerceptionNode():
         self.camera_depth_subscriber = message_filters.Subscriber('/camera/aligned_depth_to_color/image_raw', Image)
         self.camera_rgb_subscriber = message_filters.Subscriber('/camera/color/image_raw', Image)
         self.camera_info_subscriber = message_filters.Subscriber('/camera/color/camera_info', CameraInfo)
-
         self.camera_synchronizer = message_filters.TimeSynchronizer([
             self.camera_depth_subscriber, self.camera_rgb_subscriber, self.camera_info_subscriber], 10)
         self.camera_synchronizer.registerCallback(self.camera_callback)
