@@ -9,7 +9,6 @@ find_package(catkin REQUIRED COMPONENTS
     message_generation
 )
 
-
 catkin_python_setup()
 
 add_service_files(
@@ -28,6 +27,9 @@ generate_messages(
 
 catkin_package(
 )
+
+catkin_install_python(PROGRAMS nodes/aurmr_perception
+        DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 include_directories(
 # include

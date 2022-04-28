@@ -58,7 +58,7 @@ class AURMRPerceptionNode():
         current_rgb = self.rgb_image
 
         # Get the difference of the two captured RGB images
-        difference = np.abs(cv2.subtract(last_rgb, current_rgb))
+        difference = cv2.absdiff(last_rgb, current_rgb)
 
         # Threshold the difference image to get the initial mask
         mask = difference.sum(axis=2) >= self.diff_threshold
@@ -206,8 +206,8 @@ class AURMRPerceptionNode():
             cv2.waitKey(1)
 
             bin_im_viz = np.zeros((480,640))
-            if 'B001' in self.latest_captures:
-                bin_im_viz = self.latest_captures['B001']
+            if '3F' in self.latest_captures:
+                bin_im_viz = self.latest_captures['3F']
                 bin_im_viz = cv2.cvtColor(bin_im_viz, cv2.COLOR_RGB2BGR)
             cv2.imshow('latest_bin_capture',bin_im_viz)
             cv2.waitKey(1)
@@ -247,7 +247,7 @@ if __name__ == '__main__':
     try:
         parser = argparse.ArgumentParser(description='AURMR Perception Module')
         parser.add_argument('-v', '--viz', action='store_true', default=True)
-        parser.add_argument('--diff_threshold', type=int, default=30)
+        parser.add_argument('--diff_threshold', type=int, default=140)
         args, unknown = parser.parse_known_args()
         node = AURMRPerceptionNode(args)
         node.main()
