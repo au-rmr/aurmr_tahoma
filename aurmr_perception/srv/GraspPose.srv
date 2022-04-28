@@ -1,7 +1,7 @@
 sensor_msgs/PointCloud2 points
 float dist_th
-string pose_id
-string grasp_id
+int pose_id
+int grasp_id
 ---
 bool success
 string message
