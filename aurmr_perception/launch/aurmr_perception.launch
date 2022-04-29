@@ -8,4 +8,7 @@
   <node name="aurmr_perception" pkg="aurmr_perception" type="aurmr_perception" output="screen">
   </node>
 
+  <node name="aurmr_grasping" pkg="aurmr_grasping" type="aurmr_grasping" output="screen">
+  </node>
+
 </launch>
