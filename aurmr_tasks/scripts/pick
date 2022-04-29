@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import math
 
 import smach_ros
 
@@ -6,13 +7,30 @@ from smach import State, StateMachine
 
 import rospy
 
-from aurmr_tasks.common import states, motion, perception
 from aurmr_tasks.common.tahoma import Tahoma
+from aurmr_tasks.common import motion, perception
+from aurmr_tasks import interaction
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
+from tf_conversions import transformations
 import aurmr_tasks.common.control_flow as cf
-
 
 TARGET_BIN_ID = "001"
 TARGET_OBJECT_ID = "XYZ"
+
+DEG_TO_RAD = 2.0 * math.pi / 360.
+PICKS = [("2h", "bottle")]
+#HIDE_ANGLES = [-180,141,-101,272,-279,270]
+HIDE_ANGLES = [-183,-207,39,168,-183,268]
+TOTE_APPROACH_ANGLES = [-182,-78,40,306,-270,270]
+
+HIDE_ANGLES = [DEG_TO_RAD * ang for ang in HIDE_ANGLES]
+TOTE_APPROACH_ANGLES = [DEG_TO_RAD * ang for ang in TOTE_APPROACH_ANGLES]
+
+align_to_bin_orientation = transformations.quaternion_from_euler(0, -1.57, -1.57)
+align_to_bin_quat = Quaternion(x=align_to_bin_orientation[0], y=align_to_bin_orientation[1], z=align_to_bin_orientation[2], w=align_to_bin_orientation[3])
+
+
+BIN_APPROACH_POSE = PoseStamped(header=std_msgs.msg.Header(frame_id="base_link"), pose=Pose(position=Point(x=.125, y=-.25,z=.05), orientation=align_to_bin_quat))
 
 
 def main():
@@ -20,9 +38,7 @@ def main():
     rospy.init_node("pick")
     robot = Tahoma()
 
-    simulation = rospy.get_param("~simulation", False)
-
-    State.simulation = simulation
+    State.simulation = rospy.get_param("~simulation", False)
 
     pick_sm = StateMachine(["succeeded", "preempted", "aborted"],
                            input_keys=[],
@@ -31,16 +47,20 @@ def main():
     with pick_sm:
         cf.inject_userdata_auto("LOAD_TARGET_BIN_ID", "target_bin_id", TARGET_BIN_ID)
         cf.inject_userdata_auto("LOAD_TARGET_OBJECT_ID", "target_object_id", TARGET_OBJECT_ID)
-        #StateMachine.add_auto("MOVE_TO_HIDE")
-        StateMachine.add_auto("CAPTURE_EMPTY_BIN", perception.CaptureEmptyBin(), ['succeeded', 'preempted', 'aborted'])
-        #StateMachine.add_auto("PROMPT_INSERT")
-        StateMachine.add_auto("CAPTURE_OBJECT", perception.CaptureObject(), ['succeeded', 'preempted', 'aborted'])
-        #StateMachine.add_auto("MOVE_TO_BIN_APPROACH")
-        StateMachine.add_auto("LOAD_GRASP_POSE", perception.GetGraspPose(), ['succeeded', 'preempted', 'aborted'])
-        #StateMachine.add_auto("MOVE_TO_GRASP_POSE")
-        #StateMachine.add_auto("PROMPT_CLOSE")
-        #StateMachine.add_auto("MOVE_TO_TOTE")
-        #StateMachine.add_auto("PROMPT_OPEN")
+        StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, HIDE_ANGLES), ["succeeded", "aborted"])
+        StateMachine.add_auto("PRE_PERCEIVE", perception.PerceiveBin(), ["succeeded"])
+        StateMachine.add_auto("ASK_FOR_BIN_LOAD", interaction.AskForHumanAction("Load bin 2h with the bottle"), ["succeeded"])
+        StateMachine.add_auto("POST_PERCEIVE", perception.CaptureEmptyBin(), ["succeeded"])
+        StateMachine.add_auto("GET_OBJECT_POINTS", perception.CaptureObject(), ["succeeded"])
+        StateMachine.add_auto("POINTS_TO_GRASP_POSE", perception.GetGraspPose(), ["succeeded"])
+        StateMachine.add_auto("MOVE_TO_BIN_APPROACH", motion.MoveEndEffectorToPose(robot, BIN_APPROACH_POSE), ["succeeded", "aborted"])
+        StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPose(robot), ["succeeded", "aborted"])
+        StateMachine.add_auto("MOVE_TO_GRASP", motion.MoveEndEffectorToPose(robot), ["succeeded", "aborted"])
+        StateMachine.add_auto("ASK_FOR_GRIPPER_CLOSE", interaction.AskForHumanAction("Close the gripper using the teach pendant"), ["succeeded"])
+        StateMachine.add_auto("RETRACT_ARM", motion.MoveEndEffectorInLine(robot, (-1, 0, 0)), ["succeeded", "aborted"])
+        StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, TOTE_APPROACH_ANGLES), ["succeeded", "aborted"])
+        StateMachine.add_auto("ASK_FOR_GRIPPER_OPEN",
+                             interaction.AskForHumanAction("Open the gripper using the teach pendant"), ["succeeded"])
 
     rospy.loginfo('Beginning pick SM')
 

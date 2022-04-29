@@ -143,7 +143,7 @@ class Tahoma:
         """
         return self.move_to_joints(ArmJoints.from_list(self.tuck_pose))
 
-    def move_to_joints(self, joint_state):
+    def move_to_joint_angles_unsafe(self, joint_state):
         """
         Moves to an ArmJoints configuration
         :param joint_state: an ArmJoints instance to move to
@@ -158,7 +158,7 @@ class Tahoma:
         self._joint_traj_client.send_goal(goal)
         self._joint_traj_client.wait_for_result(rospy.Duration(10))
 
-    def move_to_joint_goal(self,
+    def move_to_joint_angles(self,
                            joints,
                            allowed_planning_time=10.0,
                            execution_timeout=15.0,
@@ -193,23 +193,17 @@ class Tahoma:
         Returns:
             string describing the error if an error occurred, else None.
         """
-        joint_goal = self.move_group.get_current_joint_values()
-        joint_goal[0] = -1.11
-        joint_goal[1] = -1.08
-        joint_goal[2] = -1.53
-        joint_goal[3] = -4.18
-        joint_goal[4] = -1.53
-        joint_goal[5] = 0
 
+        self.move_group.set_planning_time(allowed_planning_time)
         # The go command can be called with joint values, poses, or without any
         # parameters if you have already set the pose or joint target for the group
-        self.move_group.go(joint_goal, wait=True)
+        self.move_group.go(joints, wait=True)
 
         # Calling ``stop()`` ensures that there is no residual movement
         self.move_group.stop()
 
         current_joints = self.move_group.get_current_joint_values()
-        return all_close(joint_goal, current_joints, 0.01)
+        return all_close(joints, current_joints, 0.01)
 
     def move_to_pose_goal(self,
                           pose_stamped,
@@ -295,15 +289,7 @@ class Tahoma:
         Returns:
             string describing the error if an error occurred, else None.
         """
-        #FIXME(nickswalker): Method hacked for quick demo. Fix later
-        waypoints = []
-
-        wpose = self.move_group.get_current_pose().pose
-        wpose.position.x += 0.22
-        waypoints.append(copy.deepcopy(wpose))
-
-        wpose.position.x -= 0.22  # Third move sideways (y)
-        waypoints.append(copy.deepcopy(wpose))
+        waypoints = [pose_stamped]
 
         # We want the Cartesian path to be interpolated at a resolution of 1 cm
         # which is why we will specify 0.01 as the eef_step in Cartesian
