@@ -88,7 +88,7 @@ class Tahoma:
         self.tuck_pose = [1.32, 1.40, -0.2, 1.72, 0.0, 1.66, 0.0]
         moveit_commander.roscpp_initialize(sys.argv)
         self.commander = moveit_commander.RobotCommander()
-        self.scene = moveit_commander.PlanningSceneInterface()
+        self.scene = moveit_commander.PlanningSceneInterface(synchronous=True)
         self.move_group = moveit_commander.MoveGroupCommander(ARM_GROUP_NAME)
         self.display_trajectory_publisher = rospy.Publisher(
             "/move_group/display_planned_path",
@@ -297,7 +297,7 @@ class Tahoma:
         # ignoring the check for infeasible jumps in joint space, which is sufficient
         # for this tutorial.
         (plan, fraction) = self.move_group.compute_cartesian_path(
-            waypoints, 0.01, jump_threshold  # waypoints to follow  # eef_step
+            waypoints, 0.01, jump_threshold, avoid_collisions  # waypoints to follow  # eef_step
         )
         if fraction < .9:
             return False

@@ -1,4 +1,4 @@
-
+import aurmr_perception
 import rospy
 
 from smach import State
@@ -9,7 +9,6 @@ from aurmr_perception.srv import (
     GraspPose,
     GetObjectPointsRequest,
     GraspPoseRequest,
-    CaptureObject,
     CaptureObjectRequest,
 )
 
@@ -36,7 +35,7 @@ class CaptureObject(State):
             input_keys=['target_bin_id', 'target_object_id'],
             outcomes=['succeeded', 'preempted', 'aborted']
         )
-        self.capture_object = rospy.ServiceProxy('/aurmr_perception/capture_object', CaptureObject)
+        self.capture_object = rospy.ServiceProxy('/aurmr_perception/capture_object', aurmr_perception.srv.CaptureObject)
 
     def execute(self, userdata):
         capture_obj_req = CaptureObjectRequest(
@@ -52,7 +51,7 @@ class CaptureObject(State):
 
 
 class GetGraspPose(State):
-    def __init__(self, frame_id='gripper_base_link', distance_threshold=30):
+    def __init__(self, frame_id='base_link', distance_threshold=.25):
         State.__init__(
             self,
             input_keys=['target_bin_id', 'target_object_id'],

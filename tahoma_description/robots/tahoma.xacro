@@ -58,14 +58,14 @@
   </joint>
 
   <link name="mid_camera_mount"/>
-  <joint name="stand_upright_mid_camera_mount_joint" type="fixed">
+  <joint name="stand_brace_mid_camera_mount_joint" type="fixed">
       <parent link="stand_brace"/>
       <child link="mid_camera_mount"/>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin xyz="0.1375 0.075 0.685" rpy="0 0 0"/>
   </joint>
 
   <xacro:sensor_l515 name="stand_camera" parent="mid_camera_mount" use_nominal_extrinsics="true">
-      <origin xyz="0.125 0 0.685" rpy="0 0 0" /> <!-- z = 0.245 + 0.44 = 0.685   x=0.045+0.08=0.125-->
+      <origin xyz="0 0 0" rpy="0 0 0" /> <!-- z = 0.245 + 0.44 = 0.685   x=0.045+0.08=0.125-->
   </xacro:sensor_l515>
 
 </robot>

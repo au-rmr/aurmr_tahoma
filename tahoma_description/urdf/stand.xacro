@@ -204,7 +204,7 @@
     <joint name="stand_upright_robot_control_box_mount_joint" type="fixed">
       <parent link="stand_upright"/>
       <child link="control_box_mount"/>
-      <origin rpy="0 0 0" xyz="-.1725 .7475 0"/>
+      <origin rpy="0 0 0" xyz="-.1725 .7475 .21"/>
     </joint>
 
     <joint name="control_box_mount_control_box_joint" type="fixed">

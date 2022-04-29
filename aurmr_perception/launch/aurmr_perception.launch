@@ -1,14 +1,15 @@
 <launch>
 
   <include file="$(find realsense2_camera)/launch/rs_camera.launch">
-    <arg name="align_depth"              default="true"/>
-    <arg name="camera"                   default="stand_camera" />
+    <arg name="align_depth"              value="true"/>
+    <arg name="camera"                   value="stand_camera" />
+    <arg name="enable_pointcloud"         value="true"/>
   </include>
 
   <node name="aurmr_perception" pkg="aurmr_perception" type="aurmr_perception" output="screen">
   </node>
 
-  <node name="aurmr_grasping" pkg="aurmr_grasping" type="aurmr_grasping" output="screen">
+  <node name="aurmr_grasping" pkg="aurmr_perception" type="aurmr_grasping" output="screen">
   </node>
 
 </launch>

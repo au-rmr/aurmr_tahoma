@@ -5,10 +5,5 @@ int8 grasp_id
 ---
 bool success
 string message
-float32 pos_x
-float32 pos_y
-float32 pos_z
-float32 rot_x
-float32 rot_y
-float32 rot_z
+geometry_msgs/PoseStamped pose
 float32 grasp

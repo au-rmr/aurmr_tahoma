@@ -4,23 +4,32 @@ import argparse
 import cv2
 import numpy as np
 import rospy
+import ros_numpy
 import message_filters
 
 from collections import defaultdict
 from sensor_msgs.msg import Image, CameraInfo, PointField, PointCloud2
+from sensor_msgs.point_cloud2 import read_points
 from std_msgs.msg import Header
 from aurmr_perception.srv import *
+from geometry_msgs.msg import PoseStamped, Quaternion, Pose, Point
+from tf_conversions import transformations
+
 
 
 class AURMRGraspingNode():
     def __init__(self):
-        self.normal_vector = np.array([-1,0,0]) # eurler angle
+        align_to_bin_orientation = transformations.quaternion_from_euler(1.57, 0, 1.57)
+        self.align_to_bin_quat = Quaternion(x=align_to_bin_orientation[0], y=align_to_bin_orientation[1],
+                                       z=align_to_bin_orientation[2], w=align_to_bin_orientation[3])
+        self.normal_vector = np.array((-1,0,0))
+
+
 
     def grasping_callback(self, request):
         # get the average of the pointclouds
 
-        pts = PointCloud2.read_points(request.points, skip_nans=True, field_names=("x", "y", "z"))
-        pts = ros_numpy.numpify(pts).reshape(-1)
+        pts = ros_numpy.numpify(request.points)
         pts = np.stack([pts['x'],
                        pts['y'],
                        pts['z']], axis=1)
@@ -28,17 +37,19 @@ class AURMRGraspingNode():
         ################# hack for the first pick-up:#################
         # compute the average point of the pointcloud
         center = np.mean(pts, axis = 0)
+        # NOTE(nickswalker,4-29-22): Hack to compensate for the chunk of points that don't get observed
+        # due to the lip of the bin
+        center[2] -= 0.02
         # get the vector
         extention_dir = self.normal_vector
         dist = request.dist_th
-        robot_position = dist * extention_dir + center # center and extention_dir should be under the same coordiante!
+        position = dist * extention_dir + center # center and extention_dir should be under the same coordiante!
         # pick a orientation
         pose_pool = [-self.normal_vector, np.array([0, 0, np.pi/2])] # assuming the robot keeps the same approaching vector
 
         # pick a gripper closing distance
         gripper_pool = [0, 0.01, 0.02, 0.05]
 
-        robot_rotation = pose_pool[request.pose_id]
         gripper_dist = gripper_pool[request.grasp_id]
 
         # todo after the first pick-up:
@@ -46,20 +57,15 @@ class AURMRGraspingNode():
         # assuming the gripper is flexible enough, we can just set a hard-code distance to close the finger.
         # only get the most confident grasp
         # might need to consider motion planning collision checking etc.
-
+        grasp_pose = PoseStamped(header=request.points.header, pose=Pose(position=Point(x=position[0], y=position[1], z=position[2]),orientation=self.align_to_bin_quat))
 
         return GraspPoseResponse(success=True, message=f"Grasping Pose has been set", # The function name will be different
-                                pos_x = robot_position[0],
-                                pos_y = robot_position[1],
-                                pos_z = robot_position[2],
-                                rot_x = robot_rotation[0],
-                                rot_y = robot_rotation[1],
-                                rot_z = robot_rotation[2],
-                                grasp = gripper_dist) # not sure how to define vec3 in ROS format (maybe pointcloud2?)
+                                pose = grasp_pose,
+                                grasp = gripper_dist)
 
 
     def main(self):
-        rospy.init_node('aurmr_perception')
+        rospy.init_node('aurmr_grasping')
         self.node_name = rospy.get_name()
         rospy.loginfo("{0} started".format(self.node_name))
 
@@ -78,7 +84,7 @@ if __name__ == '__main__':
         parser.add_argument('-v', '--viz', action='store_true', default=True)
         parser.add_argument('--diff_threshold', type=int, default=30)
         args, unknown = parser.parse_known_args()
-        node = AURMRPerceptionNode(args)
+        node = AURMRGraspingNode()
         node.main()
         rospy.spin()
     except KeyboardInterrupt:

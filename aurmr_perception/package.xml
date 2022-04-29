@@ -11,9 +11,10 @@
 
   <build_depend>roslint</build_depend>
   <buildtool_depend>catkin</buildtool_depend>
+  <exec_depend>message_runtime</exec_depend>
+  <exec_depend>realsense2_camera</exec_depend>
+  <exec_depend>ros_numpy</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
-  <exec_depend>ros_numpy</exec_depend>
-  <exec_depend>message_runtime</exec_depend>
 
 </package>
