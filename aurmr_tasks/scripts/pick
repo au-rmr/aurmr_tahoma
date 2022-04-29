@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import math
-
+from std_msgs.msg import Header
 import smach_ros
 
 from smach import State, StateMachine
@@ -18,7 +18,6 @@ TARGET_BIN_ID = "001"
 TARGET_OBJECT_ID = "XYZ"
 
 DEG_TO_RAD = 2.0 * math.pi / 360.
-PICKS = [("2h", "bottle")]
 #HIDE_ANGLES = [-180,141,-101,272,-279,270]
 HIDE_ANGLES = [-183,-207,39,168,-183,268]
 TOTE_APPROACH_ANGLES = [-182,-78,40,306,-270,270]
@@ -26,17 +25,26 @@ TOTE_APPROACH_ANGLES = [-182,-78,40,306,-270,270]
 HIDE_ANGLES = [DEG_TO_RAD * ang for ang in HIDE_ANGLES]
 TOTE_APPROACH_ANGLES = [DEG_TO_RAD * ang for ang in TOTE_APPROACH_ANGLES]
 
-align_to_bin_orientation = transformations.quaternion_from_euler(0, -1.57, -1.57)
+align_to_bin_orientation = transformations.quaternion_from_euler(1.57, 0, 1.57)
 align_to_bin_quat = Quaternion(x=align_to_bin_orientation[0], y=align_to_bin_orientation[1], z=align_to_bin_orientation[2], w=align_to_bin_orientation[3])
+I_QUAT = Quaternion(x=0, y=0, z=0, w=1)
 
+BIN_APPROACH_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=.41, y=.26,z=1.16), orientation=align_to_bin_quat))
 
-BIN_APPROACH_POSE = PoseStamped(header=std_msgs.msg.Header(frame_id="base_link"), pose=Pose(position=Point(x=.125, y=-.25,z=.05), orientation=align_to_bin_quat))
-
+TRIPOD_ORIENTATION = transformations.quaternion_from_euler(0, -.6,0)
+TRIPOD_ORIENTATION = Quaternion(x=TRIPOD_ORIENTATION[0],y= TRIPOD_ORIENTATION[1],z=TRIPOD_ORIENTATION[2],w=TRIPOD_ORIENTATION[3])
 
 def main():
     rospy.loginfo('Getting robot resources')
     rospy.init_node("pick")
     robot = Tahoma()
+
+    robot.scene.clear()
+    robot.scene.add_box("pod_top", PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=1.25,y=0, z=1.75), orientation=I_QUAT)))
+    robot.scene.add_box("pod_bottom", PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=1.25,y=0, z=.5), orientation=I_QUAT)))
+    robot.scene.add_box("pod_left", PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=1.0,y=-.2, z=1.15), orientation=I_QUAT)), (.5, .5, .3))
+    robot.scene.add_box("pod_right", PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=1.0,y=.65, z=1.15), orientation=I_QUAT)), (.5, .5, .3))
+    robot.scene.add_box("tripod", PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=-.3,y=0, z=.7), orientation=TRIPOD_ORIENTATION)), (.5, .5, 1))
 
     State.simulation = rospy.get_param("~simulation", False)
 
@@ -47,17 +55,17 @@ def main():
     with pick_sm:
         cf.inject_userdata_auto("LOAD_TARGET_BIN_ID", "target_bin_id", TARGET_BIN_ID)
         cf.inject_userdata_auto("LOAD_TARGET_OBJECT_ID", "target_object_id", TARGET_OBJECT_ID)
-        StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, HIDE_ANGLES), ["succeeded", "aborted"])
+        StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, HIDE_ANGLES), ["succeeded"])
         StateMachine.add_auto("PRE_PERCEIVE", perception.CaptureEmptyBin(), ["succeeded"])
         StateMachine.add_auto("ASK_FOR_BIN_LOAD", interaction.AskForHumanAction("Load bin 2h with the bottle"), ["succeeded"])
         StateMachine.add_auto("POST_PERCEIVE", perception.CaptureObject(), ["succeeded"])
         StateMachine.add_auto("GET_GRASP_POSE", perception.GetGraspPose(), ["succeeded"])
-        StateMachine.add_auto("MOVE_TO_BIN_APPROACH", motion.MoveEndEffectorToPose(robot, BIN_APPROACH_POSE), ["succeeded", "aborted"])
-        StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPose(robot), ["succeeded", "aborted"])
-        StateMachine.add_auto("MOVE_TO_GRASP", motion.MoveEndEffectorToPose(robot), ["succeeded", "aborted"])
+        StateMachine.add_auto("MOVE_TO_BIN_APPROACH", motion.MoveEndEffectorToPose(robot, BIN_APPROACH_POSE), ["succeeded"])
+        StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPose(robot), ["succeeded"])
+        StateMachine.add_auto("MOVE_TO_GRASP", motion.MoveEndEffectorInLine(robot, (.1, 0, 0)), ["succeeded", "aborted"])
         StateMachine.add_auto("ASK_FOR_GRIPPER_CLOSE", interaction.AskForHumanAction("Close the gripper using the teach pendant"), ["succeeded"])
-        StateMachine.add_auto("RETRACT_ARM", motion.MoveEndEffectorInLine(robot, (-1, 0, 0)), ["succeeded", "aborted"])
-        StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, TOTE_APPROACH_ANGLES), ["succeeded", "aborted"])
+        StateMachine.add_auto("RETRACT_ARM", motion.MoveEndEffectorInLine(robot, (.1, 0, 0)), ["succeeded", "aborted"])
+        StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, TOTE_APPROACH_ANGLES), ["succeeded"])
         StateMachine.add_auto("ASK_FOR_GRIPPER_OPEN",
                              interaction.AskForHumanAction("Open the gripper using the teach pendant"), ["succeeded"])
 
