@@ -9,6 +9,8 @@ from aurmr_perception.srv import (
     GraspPose,
     GetObjectPointsRequest,
     GraspPoseRequest,
+    CaptureObject,
+    CaptureObjectRequest,
 )
 
 
@@ -18,10 +20,32 @@ class CaptureEmptyBin(State):
         self.reset_bin = rospy.ServiceProxy('/aurmr_perception/reset_bin', ResetBin)
 
     def execute(self, userdata):
-        get_points_req = ResetBinRequest(bin_id = userdata['target_bin_id'])
-        reset_response = self.reset_bin(get_points_req)
+        reset_bin_req = ResetBinRequest(bin_id = userdata['target_bin_id'])
+        reset_response = self.reset_bin(reset_bin_req)
 
         if reset_response.success:
+            return "succeeded"
+        else:
+            return "aborted"
+
+
+class CaptureObject(State):
+    def __init__(self):
+        State.__init__(
+            self,
+            input_keys=['target_bin_id', 'target_object_id'],
+            outcomes=['succeeded', 'preempted', 'aborted']
+        )
+        self.capture_object = rospy.ServiceProxy('/aurmr_perception/capture_object', CaptureObject)
+
+    def execute(self, userdata):
+        capture_obj_req = CaptureObjectRequest(
+            bin_id=userdata['target_bin_id'],
+            object_id=userdata['target_object_id'],
+        )
+        capture_response = self.capture_object(capture_obj_req)
+
+        if capture_response.success:
             return "succeeded"
         else:
             return "aborted"
@@ -42,9 +66,9 @@ class GetGraspPose(State):
 
     def execute(self, userdata):
         get_points_req = GetObjectPointsRequest(
-            bin_id = userdata['target_bin_id'],
-            object_id = userdata['target_object_id'],
-            frame_id = self.frame_id
+            bin_id=userdata['target_bin_id'],
+            object_id=userdata['target_object_id'],
+            frame_id=self.frame_id
         )
         points_response = self.get_points(get_points_req)
 
@@ -52,10 +76,10 @@ class GetGraspPose(State):
             return "aborted"
 
         get_grasp_req = GraspPoseRequest(
-            points = points_response.points,
-            dist_th = self.distance_threshold,
-            pose_id = 0,
-            grasp_id = 0,
+            points=points_response.points,
+            dist_th=self.distance_threshold,
+            pose_id=0,
+            grasp_id=0,
         )
         grasp_response = self.get_grasp(get_grasp_req)
 
