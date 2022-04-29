@@ -7,6 +7,7 @@ import numpy as np
 import ros_numpy
 import rospy
 import message_filters
+import tf2_ros
 
 from collections import defaultdict
 from sensor_msgs.msg import Image, CameraInfo, PointField, PointCloud2
@@ -46,6 +47,7 @@ class AURMRPerceptionNode():
         self.latest_mask = None
         self.rgb_image = None
         self.visualize = args.viz
+        self.camera_name = args.camera_name
 
     def capture_object_callback(self, request):
         if not request.bin_id or not request.object_id:
@@ -116,8 +118,8 @@ class AURMRPerceptionNode():
         )
 
     def get_object_callback(self, request):
-        if not request.object_id:
-            return GetObjectPointsResponse(success=False, message="object_id is required")
+        if not request.object_id or not request.frame_id:
+            return GetObjectPointsResponse(success=False, message="object_id and frame_id are required")
         
         if self.object_bin_queues[request.object_id].empty():
             return GetObjectPointsResponse(success=False, message=f"Object {request.object_id} was not found")
@@ -134,11 +136,17 @@ class AURMRPerceptionNode():
                 success=False,
                 message=f"Object {request.object_id} was not found in bin {bin_id}"
             )
+        
+        # Transform points to requested frame_id
+        camera_frame = f"{self.camera_name}_color_frame"
+        stamped_transform = self.tf2_buffer.lookup_transform(request.frame_id, camera_frame, rospy.Time(0), rospy.Duration(0.1))
+        camera_to_target_mat = ros_numpy.numpify(stamped_transform.transform)
+        points = self.points_table[bin_id][request.object_id]
+        points = np.vstack([points, np.ones(points.shape[1])]) # convert to homogenous
+        points = np.matmul(camera_to_target_mat, points)[0:3,:].T # apply transform
 
         # Convert numpy points to a pointcloud message
-        parent_frame = 'camera_color_frame' # TODO: translate to a common coordinate frame
         itemsize = np.dtype(np.float32).itemsize
-        points = self.points_table[bin_id][request.object_id].transpose((1,0))
         points = np.hstack((points, np.ones((points.shape[0], 4))))
         num_points = points.shape[0]
 
@@ -148,7 +156,7 @@ class AURMRPerceptionNode():
             name=n, offset=i*itemsize, datatype=PointField.FLOAT32, count=1)
             for i, n in enumerate('xyzrgba')]
 
-        header = Header(frame_id=parent_frame, stamp=rospy.Time.now())
+        header = Header(frame_id=request.frame_id, stamp=rospy.Time.now())
 
         pointcloud = PointCloud2(
             header=header,
@@ -228,16 +236,19 @@ class AURMRPerceptionNode():
     def main(self):
         rospy.init_node('aurmr_perception')
         self.node_name = rospy.get_name()
-        rospy.loginfo("{0} started".format(self.node_name))
+        rospy.loginfo(f"{self.node_name} started")
+
+        self.tf2_buffer = tf2_ros.Buffer()
+        self.tf2_listener = tf2_ros.TransformListener(self.tf2_buffer)
 
         self.trigger_capture = rospy.Service('/aurmr_perception/capture_object', CaptureObject, self.capture_object_callback)
         self.trigger_remove = rospy.Service('/aurmr_perception/remove_object', RemoveObject, self.remove_object_callback)
         self.trigger_retrieve = rospy.Service('/aurmr_perception/get_object_points', GetObjectPoints, self.get_object_callback)
         self.trigger_reset = rospy.Service('/aurmr_perception/reset_bin', ResetBin, self.reset_callback)
 
-        self.camera_depth_subscriber = message_filters.Subscriber('/stand_camera/aligned_depth_to_color/image_raw', Image)
-        self.camera_rgb_subscriber = message_filters.Subscriber('/stand_camera/color/image_raw', Image)
-        self.camera_info_subscriber = message_filters.Subscriber('/stand_camera/color/camera_info', CameraInfo)
+        self.camera_depth_subscriber = message_filters.Subscriber(f'/{self.camera_name}/aligned_depth_to_color/image_raw', Image)
+        self.camera_rgb_subscriber = message_filters.Subscriber(f'/{self.camera_name}/color/image_raw', Image)
+        self.camera_info_subscriber = message_filters.Subscriber(f'/{self.camera_name}/color/camera_info', CameraInfo)
 
         self.camera_synchronizer = message_filters.TimeSynchronizer([
             self.camera_depth_subscriber, self.camera_rgb_subscriber, self.camera_info_subscriber], 10)
@@ -253,8 +264,9 @@ class AURMRPerceptionNode():
 if __name__ == '__main__':
     try:
         parser = argparse.ArgumentParser(description='AURMR Perception Module')
-        parser.add_argument('-v', '--viz', action='store_true', default=False)
+        parser.add_argument('-v', '--viz', action='store_true', default=True)
         parser.add_argument('--diff_threshold', type=int, default=140)
+        parser.add_argument('--camera_name', default='stand_camera')
         args, unknown = parser.parse_known_args()
         node = AURMRPerceptionNode(args)
         node.main()
