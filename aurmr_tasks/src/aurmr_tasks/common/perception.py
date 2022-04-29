@@ -1,0 +1,67 @@
+
+import rospy
+
+from smach import State
+from aurmr_perception.srv import (
+    ResetBin,
+    ResetBinRequest,
+    GetObjectPoints,
+    GraspPose,
+    GetObjectPointsRequest,
+    GraspPoseRequest,
+)
+
+
+class CaptureEmptyBin(State):
+    def __init__(self):
+        State.__init__(self, input_keys=['target_bin_id'], outcomes=['succeeded', 'preempted', 'aborted'])
+        self.reset_bin = rospy.ServiceProxy('/aurmr_perception/reset_bin', ResetBin)
+
+    def execute(self, userdata):
+        get_points_req = ResetBinRequest(bin_id = userdata['target_bin_id'])
+        reset_response = self.reset_bin(get_points_req)
+
+        if reset_response.success:
+            return "succeeded"
+        else:
+            return "aborted"
+
+
+class GetGraspPose(State):
+    def __init__(self, frame_id='gripper_base_link', distance_threshold=30):
+        State.__init__(
+            self,
+            input_keys=['target_bin_id', 'target_object_id'],
+            output_keys=['grasp_pose'],
+            outcomes=['succeeded', 'preempted', 'aborted']
+        )
+        self.get_points = rospy.ServiceProxy('/aurmr_perception/get_object_points', GetObjectPoints)
+        self.get_grasp = rospy.ServiceProxy('/aurmr_perception/init_grasp', GraspPose)
+        self.frame_id = frame_id
+        self.distance_threshold = distance_threshold
+
+    def execute(self, userdata):
+        get_points_req = GetObjectPointsRequest(
+            bin_id = userdata['target_bin_id'],
+            object_id = userdata['target_object_id'],
+            frame_id = self.frame_id
+        )
+        points_response = self.get_points(get_points_req)
+
+        if not points_response.success:
+            return "aborted"
+
+        get_grasp_req = GraspPoseRequest(
+            points = points_response.points,
+            dist_th = self.distance_threshold,
+            pose_id = 0,
+            grasp_id = 0,
+        )
+        grasp_response = self.get_grasp(get_grasp_req)
+
+        if not grasp_response.success:
+            return "aborted"
+        
+        userdata['grasp_pose'] = grasp_response.pose
+
+        return "succeeded"
