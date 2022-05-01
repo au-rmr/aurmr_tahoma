@@ -4,23 +4,7 @@ project(tahoma_description)
 find_package(catkin REQUIRED)
 catkin_package()
 
-install(DIRECTORY config
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-)
-
-install(DIRECTORY launch
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-)
-
-install(DIRECTORY meshes
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-)
-
-install(DIRECTORY urdf
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-)
-
-install(DIRECTORY robots
+install(DIRECTORY config launch meshes urdf robots
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
