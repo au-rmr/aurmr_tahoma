@@ -103,6 +103,25 @@
         </geometry>
       </collision>
     </link>
+    <link name="camera_beam_lower">
+      <inertial>
+        <mass value="5"/>
+        <inertia ixx="0.0002835" ixy="0.0" ixz="0.0" iyy="0.0002835" iyz="0.0" izz="0.000324"/>
+      </inertial>
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/stand/camera_beam.stl"/>
+        </geometry>
+        <material name="blue_aluminum"/>
+      </visual>
+      <collision>
+        <origin rpy="0 0 .022" xyz="0 0 0"/>
+        <geometry>
+          <box size="0.045 1.25 0.045"/>
+        </geometry>
+      </collision>
+    </link>
     <link name="cantilever">
       <inertial>
         <mass value="8"/>
@@ -201,6 +220,12 @@
       <origin rpy="0 0 0" xyz="-.24 0 -.59"/>
     </joint>
 
+    <joint name="stand_upright_camera_beam_lower_joint" type="fixed">
+      <parent link="stand_upright"/>
+      <child link="camera_beam_lower"/>
+      <origin rpy="0 0 0" xyz="-.128 0 0"/>
+    </joint>
+
     <joint name="stand_upright_robot_control_box_mount_joint" type="fixed">
       <parent link="stand_upright"/>
       <child link="control_box_mount"/>
@@ -253,6 +278,7 @@
       <child link="left_light_panel"/>
       <origin rpy="0 ${M_PI_2} 0" xyz="-.2625 .35 .25"/>
     </joint>
+
     <joint name="stand_left_right_panel_joint" type="fixed">
       <parent link="stand_upright"/>
       <child link="right_light_panel"/>
