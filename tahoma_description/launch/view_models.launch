@@ -20,7 +20,9 @@
       <remap from="joint_states" to="/dev/null"/>
     </node>
 
-    <node name="robot_to_pod1_transform" pkg="tf2_ros" type="static_transform_publisher" args=".85 .4 0  -1.5708 0 0 base_link pod_base_link"/>
+    <node name="robot_to_pod_transform" pkg="tf2_ros" type="static_transform_publisher"
+          args=".65 .47 0 -1.5708 0 0 base_link pod_base_link"/>
+  </group>
 
   <node name="rviz" pkg="rviz" type="rviz" required="true" args="-d $(find tahoma_description)/config/view_model.rviz"/>
 </launch>

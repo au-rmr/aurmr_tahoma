@@ -6,7 +6,9 @@
 
   <xacro:include filename="$(find realsense2_description)/urdf/_l515.urdf.xacro"/>
 
-  <xacro:arg name="realsense" default="true" />
+  <xacro:arg name="realsense" default="true"/>
+  <xacro:arg name="camera_baseline" default=".5"/>
+  <xacro:arg name="camera_focal_depth" default="1.4"/>
   <xacro:arg name="transmission_hw_interface" default="hardware_interface/EffortJointInterface"/>
 
   <xacro:stand/>
@@ -31,25 +33,25 @@
 
   <link name="coupling">
     <visual>
-      <origin xyz="0 0 0" rpy="0 0 ${pi}" />
+      <origin xyz="0 0 0" rpy="0 0 ${pi}"/>
       <geometry>
         <mesh filename="package://tahoma_description/meshes/robotiq_gripper_coupling.stl"/>
       </geometry>
       <material name="">
-        <color rgba="0.1 0.1 0.1 1" />
+        <color rgba="0.1 0.1 0.1 1"/>
       </material>
     </visual>
     <collision>
       <geometry>
-          <cylinder radius=".0375" length=".0139"/>
+        <cylinder radius=".0375" length=".0139"/>
       </geometry>
     </collision>
   </link>
 
   <joint name="coupling_link_gripper_robotiq_arg2f_base_link_joint" type="fixed">
     <origin xyz="0 0 0.012" rpy="0 0 ${pi/2}"/>
-    <parent link="coupling" />
-    <child link="gripper_base_link" />
+    <parent link="coupling"/>
+    <child link="gripper_base_link"/>
   </joint>
 
   <joint name="arm_tool0-coupling_joint" type="fixed">
@@ -57,15 +59,29 @@
     <child link="coupling"/>
   </joint>
 
-  <link name="mid_camera_mount"/>
-  <joint name="camera_beam_lower_mid_camera_mount_joint" type="fixed">
-      <parent link="camera_beam_lower"/>
-      <child link="mid_camera_mount"/>
-      <origin xyz="0.08 -0.075 0.07" rpy="0 0 0"/>
+  <link name="camera_lower_right_mount"/>
+  <joint name="camera_beam_lower_camera_lower_right_mount_joint" type="fixed">
+    <parent link="camera_beam_lower"/>
+    <child link="camera_lower_right_mount"/>
+    <origin xyz="-0.00 ${-0.0215 + -$(arg camera_baseline) / 2} 0.09"
+            rpy="${-pi / 2} 0 ${math.atan2(($(arg camera_baseline) /2),$(arg camera_focal_depth))}"/>
   </joint>
 
-  <xacro:sensor_l515 name="stand_camera" parent="mid_camera_mount" use_nominal_extrinsics="true">
-      <origin xyz="0 0 0" rpy="0 0 0" /> <!-- z = 0.245 + 0.44 = 0.685   x=0.045+0.08=0.125-->
+  <link name="camera_lower_left_mount"/>
+  <joint name="camera_beam_lower_camera_lower_left_mount_joint" type="fixed">
+    <parent link="camera_beam_lower"/>
+    <child link="camera_lower_left_mount"/>
+    <!-- Link is centered on the optical frames. Slight offset in Y direction to compensate -->
+    <origin xyz="-0.00 ${-0.0215 + $(arg camera_baseline) / 2} 0.09"
+            rpy="${-pi / 2} 0 ${-math.atan2(($(arg camera_baseline) /2),$(arg camera_focal_depth))}"/>
+  </joint>
+
+  <xacro:sensor_l515 name="camera_lower_right" parent="camera_lower_right_mount" use_nominal_extrinsics="true">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </xacro:sensor_l515>
+
+  <xacro:sensor_l515 name="camera_lower_left" parent="camera_lower_left_mount" use_nominal_extrinsics="true">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
   </xacro:sensor_l515>
 
 </robot>
