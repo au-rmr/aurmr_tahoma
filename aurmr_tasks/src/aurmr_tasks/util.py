@@ -19,6 +19,7 @@ def all_close(goal, actual, tolerance):
                 return False
 
     elif type(goal) is geometry_msgs.msg.PoseStamped:
+        assert(goal.header.frame_id == actual.header.frame_id)
         return all_close(goal.pose, actual.pose, tolerance)
 
     elif type(goal) is geometry_msgs.msg.Pose:
@@ -31,3 +32,19 @@ def all_close(goal, actual, tolerance):
         return d <= tolerance and cos_phi_half >= cos(tolerance / 2.0)
 
     return True
+
+
+def pose_dist(goal, actual):
+    if type(goal) is geometry_msgs.msg.PoseStamped:
+        return pose_dist(goal.pose, actual.pose)
+
+    elif type(goal) is geometry_msgs.msg.Pose:
+        x0, y0, z0, qx0, qy0, qz0, qw0 = pose_to_list(actual)
+        x1, y1, z1, qx1, qy1, qz1, qw1 = pose_to_list(goal)
+        # Euclidean distance
+        d = dist((x1, y1, z1), (x0, y0, z0))
+        # phi = angle between orientations
+        cos_phi_half = fabs(qx0 * qx1 + qy0 * qy1 + qz0 * qz1 + qw0 * qw1)
+        return (d, cos_phi_half)
+    else:
+        return None

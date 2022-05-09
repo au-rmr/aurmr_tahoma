@@ -5,13 +5,14 @@ from control_msgs.msg import FollowJointTrajectoryAction
 from control_msgs.msg import FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectoryPoint
 import tf2_ros
+import tf2_geometry_msgs
 
 import actionlib
 import control_msgs.msg
 import trajectory_msgs.msg
 import rospy
 import tf
-from aurmr_tasks.util import all_close
+from aurmr_tasks.util import all_close, pose_dist
 from moveit_msgs.msg import MoveItErrorCodes, MoveGroupAction, DisplayTrajectory
 from moveit_msgs.srv import GetPositionIK, GetPositionIKRequest
 from tf.listener import TransformListener
@@ -90,6 +91,7 @@ class Tahoma:
         self.commander = moveit_commander.RobotCommander()
         self.scene = moveit_commander.PlanningSceneInterface(synchronous=True)
         self.move_group = moveit_commander.MoveGroupCommander(ARM_GROUP_NAME)
+        self.move_group.set_max_velocity_scaling_factor(.15)
         self.display_trajectory_publisher = rospy.Publisher(
             "/move_group/display_planned_path",
             DisplayTrajectory,
@@ -244,6 +246,16 @@ class Tahoma:
             string describing the error if an error occurred, else None.
         """
 
+        # FIXME: Hardcoded to the global frame that MoveIt will use for reporting current pose
+        transform = self.tf2_buffer.lookup_transform('base_link',
+                                       # source frame:
+                                       pose_stamped.header.frame_id,
+                                       # get the tf at the time the pose was valid
+                                       pose_stamped.header.stamp,
+                                       # wait for at most 1 second for transform, otherwise throw
+                                       rospy.Duration(1.0))
+
+        goal_in_base_link = tf2_geometry_msgs.do_transform_pose(pose_stamped, transform)
         self.move_group.set_pose_target(pose_stamped)
         plan = self.move_group.plan()[1]
 
@@ -266,7 +278,8 @@ class Tahoma:
         self.move_group.clear_pose_targets()
 
         current_pose = self.move_group.get_current_pose()
-        return all_close(pose_stamped, current_pose, 0.01)
+        rospy.loginfo("Pose dist:", pose_dist(pose_stamped, current_pose), pose_stamped.header.frame_id, current_pose.header.frame_id)
+        return all_close(goal_in_base_link, current_pose, 0.01)
 
     def straight_move_to_pose(self,
                               pose_stamped,
@@ -300,6 +313,7 @@ class Tahoma:
             waypoints, 0.01, jump_threshold, avoid_collisions  # waypoints to follow  # eef_step
         )
         if fraction < .9:
+            rospy.logwarn(f"Not moving in cartesian path. Only {fraction} waypoints reached")
             return False
         return self.move_group.execute(plan, wait=True)
 

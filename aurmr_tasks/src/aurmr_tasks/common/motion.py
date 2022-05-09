@@ -82,13 +82,19 @@ class MoveEndEffectorInLineInOut(State):
         self.robot = robot
 
     def execute(self, userdata):
-        # FIXME(nickswalker): This is hacked together for basic demonstration. Fix this method later
-        error = self.robot.straight_move_to_pose(None)
-        if error is None:
-            return "succeeded"
-        else:
-            print(error)
+        current = self.robot.move_group.get_current_pose().pose
+        current.position.x += .1
+        success = self.robot.straight_move_to_pose(current, avoid_collisions=False)
+        if not success:
             return "aborted"
+        rospy.sleep(1)
+        current = self.robot.move_group.get_current_pose().pose
+        current.position.x -= .1
+        success = self.robot.straight_move_to_pose(current, avoid_collisions=False)
+        if not success:
+            return "aborted"
+        else:
+            return "succeeded"
 
 
 class ClearCollisionGeometry(State):
@@ -156,22 +162,25 @@ class AddPodCollisionGeometry(State):
         self.robot = robot
 
     def execute(self, ud):
-        self.robot.scene.add_box("pod_top", PoseStamped(header=Header(frame_id="base_link"),
-                                                   pose=Pose(position=Point(x=1.35, y=0.14, z=1.88),
-                                                             orientation=I_QUAT)))
+        #FIXME: We should probably read this in from transforms or something
+        POD_SIZE = .9398
+        HALF_POD_SIZE = POD_SIZE / 2
+        self.robot.scene.add_box("pod_top", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                   pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.03),
+                                                             orientation=I_QUAT)), (POD_SIZE, POD_SIZE, 1.5))
 
-        self.robot.scene.add_box("pod_bottom", PoseStamped(header=Header(frame_id="base_link"),
-                                                      pose=Pose(position=Point(x=1.35, y=0.14, z=.68),
-                                                                orientation=I_QUAT)))
-        self.robot.scene.add_box("pod_left", PoseStamped(header=Header(frame_id="base_link"),
-                                                    pose=Pose(position=Point(x=1.1, y=.69, z=1.27),
+        self.robot.scene.add_box("pod_bottom", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=.68),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, 1))
+        self.robot.scene.add_box("pod_left", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                    pose=Pose(position=Point(x=.75, y=.25, z=1.27),
                                                               orientation=I_QUAT)), (.5, .5, .3))
-        self.robot.scene.add_box("pod_right", PoseStamped(header=Header(frame_id="base_link"),
-                                                     pose=Pose(position=Point(x=1.1, y=-.05, z=1.27),
+        self.robot.scene.add_box("pod_right", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                     pose=Pose(position=Point(x=.25, y=.25, z=1.27),
                                                                orientation=I_QUAT)), (.5, .5, .3))
-        self.robot.scene.add_box("tripod", PoseStamped(header=Header(frame_id="base_link"),
-                                                  pose=Pose(position=Point(x=-.3, y=0, z=.8),
-                                                            orientation=TRIPOD_ORIENTATION)), (.5, .5, 1))
+        self.robot.scene.add_box("camera_mount", PoseStamped(header=Header(frame_id="mid_camera_mount"),
+                                                     pose=Pose(position=Point(x=0, y=0, z=0),
+                                                               orientation=I_QUAT)), (.1, .1, .15))
         start = rospy.get_time()
         seconds = rospy.get_time()
         timeout = 50.0
