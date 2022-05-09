@@ -25,7 +25,7 @@
   <joint name="robot_plate_arm_base_link_joint" type="fixed">
     <parent link="robot_plate"/>
     <child link="arm_base_link"/>
-    <origin rpy="0 ${pi} ${1.5 * pi}" xyz="0 0.0 -0.01125"/>
+    <origin rpy="0 ${pi} ${1.5 * pi}" xyz="0 0.00175 -0.00885"/>
   </joint>
 
 
@@ -47,7 +47,7 @@
   </link>
 
   <joint name="coupling_link_gripper_robotiq_arg2f_base_link_joint" type="fixed">
-    <origin xyz="0 0 0.008" rpy="0 0 ${pi/2}"/>
+    <origin xyz="0 0 0.012" rpy="0 0 ${pi/2}"/>
     <parent link="coupling" />
     <child link="gripper_base_link" />
   </joint>
@@ -58,10 +58,10 @@
   </joint>
 
   <link name="mid_camera_mount"/>
-  <joint name="stand_brace_mid_camera_mount_joint" type="fixed">
-      <parent link="stand_brace"/>
+  <joint name="camera_beam_lower_mid_camera_mount_joint" type="fixed">
+      <parent link="camera_beam_lower"/>
       <child link="mid_camera_mount"/>
-      <origin xyz="0.1375 0.075 0.685" rpy="0 0 0"/>
+      <origin xyz="0.08 -0.075 0.07" rpy="0 0 0"/>
   </joint>
 
   <xacro:sensor_l515 name="stand_camera" parent="mid_camera_mount" use_nominal_extrinsics="true">

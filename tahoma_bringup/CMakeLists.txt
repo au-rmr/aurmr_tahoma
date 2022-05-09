@@ -3,11 +3,11 @@ project(tahoma_bringup)
 find_package(catkin REQUIRED)
 catkin_package()
 
-install(DIRECTORY launch/
-        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
+install(DIRECTORY config launch
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
-install(DIRECTORY config/
-        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/config)
+catkin_install_python(PROGRAMS scripts/fake_gripper_state
+        DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 catkin_add_env_hooks(${PROJECT_NAME} SHELLS sh DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/env-hooks)
 

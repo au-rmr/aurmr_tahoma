@@ -16,5 +16,13 @@
         <arg name="load_robot_description" value="false" />
     </include>
 
+    <include file="$(find tahoma_bringup)/launch/pod_bringup.launch">
+        <arg name="x" value=".69"/>
+        <arg name="y" value=".4125"/>
+        <arg name="yaw" value="-1.55"/>
+    </include>
+
+    <node name="fake_gripper_state" type="fake_gripper_state" pkg="tahoma_bringup" />
+
     <node name="rviz" pkg="rviz" type="rviz" required="true" args="-d $(find tahoma_description)/config/view_model.rviz"/>
 </launch>

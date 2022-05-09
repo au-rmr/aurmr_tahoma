@@ -223,7 +223,7 @@
     <joint name="stand_upright_camera_beam_lower_joint" type="fixed">
       <parent link="stand_upright"/>
       <child link="camera_beam_lower"/>
-      <origin rpy="0 0 0" xyz="-.128 0 0"/>
+      <origin rpy="0 0 0" xyz="-.128 0 .15"/>
     </joint>
 
     <joint name="stand_upright_robot_control_box_mount_joint" type="fixed">
@@ -241,7 +241,7 @@
     <joint name="stand_cantilever_joint" type="fixed">
       <parent link="stand_upright"/>
       <child link="cantilever"/>
-      <origin rpy="0 0 0" xyz=".0775 0  0.9475"/>
+      <origin rpy="0 0 0" xyz=".0775 0  0.9442"/>
     </joint>
 
     <joint name="cantilever_robot_plate_joint" type="fixed">
