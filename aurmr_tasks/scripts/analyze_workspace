@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+import random
+import std_msgs
+import visualization_msgs.msg
+
+import rospy
+
+from aurmr_tasks.common.tahoma import Tahoma
+
+import numpy as np
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
+from tf_conversions import transformations
+
+from aurmr_tasks.visualization import create_gripper_pose_markers
+
+
+def main():
+    rospy.loginfo('Getting robot resources')
+    rospy.init_node("analyze_workspace")
+    robot = Tahoma()
+
+    align_to_bin_orientation = transformations.quaternion_from_euler(-1.57, 0, 0)
+    align_to_bin_quat = Quaternion(x=align_to_bin_orientation[0], y=align_to_bin_orientation[1], z=align_to_bin_orientation[2], w=align_to_bin_orientation[3])
+    BIN_APPROACH_POSES = []
+    BIN_INNER_POSES = []
+    for i in range(4):
+        for letter in "abcdefghijklm":
+            frame_name = f"pod_bin_{i+1}{letter}"
+            BIN_APPROACH_POSES.append(PoseStamped(header=std_msgs.msg.Header(frame_id=frame_name), pose=Pose(position=Point(x=.125, y=-.12,z=.07), orientation=align_to_bin_quat)))
+            for j in range(10):
+                # Get some randomly offset poses in the bin to see if we'll be able to  reach the inside
+                perturbed_quat = [align_to_bin_quat.x, align_to_bin_quat.y, align_to_bin_quat.z, align_to_bin_quat.w] + np.random.uniform(-.2, .2, 4)
+                perturbed_quat /= np.linalg.norm(perturbed_quat)
+                perturbed_quat_msg = Quaternion(x=perturbed_quat[0], y=perturbed_quat[1], z=perturbed_quat[2], w=perturbed_quat[3])
+                BIN_INNER_POSES.append(PoseStamped(header=std_msgs.msg.Header(frame_id=frame_name), pose=Pose(position=Point(x=.125 + random.uniform(-.1, .1), y=random.uniform(-0,.1),z=.07 + random.uniform(0, .05)), orientation=perturbed_quat_msg)))
+    print("Determining approachable bins...")
+    reachability_pub = rospy.Publisher("~/reachability", visualization_msgs.msg.MarkerArray, queue_size=1, latch=True)
+    REACHABLE_BIN_APPROACHES = []
+    marker_colors = []
+    all_poses = BIN_APPROACH_POSES + BIN_INNER_POSES
+    for i, pose in enumerate(all_poses):
+        solution = robot.compute_ik(pose, rospy.Duration(.01))
+        if solution:
+            REACHABLE_BIN_APPROACHES.append(pose)
+            marker_colors.append((0, 1, 0))
+        else:
+            marker_colors.append((1, 0, 0))
+
+    reachability_pub.publish(create_gripper_pose_markers(all_poses, marker_colors))
+    print("Published visualization data. Spinning to keep topic open.")
+    rospy.spin()
+
+
+if __name__ == '__main__':
+    main()

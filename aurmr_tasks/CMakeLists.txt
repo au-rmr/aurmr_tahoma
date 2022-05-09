@@ -12,7 +12,7 @@ catkin_python_setup()
 catkin_package(
 )
 
-catkin_install_python(PROGRAMS scripts/pick
+catkin_install_python(PROGRAMS scripts/analyze_workspace scripts/pick
         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 # Lint Python modules for PEP8 compatibility

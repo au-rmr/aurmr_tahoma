@@ -3,8 +3,6 @@
   <xacro:include filename="$(find tahoma_description)/urdf/caster.xacro"/>
   <xacro:include filename="$(find tahoma_description)/urdf/light_panel.xacro"/>
   <xacro:macro name="stand">
-    <xacro:property name="M_PI" value="3.1415926535897931"/>
-    <xacro:property name="M_PI_2" value="1.57079632679489661923"/>
 
 
     <material name="blue_aluminum">
@@ -235,7 +233,7 @@
     <joint name="control_box_mount_control_box_joint" type="fixed">
       <parent link="control_box_mount"/>
       <child link="control_box"/>
-      <origin rpy="0.05 0 ${M_PI}" xyz="-.003 .1375 -0.13"/>
+      <origin rpy="0.05 0 ${pi}" xyz="-.003 .1375 -0.13"/>
     </joint>
 
     <joint name="stand_cantilever_joint" type="fixed">
@@ -276,13 +274,13 @@
     <joint name="stand_left_light_panel_joint" type="fixed">
       <parent link="stand_upright"/>
       <child link="left_light_panel"/>
-      <origin rpy="0 ${M_PI_2} 0" xyz="-.2625 .35 .25"/>
+      <origin rpy="0 ${pi / 2} 0" xyz="-.2625 .35 .25"/>
     </joint>
 
     <joint name="stand_left_right_panel_joint" type="fixed">
       <parent link="stand_upright"/>
       <child link="right_light_panel"/>
-      <origin rpy="0 ${M_PI_2} 0" xyz="-.2625 -.35 .25"/>
+      <origin rpy="0 ${pi / 2} 0" xyz="-.2625 -.35 .25"/>
     </joint>
   </xacro:macro>
 

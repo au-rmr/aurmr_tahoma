@@ -278,7 +278,7 @@ class Tahoma:
         self.move_group.clear_pose_targets()
 
         current_pose = self.move_group.get_current_pose()
-        rospy.loginfo("Pose dist:", pose_dist(pose_stamped, current_pose), pose_stamped.header.frame_id, current_pose.header.frame_id)
+        rospy.loginfo(f"Pose dist: {pose_dist(pose_stamped, current_pose)}, {pose_stamped.header.frame_id}, {current_pose.header.frame_id}")
         return all_close(goal_in_base_link, current_pose, 0.01)
 
     def straight_move_to_pose(self,
