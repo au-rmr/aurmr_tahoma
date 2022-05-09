@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="pod">
-  <xacro:macro name="pod" params="prefix">
+  <xacro:macro name="pod" params="prefix recipe_a">
     <xacro:arg name="prefix" default="pod_"/>
+    <xacro:arg name="recipe_a" default="[]"/>     <!-- bin heights in inches -->
     <xacro:property name="M_PI" value="3.1415926535897931"/>
     <xacro:property name="M_PI_2" value="1.57079632679489661923"/>
-    <xacro:property name="SIDE" value=".9398"/>     <!-- 37 in -->
+    <xacro:property name="SIDE" value="0.9144"/>     <!-- 36 in -->
     <xacro:property name="IN_TO_M" value="0.0254"/>
-    <!-- bin heights in inches -->
-    <xacro:property name="front_recipe" value="${[9,5.5,8,6,5,9,5,6,5,9,5,5.5,10.5]}"/>
+    <xacro:property name="FLAP_HEIGHT" value="${1 * IN_TO_M}"/> <!-- 1 inch -->
     <xacro:property name="alphabet" value="abcdefghijklmnopqrstuvwxyz"/>
 
     <material name="yellow_fabric">
@@ -18,10 +18,10 @@
     </material>
 
     <link name="${prefix}base_link">
-              <inertial>
-            <mass value="30.0" />
-            <inertia ixx="0.0002835" ixy="0.0" ixz="0.0" iyy="0.0002835" iyz="0.0" izz="0.000324"/>
-        </inertial>
+      <inertial>
+        <mass value="30.0"/>
+        <inertia ixx="0.0002835" ixy="0.0" ixz="0.0" iyy="0.0002835" iyz="0.0" izz="0.000324"/>
+      </inertial>
       <visual>
         <origin rpy="0 0 0" xyz=".4699 .4699 1.303"/>
         <geometry>
@@ -44,9 +44,9 @@
       <child link="${prefix}brace"/>
     </joint>
 
-      <link name="${prefix}fabric_base"/>
+    <link name="${prefix}fabric_base"/>
     <joint name="${prefix}brace_${prefix}fabric_base" type="fixed">
-      <origin xyz="0 0 .065"/>
+      <origin xyz="0.01 0.01 .045"/>
       <parent link="${prefix}brace"/>
       <child link="${prefix}fabric_base"/>
     </joint>
@@ -54,8 +54,8 @@
     <xacro:macro name="shifted_box" params="name width height length">
       <link name="${name}">
         <inertial>
-            <mass value="0.01" />
-            <inertia ixx="0.0002835" ixy="0.0" ixz="0.0" iyy="0.0002835" iyz="0.0" izz="0.000324"/>
+          <mass value="0.01"/>
+          <inertia ixx="0.0002835" ixy="0.0" ixz="0.0" iyy="0.0002835" iyz="0.0" izz="0.000324"/>
         </inertial>
         <visual>
           <origin xyz="${width / 2} ${height / 2} -${length / 2}"/>
@@ -84,6 +84,7 @@
       <xacro:shifted_box name="${bin_name}_right" width="${depth}" height="${height}" length="${thickness}"/>
       <xacro:shifted_box name="${bin_name}_top" width="${width}" height="${depth}" length="${thickness}"/>
       <xacro:shifted_box name="${bin_name}_back" width="${width}" height="${height}" length="${thickness}"/>
+      <xacro:shifted_box name="${bin_name}_flap" width="${width}" height="${FLAP_HEIGHT}" length="${thickness}"/>
 
       <joint name="${bin_name}_${bin_name}_bottom" type="fixed">
         <parent link="${bin_name}"/>
@@ -111,6 +112,11 @@
         <origin xyz="0 ${depth} 0" rpy="${M_PI_2} 0 0"/>
         <parent link="${bin_name}"/>
         <child link="${bin_name}_back"/>
+      </joint>
+      <joint name="${bin_name}_${bin_name}_flap" type="fixed">
+        <origin xyz="0 0 0" rpy="${M_PI_2} 0 0"/>
+        <parent link="${bin_name}"/>
+        <child link="${bin_name}_flap"/>
       </joint>
     </xacro:macro>
 
@@ -155,7 +161,7 @@
 
     </xacro:macro>
 
-    <xacro:shelf_stack prefix="${prefix}" parent="${prefix}fabric_base" recipe="${front_recipe}" width="${SIDE}"
+    <xacro:shelf_stack prefix="${prefix}" parent="${prefix}fabric_base" recipe="${recipe_a}" width="${SIDE}"
                        depth=".1524"/>
     <!-- Front left corner -->
     <!-- Layers, frame at bottom left of each bin -->

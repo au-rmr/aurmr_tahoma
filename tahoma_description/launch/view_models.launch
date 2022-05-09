@@ -1,23 +1,26 @@
 <launch>
-    <arg name="gui" default="True" />
-    <param name="robot_description" command="$(find xacro)/xacro '$(find tahoma_description)/robots/tahoma.xacro'" />
+  <arg name="gui" default="True"/>
+  <arg name="pod" default="1" doc="Suffix of pod to load. Leave empty or set to 'false' to turn off the pod."/>
+  <param name="robot_description" command="$(find xacro)/xacro '$(find tahoma_description)/robots/tahoma.xacro'"/>
 
-    <param name="pod1_description" command="$(find xacro)/xacro '$(find tahoma_description)/robots/pod1.xacro'" />
+  <node if="$(arg gui)" name="joint_state_publisher_gui" pkg="joint_state_publisher_gui"
+        type="joint_state_publisher_gui"/>
 
-    <node if="$(arg gui)" name="joint_state_publisher_gui" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui" />
+  <!-- send fake joint values -->
+  <node unless="$(arg gui)" name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
 
-    <!-- send fake joint values -->
-    <node unless="$(arg gui)" name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>
-    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
-
+  <group if="$(arg pod)">
+    <param name="pod_description"
+           command="$(find xacro)/xacro '$(find tahoma_description)/robots/pod$(arg pod).xacro'"/>
     <node name="pod_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
-        <remap from="robot_description" to="pod1_description"/>
-        <!-- This model isn't actually a robot, and doesn't have any moving joints that would need
-                states. robot_state_publisher will complain if it hears any, so this makes sure it doesn't.  -->
-        <remap from="joint_states" to="/dev/null" />
+      <remap from="robot_description" to="pod_description"/>
+      <!-- This model isn't actually a robot, and doesn't have any moving joints that would need
+              states. robot_state_publisher will complain if it hears any, so this makes sure it doesn't.  -->
+      <remap from="joint_states" to="/dev/null"/>
     </node>
 
     <node name="robot_to_pod1_transform" pkg="tf2_ros" type="static_transform_publisher" args=".85 .4 0  -1.5708 0 0 base_link pod_base_link"/>
 
-    <node name="rviz" pkg="rviz" type="rviz" required="true" args="-d $(find tahoma_description)/config/view_model.rviz"/>
+  <node name="rviz" pkg="rviz" type="rviz" required="true" args="-d $(find tahoma_description)/config/view_model.rviz"/>
 </launch>
