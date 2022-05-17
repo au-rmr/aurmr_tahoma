@@ -1,28 +1,25 @@
 <launch>
   <arg name="gui" default="True"/>
   <arg name="pod" default="1" doc="Suffix of pod to load. Leave empty or set to 'false' to turn off the pod."/>
-  <param name="robot_description" command="$(find xacro)/xacro '$(find tahoma_description)/robots/tahoma.xacro'"/>
+
+  <include file="$(find tahoma_description)/launch/load_tahoma.launch" />
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
 
   <node if="$(arg gui)" name="joint_state_publisher_gui" pkg="joint_state_publisher_gui"
         type="joint_state_publisher_gui"/>
 
   <!-- send fake joint values -->
   <node unless="$(arg gui)" name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>
-  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
 
-  <group if="$(arg pod)">
-    <param name="pod_description"
-           command="$(find xacro)/xacro '$(find tahoma_description)/robots/pod$(arg pod).xacro'"/>
-    <node name="pod_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
-      <remap from="robot_description" to="pod_description"/>
-      <!-- This model isn't actually a robot, and doesn't have any moving joints that would need
-              states. robot_state_publisher will complain if it hears any, so this makes sure it doesn't.  -->
-      <remap from="joint_states" to="/dev/null"/>
-    </node>
 
-    <node name="robot_to_pod_transform" pkg="tf2_ros" type="static_transform_publisher"
-          args=".65 .47 0 -1.5708 0 0 base_link pod_base_link"/>
+  <group if="$(eval pod > 0)">
+    <include file="$(find tahoma_description)/launch/load_pod.launch" />
+    <include file="$(find tahoma_description)/launch/pod_transform.launch" />
   </group>
+
+  <!-- These should override the nominal values from the URDF -->
+  <include file="$(find tahoma_description)/launch/camera_lower_right_transform.launch" />
+  <include file="$(find tahoma_description)/launch/camera_lower_left_transform.launch" />
 
   <node name="rviz" pkg="rviz" type="rviz" required="true" args="-d $(find tahoma_description)/config/view_model.rviz"/>
 </launch>

@@ -1,12 +1,13 @@
 <?xml version="1.0" ?>
 <launch>
     <arg name="gui" default="True" />
+    <arg name="pod_id" default="1" />
 
     <include file="$(find ur_robot_driver)/launch/ur16e_bringup.launch">
         <arg name="robot_ip" value="192.168.43.92" />
         <arg name="robot_description_file" value="$(find tahoma_description)/launch/load_tahoma.launch" />
         <arg name="controller_config_file" default="$(find tahoma_bringup)/config/controllers.yaml" />
-        <arg name="kinematics_config" value="$(find tahoma_description)/config/calibration.yaml" />
+        <arg name="kinematics_config" value="$(find tahoma_description)/config/arm_calibration.yaml" />
         <arg name="use_tool_communication" value="true" />
         <arg name="tool_voltage" value="24" />
     </include>
@@ -16,11 +17,12 @@
         <arg name="load_robot_description" value="false" />
     </include>
 
-    <include file="$(find tahoma_bringup)/launch/pod_bringup.launch">
-        <arg name="x" value=".69"/>
-        <arg name="y" value=".4125"/>
-        <arg name="yaw" value="-1.55"/>
-    </include>
+    <group if="$(eval pod_id > 0)">
+      <include file="$(find tahoma_description)/launch/load_pod.launch">
+        <arg name="id" value="$(arg pod_id)"/>
+      </include>
+      <include file="$(find tahoma_description)/launch/pod_transform.launch"/>
+    </group>
 
     <node name="fake_gripper_state" type="fake_gripper_state" pkg="tahoma_bringup" />
 
