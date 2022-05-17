@@ -3,8 +3,6 @@
   <xacro:macro name="pod" params="prefix recipe_a">
     <xacro:arg name="prefix" default="pod_"/>
     <xacro:arg name="recipe_a" default="[]"/>     <!-- bin heights in inches -->
-    <xacro:property name="M_PI" value="3.1415926535897931"/>
-    <xacro:property name="M_PI_2" value="1.57079632679489661923"/>
     <xacro:property name="SIDE" value="0.9144"/>     <!-- 36 in -->
     <xacro:property name="IN_TO_M" value="0.0254"/>
     <xacro:property name="FLAP_HEIGHT" value="${1 * IN_TO_M}"/> <!-- 1 inch -->
@@ -92,13 +90,13 @@
       </joint>
 
       <joint name="${bin_name}_${bin_name}_left" type="fixed">
-        <origin xyz="0 0 0" rpy="${M_PI_2} 0 ${M_PI_2} "/>
+        <origin xyz="0 0 0" rpy="${pi / 2} 0 ${pi / 2} "/>
         <parent link="${bin_name}"/>
         <child link="${bin_name}_left"/>
       </joint>
 
       <joint name="${bin_name}_${bin_name}_right" type="fixed">
-        <origin xyz="${width} 0 0" rpy="${M_PI_2} 0 ${M_PI_2} "/>
+        <origin xyz="${width} 0 0" rpy="${pi / 2} 0 ${pi / 2} "/>
         <parent link="${bin_name}"/>
         <child link="${bin_name}_right"/>
       </joint>
@@ -109,12 +107,12 @@
         <child link="${bin_name}_top"/>
       </joint>
       <joint name="${bin_name}_${bin_name}_back" type="fixed">
-        <origin xyz="0 ${depth} 0" rpy="${M_PI_2} 0 0"/>
+        <origin xyz="0 ${depth} 0" rpy="${pi / 2} 0 0"/>
         <parent link="${bin_name}"/>
         <child link="${bin_name}_back"/>
       </joint>
       <joint name="${bin_name}_${bin_name}_flap" type="fixed">
-        <origin xyz="0 0 0" rpy="${M_PI_2} 0 0"/>
+        <origin xyz="0 0 0" rpy="${pi / 2} 0 0"/>
         <parent link="${bin_name}"/>
         <child link="${bin_name}_flap"/>
       </joint>
