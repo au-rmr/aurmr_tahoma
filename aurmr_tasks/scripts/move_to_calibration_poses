@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+import math
+
+from sensor_msgs.msg import JointState
+from std_msgs.msg import Header
+import smach_ros
+
+from smach import State, StateMachine
+
+import rospy
+
+from aurmr_tasks.common.tahoma import Tahoma
+from aurmr_tasks.common import motion, perception
+from aurmr_tasks import interaction
+import aurmr_tasks.common.control_flow as cf
+import yaml
+import rospkg
+
+
+def main():
+    rospy.loginfo('Getting robot resources')
+    rospy.init_node("pick")
+    robot = Tahoma()
+    with open(rospkg.RosPack().get_path("tahoma_description") + "/config/camera_calibration_poses.yaml", "r") as stream:
+        try:
+            configs = yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            exit(1)
+
+    calibration_states = [JointState(name=configs["joint_names"], position=position) for position in configs["joint_values"]]
+    State.simulation = rospy.get_param("~simulation", False)
+
+    move_to_poses = StateMachine(["succeeded", "preempted", "aborted"],
+                           input_keys=[],
+                           output_keys=[])
+
+    with move_to_poses:
+        StateMachine.add_auto("CLEAR_SCENE", motion.ClearCollisionGeometry(robot), ["succeeded"])
+        StateMachine.add_auto("SETUP_COLLISION_SCENE", motion.AddPodCollisionGeometry(robot), ["succeeded"])
+        cf.inject_userdata_auto("LOAD_POSES", "positions", calibration_states)
+
+        StateMachine.add_auto("ASK_FOR_CALIBRATION_TARGET_LOAD", interaction.AskForHumanAction("Put the calibration target in the gripper."), ["succeeded"])
+        StateMachine.add_auto("ADD_CALIBRATION_COLLISION_OBJECT", motion.AddCalibrationTargetInHandCollision(robot), ["succeeded"])
+        StateMachine.add("SELECT_POSITION", cf.IterateList("positions", "position"),
+                         {"repeat": "MOVE_TO_POSITION", "done": "aborted"})
+
+        StateMachine.add_auto("MOVE_TO_POSITION", motion.MoveToJointAngles(robot), ["succeeded"])
+        StateMachine.add("ASK_TO_PROCEED",
+                              interaction.AskForHumanAction("Continue to next position"), {"succeeded": "SELECT_POSITION"})
+
+    rospy.loginfo('Beginning pick SM')
+
+    sis = smach_ros.IntrospectionServer('pick_sm', move_to_poses, '/pick')
+    sis.start()
+
+    outcome = move_to_poses.execute()
+
+    rospy.spin()
+    sis.stop()
+
+
+if __name__ == '__main__':
+    main()

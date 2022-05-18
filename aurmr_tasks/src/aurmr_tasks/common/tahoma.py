@@ -1,7 +1,7 @@
 import copy
 import sys
 
-from control_msgs.msg import FollowJointTrajectoryAction
+from control_msgs.msg import FollowJointTrajectoryAction, GripperCommandAction, GripperCommandGoal
 from control_msgs.msg import FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectoryPoint
 import tf2_ros
@@ -20,6 +20,7 @@ import moveit_commander
 
 ARM_GROUP_NAME = 'manipulator'
 JOINT_ACTION_SERVER = '/pos_joint_traj_controller/follow_joint_trajectory'
+GRIPPER_ACTION_SERVER = '/gripper_controller/gripper_cmd'
 MOVE_GROUP_ACTION_SERVER = 'move_group'
 TIME_FROM_START = 5
 
@@ -77,6 +78,7 @@ class Tahoma:
         # self.joint_states_subscriber = rospy.Subscriber('/joint_states', JointState, self.joint_states_callback)
         self._joint_traj_client = actionlib.SimpleActionClient(
             JOINT_ACTION_SERVER, control_msgs.msg.FollowJointTrajectoryAction)
+        self._gripper_client = actionlib.SimpleActionClient(GRIPPER_ACTION_SERVER, GripperCommandAction)
         server_reached = self._joint_traj_client.wait_for_server(rospy.Duration(10))
         if not server_reached:
             rospy.signal_shutdown('Unable to connect to arm action server. Timeout exceeded.')
@@ -86,7 +88,6 @@ class Tahoma:
         self._move_group_client.wait_for_server(rospy.Duration(10))
         self._compute_ik = rospy.ServiceProxy('compute_ik', GetPositionIK)
         self._tf_listener = TransformListener()
-        self.tuck_pose = [1.32, 1.40, -0.2, 1.72, 0.0, 1.66, 0.0]
         moveit_commander.roscpp_initialize(sys.argv)
         self.commander = moveit_commander.RobotCommander()
         self.scene = moveit_commander.PlanningSceneInterface(synchronous=True)
@@ -106,7 +107,19 @@ class Tahoma:
         self.eef_link = eef_link
         self.group_names = group_names
 
-    def move_to_pose(self, pose, return_before_done=False):
+    def open_gripper(self, return_before_done=False):
+        goal = GripperCommandGoal(position=0, max_effort=1)
+        self._gripper_client.send_goal(goal)
+        if not return_before_done:
+            self._gripper_client.wait_for_result()
+
+    def close_gripper(self, return_before_done=False):
+        goal = GripperCommandGoal(position=0.83, max_effort=1)
+        self._gripper_client.send_goal(goal)
+        if not return_before_done:
+            self._gripper_client.wait_for_result()
+
+    def move_to_pose_unsafe(self, pose, return_before_done=False):
         joint_names = [key for key in pose]
         point = JointTrajectoryPoint()
         point.time_from_start = rospy.Duration(0, 1)
@@ -125,25 +138,6 @@ class Tahoma:
             self._joint_traj_client.wait_for_result()
             # print('Received the following result:')
             # print(self.trajectory_client.get_result())
-
-    def tuck(self):
-        """
-        Uses motion-planning to tuck the arm within the footprint of the base.
-        :return: a string describing the error, or None if there was no error
-        """
-
-        return self.move_to_joint_goal(zip(ArmJoints.names(), self.tuck_pose))
-
-    def tuck_unsafe(self):
-        """
-        TUCKS BUT DOES NOT PREVENT SELF-COLLISIONS, WHICH ARE HIGHLY LIKELY.
-
-        Don't use this unless you have prior knowledge that the arm can safely return
-        to tucked from its current configuration. Most likely, you should only use this
-        method in simulation, where the arm can clip through the base without issue.
-        :return:
-        """
-        return self.move_to_joints(ArmJoints.from_list(self.tuck_pose))
 
     def move_to_joint_angles_unsafe(self, joint_state):
         """
@@ -164,7 +158,6 @@ class Tahoma:
                            joints,
                            allowed_planning_time=10.0,
                            execution_timeout=15.0,
-                           group_name=ARM_GROUP_NAME,
                            num_planning_attempts=1,
                            plan_only=False,
                            replan=False,
@@ -207,7 +200,7 @@ class Tahoma:
         current_joints = self.move_group.get_current_joint_values()
         return all_close(joints, current_joints, 0.01)
 
-    def move_to_pose_goal(self,
+    def move_to_pose(self,
                           pose_stamped,
                           allowed_planning_time=10.0,
                           execution_timeout=15.0,

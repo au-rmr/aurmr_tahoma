@@ -5,14 +5,13 @@ find_package(catkin REQUIRED COMPONENTS
     roslint
 )
 
-
 catkin_python_setup()
 
 
 catkin_package(
 )
 
-catkin_install_python(PROGRAMS scripts/analyze_workspace scripts/pick
+catkin_install_python(PROGRAMS scripts/analyze_workspace scripts/move_to_calibration_poses scripts/pick
         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 # Lint Python modules for PEP8 compatibility
