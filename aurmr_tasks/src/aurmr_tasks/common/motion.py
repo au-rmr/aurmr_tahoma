@@ -1,6 +1,7 @@
 import geometry_msgs.msg
 import rospy
 import std_msgs.msg
+from sensor_msgs.msg import JointState
 
 from smach import State
 
@@ -35,7 +36,10 @@ class MoveToJointAngles(State):
             target = self.position
         else:
             target = ud["position"]
-        rospy.loginfo("Moving to ", target.position)
+        to_log = target
+        if isinstance(target, JointState):
+            to_log = target.position
+        rospy.loginfo(f"Moving to {to_log}")
         self.robot.move_to_joint_angles(target,)
         return "succeeded"
 
