@@ -59,9 +59,9 @@ class AURMRGraspingNode():
                                             self.object_pointcloud['z']], axis=1)
 
 
-        ros_depth_image = rospy.wait_for_message('/stand_camera/aligned_depth_to_color/image_raw', Image, timeout=1)
-        ros_rgb_image = rospy.wait_for_message('/stand_camera/color/image_raw', Image, timeout=1)
-        ros_camera_info = rospy.wait_for_message('/stand_camera/color/camera_info', CameraInfo, timeout=1)
+        ros_depth_image = rospy.wait_for_message('/camera_lower_left/aligned_depth_to_color/image_raw', Image, timeout=1)
+        ros_rgb_image = rospy.wait_for_message('/camera_lower_left/color/image_raw', Image, timeout=1)
+        ros_camera_info = rospy.wait_for_message('/camera_lower_left/color/camera_info', CameraInfo, timeout=1)
 
         self.rgb_image = ros_numpy.numpify(ros_rgb_image)
         self.depth_image = ros_numpy.numpify(ros_depth_image)
