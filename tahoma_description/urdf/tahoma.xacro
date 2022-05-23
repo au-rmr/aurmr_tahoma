@@ -84,8 +84,8 @@
       <parent link="camera_beam_lower"/>
       <child link="camera_lower_left_mount"/>
       <!-- Link is centered on the optical frames. Slight offset in Y direction to compensate -->
-      <origin xyz="-0.00 ${-0.0215 + camera_baseline / 2} 0.09"
-              rpy="${-pi / 2} 0 ${-math.atan2((camera_baseline /2),camera_focal_depth)}"/>
+      <origin xyz="-0.00 0.02 0.11"
+              rpy="${pi / 2} 0 0"/>
     </joint>
     <joint name="camera_beam_lower_camera_lower_right_mount_joint" type="fixed">
       <parent link="camera_beam_lower"/>
