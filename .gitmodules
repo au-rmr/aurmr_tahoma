@@ -9,4 +9,4 @@
 	url = https://github.com/UniversalRobots/Universal_Robots_ROS_Driver.git
 [submodule "robotiq"]
 	path = robotiq
-	url = https://github.com/jr-robotics/robotiq.git
+	url = https://github.com/au-rmr/robotiq.git
