@@ -136,14 +136,19 @@ class AURMRPerceptionNode():
                 success=False,
                 message=f"Object {request.object_id} was not found in bin {bin_id}"
             )
+
+        # Convert to homogenous
+        points = self.points_table[bin_id][request.object_id]
+        points = np.vstack([points, np.ones(points.shape[1])]) 
         
         # Transform points to requested frame_id
-        camera_frame = f"{self.camera_name}_color_frame"
-        stamped_transform = self.tf2_buffer.lookup_transform(request.frame_id, camera_frame, rospy.Time(0), rospy.Duration(0.1))
-        camera_to_target_mat = ros_numpy.numpify(stamped_transform.transform)
-        points = self.points_table[bin_id][request.object_id]
-        points = np.vstack([points, np.ones(points.shape[1])]) # convert to homogenous
-        points = np.matmul(camera_to_target_mat, points)[0:3,:].T # apply transform
+        try:
+            camera_frame = f"{self.camera_name}_color_frame"
+            stamped_transform = self.tf2_buffer.lookup_transform(request.frame_id, camera_frame, rospy.Time(0), rospy.Duration(0.1))
+            camera_to_target_mat = ros_numpy.numpify(stamped_transform.transform)
+            points = np.matmul(camera_to_target_mat, points)[0:3,:].T # apply transform
+        except:
+            print('Skipping transform')
 
         # Convert numpy points to a pointcloud message
         itemsize = np.dtype(np.float32).itemsize
@@ -202,8 +207,10 @@ class AURMRPerceptionNode():
     
     def reset_callback(self, request):
         if not request.bin_id:
+            print('bin_id is required')
             return ResetBinResponse(success=False, message="bin_id is required")
         if self.rgb_image is None:
+            print('No images have been streamed')
             return ResetBinResponse(success=False, message="No images have been streamed")
         
         self.latest_captures[request.bin_id] = self.rgb_image
@@ -263,6 +270,7 @@ class AURMRPerceptionNode():
 
 if __name__ == '__main__':
     try:
+        print('Perception Node Started')
         parser = argparse.ArgumentParser(description='AURMR Perception Module')
         parser.add_argument('-v', '--viz', action='store_true', default=False)
         parser.add_argument('--diff_threshold', type=int, default=140)

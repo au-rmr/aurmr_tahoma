@@ -12,16 +12,18 @@ from collections import defaultdict
 from sensor_msgs.msg import Image, CameraInfo, PointField, PointCloud2
 from sensor_msgs.point_cloud2 import read_points
 from std_msgs.msg import Header
-# from aurmr_perception.srv import *
+from aurmr_perception.srv import *
 from geometry_msgs.msg import PoseStamped, Quaternion, Pose, Point
 from tf_conversions import transformations
 
 import sys
 import os
-os.chdir('/home/aurmr/workspaces/vatsa_ws/graspnet/pytorch_6dof-graspnet')
-sys.path.insert(1, '/home/aurmr/workspaces/vatsa_ws/graspnet/pytorch_6dof-graspnet')
-import grasp_estimator
+# os.chdir('/home/aurmr/workspaces/vatsa_ws/graspnet/pytorch_6dof-graspnet') # Location of graspnet
+# sys.path.insert(1, '/home/aurmr/workspaces/vatsa_ws/graspnet/pytorch_6dof-graspnet')
 
+os.chdir('/media/enigma/Amplitude/Study/UW/RSE_Lab/pytorch_6dof-graspnet') # Location of graspnet
+sys.path.insert(1, '/media/enigma/Amplitude/Study/UW/RSE_Lab/pytorch_6dof-graspnet')
+import grasp_estimator
 
 import glob
 import mayavi.mlab as mlab
@@ -40,6 +42,7 @@ class AURMRGraspingNode():
         self.rgb_image = None
         self.depth_image = None
         self.camera_info = None
+        self.object_pointcloud = None
 
     def make_graspnet_parser(self):
         parser = argparse.ArgumentParser(
@@ -129,7 +132,7 @@ class AURMRGraspingNode():
         image = self.rgb_image
 
         camera_intrinsics = self.camera_info
-        object_pc = np.float64(data['smoothed_object_pc'])
+        object_pc = np.float64(self.object_pointcloud)
 
         object_pc_x = -np.copy(object_pc[:, 2])
         object_pc_y = -np.copy(object_pc[:, 1])
@@ -182,6 +185,8 @@ class AURMRGraspingNode():
         # get the average of the pointclouds
 
         # self.pc_publish(request.points)
+
+        input('Shall I continue?')
 
         self.object_pointcloud = ros_numpy.numpify(request.points)
         self.object_pointcloud = np.stack([self.object_pointcloud['x'],

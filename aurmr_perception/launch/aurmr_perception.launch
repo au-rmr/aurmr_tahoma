@@ -2,9 +2,15 @@
 
   <include file="$(find realsense2_camera)/launch/rs_camera.launch">
     <arg name="align_depth"              value="true"/>
-    <arg name="camera"                   value="stand_camera" />
+    <arg name="camera"                   value="camera_lower_left" />
     <arg name="enable_pointcloud"         value="true"/>
   </include>
+
+  <rosparam>
+      /camera/motion_module/global_time_enabled: true
+      /camera/l500_depth_sensor/global_time_enabled: true
+      /camera/rgb_camera/global_time_enabled: true
+  </rosparam>
 
   <node name="aurmr_perception" pkg="aurmr_perception" type="aurmr_perception" output="screen">
   </node>

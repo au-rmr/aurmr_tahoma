@@ -1,0 +1,77 @@
+#!/usr/bin/env python
+
+import rospy
+import ros_numpy
+import numpy as np
+from sensor_msgs.msg import PointCloud2
+from sensor_msgs import point_cloud2
+from aurmr_perception.srv import *
+
+global arr_data
+
+class listener():
+    def __init__(self):
+        self.name = 'listener'
+        self.listenerData = None
+        
+
+    def callback_1(self, data):
+        self.listenerData = np.array([[1],[1],[1]])
+        pts = point_cloud2.read_points(data, field_names=("x", "y", "z"), skip_nans=True)
+        for p in pts:
+            self.listenerData = np.append(self.listenerData, np.array(p).reshape(-1,1), axis=1)
+        print(3)
+    
+
+    def callback(self, dummyData):
+        # get the average of the pointclouds
+        rospy.Subscriber("/camera/depth/color/points", PointCloud2, self.callback_1)
+        print(self.listenerData)
+
+        return PointCloudResponse(
+            points = self.listenerData,
+            dist_th = 0.05, 
+            pose_id = 0, 
+            grasp_id = 0
+        )
+
+    def main(self):
+        rospy.init_node('realsense_subscriber')
+        self.node_name = rospy.get_name()
+        rospy.loginfo("{0} started".format(self.node_name))
+
+        data = rospy.Subscriber("/camera/depth/color/points", PointCloud2, self.callback_1)
+
+        self.rate = 5.0
+        rate = rospy.Rate(self.rate)
+
+        while not rospy.is_shutdown():
+            rate.sleep()
+
+    def main_server(self):  
+        rospy.init_node('realsense_server')
+        self.node_name = rospy.get_name()
+        rospy.loginfo("{0} started".format(self.node_name))
+
+        print(2)
+        self.trigger_get_pointcloud = rospy.Service("realsense_server", PointCloud, self.callback)
+
+        self.rate = 5.0
+        rate = rospy.Rate(self.rate)
+
+        while not rospy.is_shutdown():
+            rate.sleep()
+
+
+if __name__ == '__main__':
+    try:
+        # parser = argparse.ArgumentParser(description='AURMR Perception Module')
+        # parser.add_argument('-v', '--viz', action='store_true', default=True)
+        # parser.add_argument('--diff_threshold', type=int, default=30)
+        # args, unknown = parser.parse_known_args()
+        node = listener()
+        print(1)
+        node.main_server()
+        rospy.spin()
+    except KeyboardInterrupt:
+        print('interrupt received, so shutting down')
