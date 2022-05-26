@@ -1,6 +1,32 @@
 import geometry_msgs.msg
 from math import pi, tau, dist, fabs, cos
+
+import rospy
 from moveit_commander.conversions import pose_to_list
+from smach import State, StateMachine
+
+
+class Formulator(State):
+    def __init__(self, template, input_keys, output_key):
+        State.__init__(self, outcomes=["succeeded", "aborted"], input_keys=input_keys,
+                       output_keys=[output_key])
+        self.template = template
+
+    def execute(self, ud):
+        try:
+            args = [ud[input_key] for input_key in self._input_keys]
+            ud[self._output_keys[0]] = self.template.format(*args)
+            return "succeeded"
+        except Exception as e:
+            # Catch any fumbled templates
+            rospy.logerr("Bad formulate_ud_str: {}, {}, {}".format(self.template, self._input_keys, self._output_keys))
+            return "aborted"
+
+
+def formulate_ud_str_auto(name, template, input_keys, output_key, transitions=None):
+    if transitions is None:
+        transitions = {}
+    StateMachine.add_auto(name, Formulator(template, input_keys, output_key), transitions=transitions)
 
 
 def all_close(goal, actual, tolerance):
@@ -19,7 +45,7 @@ def all_close(goal, actual, tolerance):
                 return False
 
     elif type(goal) is geometry_msgs.msg.PoseStamped:
-        assert(goal.header.frame_id == actual.header.frame_id)
+        assert (goal.header.frame_id == actual.header.frame_id)
         return all_close(goal.pose, actual.pose, tolerance)
 
     elif type(goal) is geometry_msgs.msg.Pose:

@@ -13,6 +13,7 @@ from aurmr_tasks import interaction
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from tf_conversions import transformations
 import aurmr_tasks.common.control_flow as cf
+from aurmr_tasks.pod import load_sm
 
 TARGET_BIN_ID = "001"
 TARGET_OBJECT_ID = "XYZ"
@@ -46,12 +47,8 @@ def main():
     with pick_sm:
         StateMachine.add_auto("CLEAR_SCENE", motion.ClearCollisionGeometry(robot), ["succeeded"])
         StateMachine.add_auto("SETUP_COLLISION_SCENE", motion.AddPodCollisionGeometry(robot), ["succeeded"])
-        cf.inject_userdata_auto("LOAD_TARGET_BIN_ID", "target_bin_id", TARGET_BIN_ID)
-        cf.inject_userdata_auto("LOAD_TARGET_OBJECT_ID", "target_object_id", TARGET_OBJECT_ID)
         StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, HIDE_ANGLES), ["succeeded"])
-        StateMachine.add_auto("PRE_PERCEIVE", perception.CaptureEmptyBin(), ["succeeded"])
-        StateMachine.add_auto("ASK_FOR_BIN_LOAD", interaction.AskForHumanAction("Load bin 2f with the bottle"), ["succeeded"])
-        StateMachine.add_auto("POST_PERCEIVE", perception.CaptureObject(), ["succeeded"])
+        StateMachine.add_auto("LOAD_POD", load_sm([["2f", "bottle"]]), ["succeeded"])
         StateMachine.add_auto("GET_GRASP_POSE", perception.GetGraspPose(), ["succeeded"])
         StateMachine.add_auto("REMAP_GRASP_POSE", cf.input_to_output("grasp_pose", "pose"), ["succeeded"])
         # StateMachine.add_auto("MOVE_TO_BIN_APPROACH", motion.MoveEndEffectorToPose(robot, BIN_APPROACH_POSE), ["succeeded"], {"aborted": "MOVE_TO_BIN_APPROACH"})
