@@ -55,7 +55,7 @@ class CaptureObject(State):
 
 
 class GetGraspPose(State):
-    def __init__(self, frame_id='stand_camera_link', distance_threshold=.25):
+    def __init__(self, frame_id='camera_lower_left_link', distance_threshold=.25):
         State.__init__(
             self,
             input_keys=['target_bin_id', 'target_object_id'],
