@@ -1,0 +1,8 @@
+<launch>
+  <!-- Launch an example that sends commands via C++ API. -->
+
+  <node name="servo_server" pkg="moveit_servo" type="servo_server" output="screen" >
+    <rosparam  command="load" file="$(find tahoma_moveit_config)/config/servo.yaml" />
+  </node>
+
+</launch>
