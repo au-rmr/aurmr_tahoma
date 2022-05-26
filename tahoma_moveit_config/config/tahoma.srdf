@@ -45,18 +45,18 @@
     <disable_collisions link1="arm_wrist_2_link" link2="arm_wrist_3_link" reason="Adjacent" />
     <disable_collisions link1="arm_wrist_3_link" link2="coupling" reason="Adjacent" />
     <disable_collisions link1="coupling" link2="gripper_robotiq_arg2f_base_link" reason="Adjacent" />
-    <disable_collisions link1="gripper_right_outer_finger" link2="gripper_right_outer_knuckle" reason="Adjacent" />
-    <disable_collisions link1="gripper_left_outer_finger" link2="gripper_left_outer_knuckle" reason="Adjacent" />
-    <disable_collisions link1="gripper_right_inner_finger" link2="gripper_right_inner_finger_pad" reason="Adjacent" />
+    <disable_collisions link1="gripper_right_bar" link2="gripper_right_outer_knuckle" reason="Adjacent" />
+    <disable_collisions link1="gripper_left_bar" link2="gripper_left_outer_knuckle" reason="Adjacent" />
+    <!-- We've turned these off in the model for now -->
+    <!--disable_collisions link1="gripper_right_distal_phalanx" link2="gripper_right_inner_finger_pad" reason="Adjacent" /-->
+    <!--disable_collisions link1="gripper_left_distal_phalanx" link2="gripper_left_inner_finger_pad" reason="Adjacent" /-->
+    <disable_collisions link1="gripper_right_distal_phalanx" link2="gripper_right_bar" reason="Adjacent" />
+    <disable_collisions link1="gripper_left_distal_phalanx" link2="gripper_left_bar" reason="Adjacent" />
+    <disable_collisions link1="gripper_right_proximal_phalanx" link2="gripper_right_distal_phalanx" reason="Adjacent" />
+    <disable_collisions link1="gripper_left_proximal_phalanx" link2="gripper_left_distal_phalanx" reason="Adjacent" />
 
-    <disable_collisions link1="gripper_left_inner_finger" link2="gripper_left_inner_finger_pad" reason="Adjacent" />
-    <disable_collisions link1="gripper_right_inner_finger" link2="gripper_right_outer_finger" reason="Adjacent" />
-    <disable_collisions link1="gripper_left_inner_finger" link2="gripper_left_outer_finger" reason="Adjacent" />
-    <disable_collisions link1="gripper_right_inner_knuckle" link2="gripper_right_inner_finger" reason="Adjacent" />
-    <disable_collisions link1="gripper_left_inner_knuckle" link2="gripper_left_inner_finger" reason="Adjacent" />
-
-    <disable_collisions link1="gripper_robotiq_arg2f_base_link" link2="gripper_right_inner_knuckle" reason="Adjacent" />
-    <disable_collisions link1="gripper_robotiq_arg2f_base_link" link2="gripper_left_inner_knuckle" reason="Adjacent" />
+    <disable_collisions link1="gripper_robotiq_arg2f_base_link" link2="gripper_right_proximal_phalanx" reason="Adjacent" />
+    <disable_collisions link1="gripper_robotiq_arg2f_base_link" link2="gripper_left_proximal_phalanx" reason="Adjacent" />
     <disable_collisions link1="gripper_robotiq_arg2f_base_link" link2="gripper_right_outer_knuckle" reason="Adjacent" />
     <disable_collisions link1="gripper_robotiq_arg2f_base_link" link2="gripper_left_outer_knuckle" reason="Adjacent" />
 
