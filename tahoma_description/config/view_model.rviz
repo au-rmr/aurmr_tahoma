@@ -3330,7 +3330,7 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
       Name: Pod
-      Robot Description: pod1_description
+      Robot Description: pod_description
       TF Prefix: ""
       Update Interval: 0
       Value: true
