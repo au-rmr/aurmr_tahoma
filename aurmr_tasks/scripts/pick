@@ -19,8 +19,7 @@ TARGET_BIN_ID = "001"
 TARGET_OBJECT_ID = "XYZ"
 
 DEG_TO_RAD = 2.0 * math.pi / 360.
-#HIDE_ANGLES = [-180,141,-101,272,-279,270]
-HIDE_ANGLES = [-183,-207,39,168,-183,268]
+HIDE_ANGLES = [4,31,-25,-44,0,37]
 TOTE_APPROACH_ANGLES = [-182,-78,40,306,-270,270]
 
 HIDE_ANGLES = [DEG_TO_RAD * ang for ang in HIDE_ANGLES]
@@ -40,18 +39,17 @@ def main():
 
     State.simulation = rospy.get_param("~simulation", False)
 
-    pick_sm = StateMachine(["succeeded", "preempted", "aborted"],
-                           input_keys=[],
-                           output_keys=[])
+    pick_sm = StateMachine(["succeeded", "preempted", "aborted"], input_keys=[], output_keys=[])
 
+    picks = [["2f", "bottle"]]
     with pick_sm:
-        StateMachine.add_auto("CLEAR_SCENE", motion.ClearCollisionGeometry(robot), ["succeeded"])
-        StateMachine.add_auto("SETUP_COLLISION_SCENE", motion.AddPodCollisionGeometry(robot), ["succeeded"])
-        StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, HIDE_ANGLES), ["succeeded"])
-        StateMachine.add_auto("LOAD_POD", load_sm([["2f", "bottle"]]), ["succeeded"])
+        cf.inject_userdata_auto("LOAD_PICKS", "picks", picks)
+
+        StateMachine.add("ITERATE_STOWS", cf.IterateList("picks", "pick"),
+                         {"repeat": "SPLAT_PICK", "done": "succeeded"})
+        cf.splat_auto("SPLAT_PICK", "pick", ["target_bin_id", "target_object_id"])
         StateMachine.add_auto("GET_GRASP_POSE", perception.GetGraspPose(), ["succeeded"])
         StateMachine.add_auto("REMAP_GRASP_POSE", cf.input_to_output("grasp_pose", "pose"), ["succeeded"])
-        # StateMachine.add_auto("MOVE_TO_BIN_APPROACH", motion.MoveEndEffectorToPose(robot, BIN_APPROACH_POSE), ["succeeded"], {"aborted": "MOVE_TO_BIN_APPROACH"})
         StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPose(robot), ["succeeded"])
         StateMachine.add_auto("ASK_FOR_GRIPPER_OPEN_TO_GRASP",
                               interaction.AskForHumanAction("Open the gripper using the teach pendant"), ["succeeded"])
@@ -65,12 +63,25 @@ def main():
         StateMachine.add_auto("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE",
                              interaction.AskForHumanAction("Open the gripper using the teach pendant"), ["succeeded"])
 
+    stow_and_pick_sm = StateMachine(["succeeded", "preempted", "aborted"],
+                           input_keys=[],
+                           output_keys=[])
+
+    with stow_and_pick_sm:
+        StateMachine.add_auto("CLEAR_SCENE", motion.ClearCollisionGeometry(robot), ["succeeded"])
+        StateMachine.add_auto("SETUP_COLLISION_SCENE", motion.AddPodCollisionGeometry(robot), ["succeeded"])
+        StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, HIDE_ANGLES), ["succeeded"])
+        StateMachine.add_auto("LOAD_POD", load_sm([["2f", "bottle"]]), ["succeeded"])
+
+        StateMachine.add_auto("PICK", pick_sm, ["succeeded"])
+
+
     rospy.loginfo('Beginning pick SM')
 
-    sis = smach_ros.IntrospectionServer('pick_sm', pick_sm, '/pick')
+    sis = smach_ros.IntrospectionServer('pick_sm', stow_and_pick_sm, '/pick')
     sis.start()
 
-    outcome = pick_sm.execute()
+    outcome = stow_and_pick_sm.execute()
 
     rospy.spin()
     sis.stop()

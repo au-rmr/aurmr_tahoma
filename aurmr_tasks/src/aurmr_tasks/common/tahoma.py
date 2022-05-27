@@ -239,8 +239,7 @@ class Tahoma:
             string describing the error if an error occurred, else None.
         """
 
-        # FIXME: Hardcoded to the global frame that MoveIt will use for reporting current pose
-        transform = self.tf2_buffer.lookup_transform('base_link',
+        transform = self.tf2_buffer.lookup_transform(self.move_group.get_planning_frame(),
                                        # source frame:
                                        pose_stamped.header.frame_id,
                                        # get the tf at the time the pose was valid
@@ -248,7 +247,7 @@ class Tahoma:
                                        # wait for at most 1 second for transform, otherwise throw
                                        rospy.Duration(1.0))
 
-        goal_in_base_link = tf2_geometry_msgs.do_transform_pose(pose_stamped, transform)
+        goal_in_planning_frame = tf2_geometry_msgs.do_transform_pose(pose_stamped, transform)
         self.move_group.set_pose_target(pose_stamped)
         plan = self.move_group.plan()[1]
 
@@ -271,8 +270,8 @@ class Tahoma:
         self.move_group.clear_pose_targets()
 
         current_pose = self.move_group.get_current_pose()
-        rospy.loginfo(f"Pose dist: {pose_dist(pose_stamped, current_pose)}, {pose_stamped.header.frame_id}, {current_pose.header.frame_id}")
-        return all_close(goal_in_base_link, current_pose, 0.01)
+        rospy.loginfo(f"Pose dist: {pose_dist(goal_in_planning_frame, current_pose)}")
+        return all_close(goal_in_planning_frame, current_pose, 0.01)
 
     def straight_move_to_pose(self,
                               pose_stamped,

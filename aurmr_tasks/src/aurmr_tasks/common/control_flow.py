@@ -81,10 +81,10 @@ class Splat(smach.State):
         smach.State.__init__(self, outcomes=['succeeded'], input_keys=[input_key], output_keys=output_keys)
 
     def execute(self, userdata):
-        input_key = self._input_keys[0]
+        input_key = list(self._input_keys)[0]
         in_data = userdata[input_key]
-        for output_key in self._output_keys():
-            userdata[output_key] = userdata[input_key]
+        for output_key, data in zip(self._output_keys, in_data):
+            userdata[output_key] = data
         return 'succeeded'
 
 
