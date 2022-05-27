@@ -31,6 +31,7 @@ from utils.visualization_utils import *
 import mayavi.mlab as mlab
 from utils import utils
 from data import DataLoader
+import open3d as o3d
 
 
 class AURMRGraspingNode():
@@ -45,20 +46,88 @@ class AURMRGraspingNode():
         self.object_pointcloud = None
         self.estimator = estimator
 
-    
+    def display_inlier_outlier(self, cloud, ind):
+        inlier_cloud = cloud.select_by_index(ind)
+        outlier_cloud = cloud.select_by_index(ind, invert=True)
+
+        print("Showing outliers (red) and inliers (gray): ")
+        outlier_cloud.paint_uniform_color([1, 0, 0])
+        inlier_cloud.paint_uniform_color([0.8, 0.8, 0.8])
+        o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
+
+    def filter_pointcloud(self):
+        satisfied = 'n'
+        nb_points=450
+        radius=0.015
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(self.object_pointcloud)
+
+        while satisfied == 'n':
+            cl, ind = pcd.remove_radius_outlier(nb_points, radius)
+            self.display_inlier_outlier(pcd, ind)
+            satisfied = input('Satisfied with the pointcloud filtering? (y/n)')
+            if satisfied == 'n':
+                nb_points = int(input('Enter new value of nb_points (default value = 450): '))
+                radius = float(input('Enter new value of radius (default value = 0.015): '))
+
+        self.object_pointcloud = np.asarray(cl.points)
 
 
-    def filterGrasps(self, grasps, grasp_scores):
+    def filter_grasps(self, grasps, grasp_scores):
         filtered_grasps = []
         filtered_scores = []
         for grasp, grasp_score in zip(grasps, grasp_scores):
             euler_grasp = transformations.euler_from_matrix(grasp[0:3, 0:3])
-            norm_euler_grasp = np.linalg.norm(euler_grasp[0:1])  # Taking only x and y angles
+            norm_euler_grasp = np.linalg.norm(euler_grasp[1:2])  # Taking only y and z angles and ignoring rot along x axis
             if norm_euler_grasp < 1:
                 filtered_grasps.append(grasp)
                 filtered_scores.append(grasp_score)
             # print(norm_euler_grasp)
         return filtered_grasps, filtered_scores
+
+    def visualize_graspnet(self):
+        np.nan_to_num(self.depth_image, copy=False)
+        mask = np.where(np.logical_or(self.depth_image == 0, self.depth_image > 1.5))
+        self.depth_image[mask] = np.nan
+
+        # depth[0:60,:] = np.nan
+        # depth[660:720,:] = np.nan
+        # depth[:,0:200] = np.nan
+        # depth[:,1000:1280] = np.nan
+        
+        pc, selection = backproject(self.depth_image,
+                                    self.camera_info,
+                                    return_finite_depth=True,
+                                    return_selection=True)
+        pc_colors = self.rgb_image.copy()
+        pc_colors = np.reshape(pc_colors, [-1, 3])
+        pc_colors = pc_colors[selection, :]
+        print(pc.shape)
+        print(pc_colors.shape)
+        print('pc:\n',pc)
+        # Smoothed pc comes from averaging the depth for 10 frames and removing
+        # the pixels with jittery depth between those 10 frames.
+        input('Start Graspnet?')
+        generated_grasps, generated_scores = estimator.generate_and_refine_grasps(object_pc)
+        
+        # print('generated_scores', generated_scores, type(generated_scores))
+        mlab.figure(bgcolor=(1, 1, 1))
+
+        sorted_grasp_index = sorted(range(len(generated_scores)), key=generated_scores.__getitem__)
+        sorted_generated_grasps = [generated_grasps[i] for i in reversed(sorted_grasp_index)]
+        sorted_generated_scores = [generated_scores[i] for i in reversed(sorted_grasp_index)]
+
+        # print(sorted_generated_grasps, sorted_generated_grasps[0].shape)
+        # print(sorted_generated_scores)
+
+        filtered_grasps, filtered_scores = filterGrasps(sorted_generated_grasps, sorted_generated_scores)
+
+        draw_scene(
+            pc,
+            pc_color=pc_colors,
+            grasps=filtered_grasps,
+            grasp_scores=filtered_scores,
+        )
 
     def graspnet(self):
         # Depending on your numpy version you may need to change allow_pickle
@@ -70,18 +139,18 @@ class AURMRGraspingNode():
 
         camera_intrinsics = self.camera_info
         object_pc = np.float64(self.object_pointcloud)
-
+        '''
         object_pc_x = -np.copy(object_pc[:, 2])
         object_pc_y = -np.copy(object_pc[:, 1])
         object_pc_z = np.copy(object_pc[:, 0])
 
         object_pc[:, 0] = object_pc_y
         object_pc[:, 1] = object_pc_x
-        object_pc[:, 2] = object_pc_z
+        object_pc[:, 2] = object_pc_z'''
         
         generated_grasps, generated_scores = self.estimator.generate_and_refine_grasps(object_pc)
 
-        filtered_grasps, filtered_scores = self.filterGrasps(generated_grasps, generated_scores)
+        filtered_grasps, filtered_scores = self.filter_grasps(generated_grasps, generated_scores)
 
         sorted_grasp_index = sorted(range(len(filtered_scores)), key=filtered_scores.__getitem__)
         sorted_generated_grasps = [filtered_grasps[i] for i in reversed(sorted_grasp_index)]
@@ -94,21 +163,23 @@ class AURMRGraspingNode():
         a_list.append(True)
 
     def pc_publish(self, pts):
-        pub = rospy.Publisher('ObjectPC', PointCloud2, queue_size=10)
+        pub_opc = rospy.Publisher('ObjectPC', PointCloud2, queue_size=10)
         rate = rospy.Rate(1)
         a_list = []
         th.Thread(target=self.key_capture_thread, args=(), name='key_capture_thread', daemon=True).start()
         while not a_list:
-            pub.publish(pts)
+            pub_opc.publish(pts)
             rate.sleep()
 
-    def pose_publish(self, pose_stamped):
+    def pose_publish(self, pose_stamped, pts):
         pub = rospy.Publisher('GraspPose', PoseStamped, queue_size=10)
+        pub_opc = rospy.Publisher('ObjectPC', PointCloud2, queue_size=10)
         rate = rospy.Rate(1)
         a_list = []
         th.Thread(target=self.key_capture_thread, args=(), name='key_capture_thread', daemon=True).start()
         while not a_list:
             pub.publish(pose_stamped)
+            pub_opc.publish(pts)
             rate.sleep()
 
     def save_points(self):
@@ -128,6 +199,7 @@ class AURMRGraspingNode():
                                             self.object_pointcloud['y'],
                                             self.object_pointcloud['z']], axis=1)
 
+        self.filter_pointcloud()
 
         ros_depth_image = rospy.wait_for_message('/camera_lower_left/aligned_depth_to_color/image_raw', Image, timeout=1)
         ros_rgb_image = rospy.wait_for_message('/camera_lower_left/color/image_raw', Image, timeout=1)
@@ -167,8 +239,9 @@ class AURMRGraspingNode():
 
         print('Running-Graspnet')
         grasp_pose_se3 = self.graspnet()
+        print('Graspnet ran successfully.')
 
-        grasp_point = Point(x=grasp_pose_se3[3,0], y=grasp_pose_se3[3,1], z=grasp_pose_se3[3,2])
+        grasp_point = Point(x=grasp_pose_se3[0,3], y=grasp_pose_se3[1,3], z=grasp_pose_se3[2,3])
 
         grasp_orientation_quat = transformations.quaternion_from_matrix(grasp_pose_se3)
         grasp_orientation = Quaternion(x=grasp_orientation_quat[0], y=grasp_orientation_quat[1],
@@ -180,7 +253,7 @@ class AURMRGraspingNode():
         grasp_pose_stamped = PoseStamped(header=request.points.header, 
                                 pose=grasp_pose)
 
-        # self.pose_publish(grasp_pose_stamped)
+        self.pose_publish(grasp_pose_stamped, request.points)
 
         return GraspPoseResponse(success=True, message=f"Grasping Pose has been set", # The function name will be different
                                 pose = grasp_pose_stamped,
