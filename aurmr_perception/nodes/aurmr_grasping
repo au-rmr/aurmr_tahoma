@@ -28,7 +28,6 @@ import grasp_estimator
 import glob
 import mayavi.mlab as mlab
 from utils.visualization_utils import *
-import mayavi.mlab as mlab
 from utils import utils
 from data import DataLoader
 import open3d as o3d
@@ -45,6 +44,8 @@ class AURMRGraspingNode():
         self.camera_info = None
         self.object_pointcloud = None
         self.estimator = estimator
+        self.sorted_generated_grasps = None
+        self.sorted_generated_scores = None
 
     def display_inlier_outlier(self, cloud, ind):
         inlier_cloud = cloud.select_by_index(ind)
@@ -78,55 +79,78 @@ class AURMRGraspingNode():
         filtered_scores = []
         for grasp, grasp_score in zip(grasps, grasp_scores):
             euler_grasp = transformations.euler_from_matrix(grasp[0:3, 0:3])
-            norm_euler_grasp = np.linalg.norm(euler_grasp[1:2])  # Taking only y and z angles and ignoring rot along x axis
-            if norm_euler_grasp < 1:
+            norm_euler_grasp = np.linalg.norm(euler_grasp[0:1])  # Taking only y and z angles and ignoring rot along x axis
+            if norm_euler_grasp < 0.5:
+                # print(grasp)
                 filtered_grasps.append(grasp)
                 filtered_scores.append(grasp_score)
             # print(norm_euler_grasp)
         return filtered_grasps, filtered_scores
+    
+    def backproject(self, depth_cv,
+                intrinsic_matrix,
+                return_finite_depth=True,
+                return_selection=False):
+
+        depth = depth_cv.astype(np.float32, copy=True)
+
+        # get intrinsic matrix
+        K = intrinsic_matrix
+        Kinv = np.linalg.inv(K)
+
+        # compute the 3D points
+        width = depth.shape[1]
+        height = depth.shape[0]
+
+        # construct the 2D points matrix
+        y, z = np.meshgrid(np.arange(width), np.arange(height))
+        ones = np.ones((height, width), dtype=np.float32)
+        x2d = np.stack((ones, y, z), axis=2).reshape(width * height, 3)
+
+        # backprojection
+        R = np.dot(Kinv, x2d.transpose())
+
+        # compute the 3D points
+        X = np.multiply(np.tile(depth.reshape(1, width * height), (3, 1)), R)
+        X = np.array(X).transpose()
+        if return_finite_depth:
+            selection = np.isfinite(X[:, 0])
+            X = X[selection, :]
+
+        if return_selection:
+            return X, selection
+
+        return X
 
     def visualize_graspnet(self):
+        # self.depth_image[self.depth_image == 0 or self.depth_image > 1] = np.nan
+
         np.nan_to_num(self.depth_image, copy=False)
         mask = np.where(np.logical_or(self.depth_image == 0, self.depth_image > 1.5))
+        print('mask', mask)
         self.depth_image[mask] = np.nan
-
-        # depth[0:60,:] = np.nan
-        # depth[660:720,:] = np.nan
-        # depth[:,0:200] = np.nan
-        # depth[:,1000:1280] = np.nan
         
-        pc, selection = backproject(self.depth_image,
+        pc, selection = self.backproject(self.depth_image,
                                     self.camera_info,
                                     return_finite_depth=True,
                                     return_selection=True)
         pc_colors = self.rgb_image.copy()
         pc_colors = np.reshape(pc_colors, [-1, 3])
         pc_colors = pc_colors[selection, :]
-        print(pc.shape)
-        print(pc_colors.shape)
-        print('pc:\n',pc)
-        # Smoothed pc comes from averaging the depth for 10 frames and removing
-        # the pixels with jittery depth between those 10 frames.
-        input('Start Graspnet?')
-        generated_grasps, generated_scores = estimator.generate_and_refine_grasps(object_pc)
-        
-        # print('generated_scores', generated_scores, type(generated_scores))
-        mlab.figure(bgcolor=(1, 1, 1))
 
-        sorted_grasp_index = sorted(range(len(generated_scores)), key=generated_scores.__getitem__)
-        sorted_generated_grasps = [generated_grasps[i] for i in reversed(sorted_grasp_index)]
-        sorted_generated_scores = [generated_scores[i] for i in reversed(sorted_grasp_index)]
+        print('Opening mlab figure')
+
+        mlab.figure(bgcolor=(1, 1, 1))
 
         # print(sorted_generated_grasps, sorted_generated_grasps[0].shape)
         # print(sorted_generated_scores)
 
-        filtered_grasps, filtered_scores = filterGrasps(sorted_generated_grasps, sorted_generated_scores)
-
+        print('Drawing grasp scene')
         draw_scene(
             pc,
             pc_color=pc_colors,
-            grasps=filtered_grasps,
-            grasp_scores=filtered_scores,
+            grasps=self.sorted_generated_grasps,
+            grasp_scores=self.sorted_generated_scores,
         )
 
     def graspnet(self):
@@ -134,29 +158,39 @@ class AURMRGraspingNode():
         # from True to False.
         # input('Extracting depth')
         depth_scale_factor = 0.001
-        depth = self.depth_image * depth_scale_factor
-        image = self.rgb_image
+        self.depth_image = self.depth_image * depth_scale_factor
+        self.object_pointcloud = np.float64(self.object_pointcloud)
 
-        camera_intrinsics = self.camera_info
-        object_pc = np.float64(self.object_pointcloud)
-        '''
-        object_pc_x = -np.copy(object_pc[:, 2])
-        object_pc_y = -np.copy(object_pc[:, 1])
-        object_pc_z = np.copy(object_pc[:, 0])
+        # 90 degree yaw and 90 degree pitch
+        transformation_matrix = np.array([[0, -1, 0, 0],
+                                        [0, 0, -1, 0],
+                                        [1, 0, 0, 0],
+                                        [0, 0, 0, 1]])
 
-        object_pc[:, 0] = object_pc_y
-        object_pc[:, 1] = object_pc_x
-        object_pc[:, 2] = object_pc_z'''
-        
+        object_pc = np.vstack([self.object_pointcloud.T, np.ones(self.object_pointcloud.shape[0])])
+        object_pc = np.matmul(transformation_matrix, object_pc)[0:3,:].T
+
         generated_grasps, generated_scores = self.estimator.generate_and_refine_grasps(object_pc)
 
         filtered_grasps, filtered_scores = self.filter_grasps(generated_grasps, generated_scores)
 
         sorted_grasp_index = sorted(range(len(filtered_scores)), key=filtered_scores.__getitem__)
-        sorted_generated_grasps = [filtered_grasps[i] for i in reversed(sorted_grasp_index)]
-        sorted_generated_scores = [filtered_scores[i] for i in reversed(sorted_grasp_index)]
+        self.sorted_generated_grasps = [filtered_grasps[i] for i in reversed(sorted_grasp_index)]
+        self.sorted_generated_scores = [filtered_scores[i] for i in reversed(sorted_grasp_index)]
 
-        return sorted_generated_grasps[0]
+        transformation_matrix_inv = np.array([[0, 0, 1, 0],
+                                        [-1, 0, 0, 0],
+                                        [0, -1, 0, 0],
+                                        [0, 0, 0, 1]])
+
+        transformation_matrix_rot = np.array([[0, -1, 0, 0],
+                                        [0, 0, -1, 0],
+                                        [1, 0, 0, 0],
+                                        [0, 0, 0, 1]])
+
+        return_pose = transformation_matrix_inv @ self.sorted_generated_grasps[0] @ transformation_matrix_rot
+
+        return return_pose
 
     def key_capture_thread(a_list):
         input('Press enter to continue...')
@@ -209,7 +243,7 @@ class AURMRGraspingNode():
         self.depth_image = ros_numpy.numpify(ros_depth_image)
         self.camera_info = np.array(ros_camera_info.K).reshape((3,3))
 
-        # self.save_points()
+        self.save_points()
 
         if False:
             ################# hack for the first pick-up:#################
