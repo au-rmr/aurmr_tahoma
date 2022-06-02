@@ -58,11 +58,11 @@ def main():
         StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPose(robot), ["succeeded"])
         StateMachine.add_auto("ASK_FOR_GRIPPER_OPEN_TO_GRASP",
                               interaction.AskForHumanAction("Open the gripper using the teach pendant"), ["succeeded"])
-        StateMachine.add_auto("MOVE_TO_GRASP", motion.MoveEndEffectorInLine(robot, (.1, 0, 0)), ["succeeded", "aborted"])
+        StateMachine.add_auto("MOVE_TO_GRASP", motion.MoveEndEffectorInLine(robot, (0, 0, 0.075)), ["succeeded", "aborted"])
         StateMachine.add_auto("ASK_FOR_GRIPPER_CLOSE", interaction.AskForHumanAction("Close the gripper using the teach pendant"), ["succeeded"])
-        StateMachine.add_auto("LIFT_OBJ", motion.MoveEndEffectorInLine(robot, (0, 0, 0.05)), ["succeeded", "aborted"])
+        StateMachine.add_auto("LIFT_OBJ", motion.MoveEndEffectorInLine(robot, (0, 0, 0.05), 'base_link'), ["succeeded", "aborted"])
 
-        StateMachine.add_auto("RETRACT_ARM", motion.MoveEndEffectorInLine(robot, (-.1, 0, 0)), ["succeeded", "aborted"])
+        StateMachine.add_auto("RETRACT_ARM", motion.MoveEndEffectorInLine(robot, (0, 0, -0.25)), ["succeeded", "aborted"])
         StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX", motion.AddInHandCollisionGeometry(robot), ["succeeded"])
         StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, TOTE_APPROACH_ANGLES), ["succeeded"])
         StateMachine.add_auto("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE",

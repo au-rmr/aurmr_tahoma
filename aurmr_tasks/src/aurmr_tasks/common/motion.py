@@ -24,6 +24,15 @@ I_QUAT = Quaternion(x=0, y=0, z=0, w=1)
 TRIPOD_ORIENTATION = transformations.quaternion_from_euler(0, -.3,0)
 TRIPOD_ORIENTATION = Quaternion(x=TRIPOD_ORIENTATION[0],y= TRIPOD_ORIENTATION[1],z=TRIPOD_ORIENTATION[2],w=TRIPOD_ORIENTATION[3])
 
+def qv_mult(q1, v1):
+        # comment this out if v1 doesn't need to be a unit vector
+        # v1 = transformations.unit_vector(v1)
+        q2 = list(v1)
+        q2.append(0.0)
+        return transformations.quaternion_multiply(
+            transformations.quaternion_multiply(q1, q2), 
+            transformations.quaternion_conjugate(q1)
+        )[:3]
 
 class MoveToJointAngles(State):
     def __init__(self, robot, default_position=None):
@@ -56,6 +65,11 @@ class MoveEndEffectorToPose(State):
             pose = self.default_pose
         else:
             pose = userdata["pose"]
+        v = qv_mult([pose.pose.orientation.x, pose.pose.orientation.y, pose.pose.orientation.z, pose.pose.orientation.w], [0,0,-0.15])
+
+        pose.pose.position.x += v[0]
+        pose.pose.position.y += v[1]
+        pose.pose.position.z += v[2]
 
         self.target_pose_visualizer.publish(pose)
         success = self.robot.move_to_pose(pose)
@@ -66,17 +80,24 @@ class MoveEndEffectorToPose(State):
 
 
 class MoveEndEffectorInLine(State):
-    def __init__(self, robot, to_point):
+    def __init__(self, robot, to_point, frame=None):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
         self.to_point = to_point
+        self.frame = frame
 
     def execute(self, userdata):
         offset = self.to_point
-        current = self.robot.move_group.get_current_pose().pose
-        current.position.x += offset[0]
-        current.position.y += offset[1]
-        current.position.z += offset[2]
+        movement_frame = self.frame
+        if movement_frame is None:
+            movement_frame = 'arm_tool0'
+        current = self.robot.move_group.get_current_pose(movement_frame)
+
+        v = qv_mult([current.pose.orientation.x, current.pose.orientation.y, current.pose.orientation.z, current.pose.orientation.w], offset)
+
+        current.pose.position.x += v[0]
+        current.pose.position.y += v[1]
+        current.pose.position.z += v[2]
         error = self.robot.straight_move_to_pose(current, avoid_collisions=False)
         if error is None:
             return "succeeded"

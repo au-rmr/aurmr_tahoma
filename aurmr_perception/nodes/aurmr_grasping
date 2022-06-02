@@ -18,11 +18,11 @@ from tf_conversions import transformations
 
 import sys
 import os
-# os.chdir('/home/aurmr/workspaces/vatsa_ws/graspnet/pytorch_6dof-graspnet') # Location of graspnet
-# sys.path.insert(1, '/home/aurmr/workspaces/vatsa_ws/graspnet/pytorch_6dof-graspnet')
+os.chdir('/home/aurmr/workspaces/vatsa_ws/graspnet/pytorch_6dof-graspnet') # Location of graspnet
+sys.path.insert(1, '/home/aurmr/workspaces/vatsa_ws/graspnet/pytorch_6dof-graspnet')
 
-os.chdir('/media/enigma/Amplitude/Study/UW/RSE_Lab/pytorch_6dof-graspnet') # Location of graspnet
-sys.path.insert(1, '/media/enigma/Amplitude/Study/UW/RSE_Lab/pytorch_6dof-graspnet')
+# os.chdir('/media/enigma/Amplitude/Study/UW/RSE_Lab/pytorch_6dof-graspnet') # Location of graspnet
+# sys.path.insert(1, '/media/enigma/Amplitude/Study/UW/RSE_Lab/pytorch_6dof-graspnet')
 import grasp_estimator
 
 import glob
@@ -58,7 +58,7 @@ class AURMRGraspingNode():
 
     def filter_pointcloud(self):
         satisfied = 'n'
-        nb_points=450
+        nb_points=350
         radius=0.015
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(self.object_pointcloud)
@@ -79,8 +79,8 @@ class AURMRGraspingNode():
         filtered_scores = []
         for grasp, grasp_score in zip(grasps, grasp_scores):
             euler_grasp = transformations.euler_from_matrix(grasp[0:3, 0:3])
-            norm_euler_grasp = np.linalg.norm(euler_grasp[0:1])  # Taking only y and z angles and ignoring rot along x axis
-            if norm_euler_grasp < 0.5:
+            norm_euler_grasp = np.linalg.norm(euler_grasp[0:2])  # Taking only y and z angles and ignoring rot along x axis
+            if norm_euler_grasp < 0.3:
                 # print(grasp)
                 filtered_grasps.append(grasp)
                 filtered_scores.append(grasp_score)
@@ -188,7 +188,7 @@ class AURMRGraspingNode():
                                         [1, 0, 0, 0],
                                         [0, 0, 0, 1]])
 
-        return_pose = transformation_matrix_inv @ self.sorted_generated_grasps[0] @ transformation_matrix_rot
+        return_pose = transformation_matrix_inv @ self.sorted_generated_grasps[0]
 
         return return_pose
 
@@ -206,15 +206,12 @@ class AURMRGraspingNode():
             rate.sleep()
 
     def pose_publish(self, pose_stamped, pts):
-        pub = rospy.Publisher('GraspPose', PoseStamped, queue_size=10)
-        pub_opc = rospy.Publisher('ObjectPC', PointCloud2, queue_size=10)
-        rate = rospy.Rate(1)
-        a_list = []
-        th.Thread(target=self.key_capture_thread, args=(), name='key_capture_thread', daemon=True).start()
-        while not a_list:
-            pub.publish(pose_stamped)
-            pub_opc.publish(pts)
-            rate.sleep()
+        pub = rospy.Publisher('GraspPose', PoseStamped, queue_size=10, latch=True)
+        pub_opc = rospy.Publisher('ObjectPC', PointCloud2, queue_size=10, latch=True)
+        
+        print('Pose is being published')
+        pub.publish(pose_stamped)
+        pub_opc.publish(pts)
 
     def save_points(self):
         np.savez('/home/enigma/catkin_ws/trial.npz', image=self.rgb_image, 
@@ -243,7 +240,7 @@ class AURMRGraspingNode():
         self.depth_image = ros_numpy.numpify(ros_depth_image)
         self.camera_info = np.array(ros_camera_info.K).reshape((3,3))
 
-        self.save_points()
+        # self.save_points()
 
         if False:
             ################# hack for the first pick-up:#################

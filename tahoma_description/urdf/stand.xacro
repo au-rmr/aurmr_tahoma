@@ -221,7 +221,7 @@
     <joint name="stand_upright_camera_beam_lower_joint" type="fixed">
       <parent link="stand_upright"/>
       <child link="camera_beam_lower"/>
-      <origin rpy="0 0 0" xyz="-.1225 0 .465"/>
+      <origin rpy="0 0 0" xyz="-.1225 0 .193"/>
     </joint>
 
     <joint name="stand_upright_robot_control_box_mount_joint" type="fixed">

@@ -295,7 +295,17 @@ class Tahoma:
         Returns:
             string describing the error if an error occurred, else None.
         """
-        waypoints = [pose_stamped]
+        transform = self.tf2_buffer.lookup_transform(self.planning_frame,
+                                       # source frame:
+                                       pose_stamped.header.frame_id,
+                                       # get the tf at the time the pose was valid
+                                       pose_stamped.header.stamp,
+                                       # wait for at most 1 second for transform, otherwise throw
+                                       rospy.Duration(1.0))
+
+        pose_planning_frame = tf2_geometry_msgs.do_transform_pose(pose_stamped, transform)
+
+        waypoints = [pose_planning_frame.pose]
 
         # We want the Cartesian path to be interpolated at a resolution of 1 cm
         # which is why we will specify 0.01 as the eef_step in Cartesian
