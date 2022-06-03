@@ -2,7 +2,7 @@
   <arg name="controller" default="" />
 
   <rosparam command="load" ns="servo_server" file="$(find tahoma_moveit_config)/config/servo.yaml" />
-  <group if="$(eval controller == 'spacemouse')">
+  <group if="$(eval controller == 'spacenav')">
     <node name="spacenav_node" pkg="spacenav_node" type="spacenav_node" />
     <node name="spacenav_to_twist" pkg="moveit_servo" type="spacenav_to_twist" output="screen" />
     <rosparam ns="servo_server">
