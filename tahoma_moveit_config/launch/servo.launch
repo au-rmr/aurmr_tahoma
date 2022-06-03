@@ -1,5 +1,5 @@
 <launch>
-  <arg name="controller" default="spacemouse" />
+  <arg name="controller" default="" />
 
   <rosparam command="load" ns="servo_server" file="$(find tahoma_moveit_config)/config/servo.yaml" />
   <group if="$(eval controller == 'spacemouse')">
@@ -10,6 +10,6 @@
     </rosparam>
   </group>
 
-  <node name="servo_server" pkg="moveit_servo" type="servo_server" output="screen" />
+  <node name="servo_server" pkg="tahoma_moveit_config" type="servo_server" output="screen" />
 
 </launch>

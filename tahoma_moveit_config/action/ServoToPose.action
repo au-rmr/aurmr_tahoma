@@ -1,0 +1,11 @@
+#goal definition
+geometry_msgs/PoseStamped pose
+float64[] positional_tolerance
+float64 angular_tolerance
+duration timeout
+---
+#result definition
+float64[] error
+---
+#feedback
+float64[] error
