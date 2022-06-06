@@ -75,6 +75,25 @@ def input_to_output(input_key, output_key):
     return InputToOutput()
 
 
+class Splat(smach.State):
+    def __init__(self, input_key, output_keys):
+        assert isinstance(output_keys, list)
+        smach.State.__init__(self, outcomes=['succeeded'], input_keys=[input_key], output_keys=output_keys)
+
+    def execute(self, userdata):
+        input_key = list(self._input_keys)[0]
+        in_data = userdata[input_key]
+        for output_key, data in zip(self._output_keys, in_data):
+            userdata[output_key] = data
+        return 'succeeded'
+
+
+def splat_auto(name, input_key, output_keys, transitions=None):
+    if transitions is None:
+        transitions = {}
+    StateMachine.add_auto(name, Splat(input_key, output_keys),["succeeded"], transitions=transitions)
+
+
 def chain_states(*args):
     class ChainedStates(smach.State):
         def __init__(self):

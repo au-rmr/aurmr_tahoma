@@ -21,18 +21,15 @@ from tf_conversions import transformations
 
 I_QUAT = Quaternion(x=0, y=0, z=0, w=1)
 
-TRIPOD_ORIENTATION = transformations.quaternion_from_euler(0, -.3,0)
-TRIPOD_ORIENTATION = Quaternion(x=TRIPOD_ORIENTATION[0],y= TRIPOD_ORIENTATION[1],z=TRIPOD_ORIENTATION[2],w=TRIPOD_ORIENTATION[3])
 
 def qv_mult(q1, v1):
-        # comment this out if v1 doesn't need to be a unit vector
-        # v1 = transformations.unit_vector(v1)
         q2 = list(v1)
         q2.append(0.0)
         return transformations.quaternion_multiply(
-            transformations.quaternion_multiply(q1, q2), 
+            transformations.quaternion_multiply(q1, q2),
             transformations.quaternion_conjugate(q1)
         )[:3]
+
 
 class MoveToJointAngles(State):
     def __init__(self, robot, default_position=None):
@@ -49,8 +46,11 @@ class MoveToJointAngles(State):
         if isinstance(target, JointState):
             to_log = target.position
         rospy.loginfo(f"Moving to {to_log}")
-        self.robot.move_to_joint_angles(target,)
-        return "succeeded"
+        success = self.robot.move_to_joint_angles(target,)
+        if success:
+            return "succeeded"
+        else:
+            return "aborted"
 
 
 class MoveEndEffectorToPose(State):

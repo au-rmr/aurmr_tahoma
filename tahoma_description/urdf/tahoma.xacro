@@ -50,28 +50,47 @@
 
     <link name="coupling">
       <visual>
-        <origin xyz="0 0 0" rpy="0 0 ${pi}"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://tahoma_description/meshes/robotiq_gripper_coupling.stl"/>
+          <mesh filename="package://robotiq_2f_85_gripper_visualization/meshes/visual/coupling.stl"/>
+        </geometry>
+        <material name="">
+          <color rgba="0.1 0.1 0.1 1"/>
+        </material>
+      </visual>
+     <visual>
+        <origin xyz="0.0335 0 0.006" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://robotiq_2f_85_gripper_visualization/meshes/visual/connector_cover.stl"/>
         </geometry>
         <material name="">
           <color rgba="0.1 0.1 0.1 1"/>
         </material>
       </visual>
       <collision>
+        <!-- Primitives are centered, so offset -->
+        <origin xyz="${(0.029 / 2) + 0.0335} 0 -0.013" rpy="0 0 0"/>
         <geometry>
-          <cylinder radius=".0375" length=".0139"/>
+          <box size=".029 0.033 .056"/>
+        </geometry>
+      </collision>
+      <collision>
+        <!-- Primitives are centered, so offset -->
+        <origin xyz="0 0 ${.0169 / 2}" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius=".0375" length=".0169"/>
         </geometry>
       </collision>
     </link>
 
     <joint name="coupling_link_gripper_robotiq_arg2f_base_link_joint" type="fixed">
-      <origin xyz="0 0 0.012" rpy="0 0 ${pi/2}"/>
+      <origin xyz="0 0 0.0139" rpy="0 0 0"/>
       <parent link="coupling"/>
       <child link="gripper_base_link"/>
     </joint>
 
     <joint name="arm_tool0-coupling_joint" type="fixed">
+      <origin xyz="0 0 -0.003" rpy="0 0 ${1.5 * pi}"/>
       <parent link="arm_tool0"/>
       <child link="coupling"/>
     </joint>

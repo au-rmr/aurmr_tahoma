@@ -9,5 +9,16 @@ To view the model
     roslaunch tahoma_description view_model.launch
 
 
-git@github.com:AcutronicRobotics/robotiq_modular_gripper.git
-https://github.com/cambel/isaac-gym-ur3e/tree/23632f1d3407e0a8f0ea9c93fcaec123e85d5c30/assets/urdf/ur_description/meshes
+## Development
+
+Make sure you update the SRDF in `tahoma_moveit_config` if you makee changes to the robot's URDF.
+
+### Verification
+
+To check the kinematic chain:
+
+    xacro $(rospack find tahoma_description)/robots/tahoma.xacro > /tmp/tahoma.urdf && check_urdf /tmp/tahoma.urdf
+
+To pretty print the full robot specification (not in XML format):
+
+    xacro $(rospack find tahoma_description)/robots/tahoma.xacro | rosrun urdfdom_py display_urdf - 
