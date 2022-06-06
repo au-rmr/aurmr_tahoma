@@ -15,7 +15,7 @@ class Formulator(State):
     def execute(self, ud):
         try:
             args = [ud[input_key] for input_key in self._input_keys]
-            ud[self._output_keys[0]] = self.template.format(*args)
+            ud[list(self._output_keys)[0]] = self.template.format(*args)
             return "succeeded"
         except Exception as e:
             # Catch any fumbled templates
@@ -26,7 +26,7 @@ class Formulator(State):
 def formulate_ud_str_auto(name, template, input_keys, output_key, transitions=None):
     if transitions is None:
         transitions = {}
-    StateMachine.add_auto(name, Formulator(template, input_keys, output_key), transitions=transitions)
+    StateMachine.add_auto(name, Formulator(template, input_keys, output_key), ["succeeded"],transitions=transitions)
 
 
 def all_close(goal, actual, tolerance):

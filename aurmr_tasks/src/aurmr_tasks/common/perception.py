@@ -19,7 +19,7 @@ class CaptureEmptyBin(State):
         self.reset_bin = rospy.ServiceProxy('/aurmr_perception/reset_bin', ResetBin)
 
     def execute(self, userdata):
-        reset_bin_req = ResetBinRequest(bin_id = userdata['target_bin_id'])
+        reset_bin_req = ResetBinRequest(bin_id=userdata['target_bin_id'])
         reset_response = self.reset_bin(reset_bin_req)
 
         if reset_response.success:
@@ -60,6 +60,9 @@ class GetGraspPose(State):
         )
         self.get_points = rospy.ServiceProxy('/aurmr_perception/get_object_points', GetObjectPoints)
         self.get_grasp = rospy.ServiceProxy('/aurmr_perception/init_grasp', GraspPose)
+        # Crash during initialization if these aren't running so see the problem early
+        self.get_points.wait_for_service(timeout=5)
+        self.get_grasp.wait_for_service(timeout=5)
         self.frame_id = frame_id
         self.distance_threshold = distance_threshold
 
