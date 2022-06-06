@@ -79,6 +79,10 @@ twist_stamped_pub_ =
     PoseTrackingStatusCode PoseTracking::moveToPose(const Eigen::Vector3d& positional_tolerance,
                                                     const double angular_tolerance, const double target_pose_timeout)
     {
+        // Clear error left over from previous run so
+        // we can tell when up to date information arrives
+        angular_error_ = boost::none;
+        done_moving_to_pose_ = false;
         // Reset stop requested flag before starting motions
         stop_requested_ = false;
         // Wait a bit for a target pose message to arrive.
@@ -108,7 +112,7 @@ twist_stamped_pub_ =
         while (ros::ok() && !satisfiesPoseTolerance(positional_tolerance, angular_tolerance))
         {
             // Attempt to update robot pose
-            if (servo_->getEEFrameTransform(command_frame_transform_))
+            if (servo_->getCommandFrameTransform(command_frame_transform_))
             {
                 command_frame_transform_stamp_ = ros::Time::now();
             }
@@ -137,6 +141,8 @@ twist_stamped_pub_ =
             }
         }
 
+        done_moving_to_pose_ = true;
+        ROS_INFO_STREAM_NAMED(LOGNAME, "Pose tolerance met. Exiting control loop");
         doPostMotionReset();
         return PoseTrackingStatusCode::SUCCESS;
     }
@@ -328,7 +334,6 @@ twist_stamped_pub_ =
     {
         stopMotion();
         stop_requested_ = false;
-        angular_error_ = boost::none;
 
         // Reset error integrals and previous errors of PID controllers
         cartesian_position_pids_[0].reset();

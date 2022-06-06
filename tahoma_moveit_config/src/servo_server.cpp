@@ -100,8 +100,6 @@ public:
             action_name_(name), tracker_(nh_, planning_scene_monitor), pause_srv_(nh_.advertiseService("set_pause", &ServoToPoseActionServer::pauseCB, this))
     {
         as_.start();
-        tracker_.servo_->setPaused(true);
-
     }
 
     ~ServoToPoseActionServer(void)
@@ -131,21 +129,27 @@ public:
         feedback_.error.push_back(std::numeric_limits<double>::signaling_NaN());
         ros::Rate loop_rate(5);
         bool success = false;
-        while (!this->as_.isPreemptRequested() && ros::Time::now() < timeout)
+        while (!tracker_.done_moving_to_pose_)
         {
-            this->tracker_.getPIDErrors(feedback_.error[0], feedback_.error[1],feedback_.error[2],feedback_.error[3]);
+            tracker_.getPIDErrors(feedback_.error[0], feedback_.error[1],feedback_.error[2],feedback_.error[3]);
             as_.publishFeedback(feedback_);
-            if (this->tracker_.satisfiesPoseTolerance(lin_tol, rot_tol))
-            {
-                success = true;
-                break;
+            if (as_.isPreemptRequested() || ros::Time::now() > timeout) {
+              ROS_INFO_STREAM_NAMED(LOGNAME, "Timed out or preempted. Exiting monitor loop");
+              // Make sure the tracker is stopped and clean up
+              tracker_.stopMotion();
+              break;
             }
             loop_rate.sleep();
         }
-        // Make sure the tracker is stopped and clean up
-        tracker_.stopMotion();
+
+        if (tracker_.satisfiesPoseTolerance(lin_tol, rot_tol))
+        {
+          ROS_INFO_STREAM_NAMED(LOGNAME, "Pose tolerance satisfied.");
+          success = true;
+        }
+
         move_to_pose_thread.join();
-        if (this->as_.isPreemptRequested()) {
+        if (as_.isPreemptRequested()) {
             as_.setPreempted(result_);
         }
         else if (success) {

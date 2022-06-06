@@ -124,6 +124,7 @@ namespace tahoma_moveit_config
 
         // moveit_servo::Servo instance. Public so we can access member functions like setPaused()
         std::unique_ptr<moveit_servo::Servo> servo_;
+        std::atomic<bool> done_moving_to_pose_;
 
     private:
         /** \brief Load ROS parameters for controller settings. */
