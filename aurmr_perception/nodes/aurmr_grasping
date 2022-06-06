@@ -242,32 +242,6 @@ class AURMRGraspingNode():
 
         # self.save_points()
 
-        if False:
-            ################# hack for the first pick-up:#################
-            # compute the average point of the pointcloud
-            center = np.mean(self.object_pointcloud, axis = 0)
-            # NOTE(nickswalker,4-29-22): Hack to compensate for the chunk of points that don't get observed
-            # due to the lip of the bin
-            center[2] -= 0.02
-            # get the vector
-            extention_dir = self.normal_vector
-            dist = request.dist_th
-            position = dist * extention_dir + center # center and extention_dir should be under the same coordiante!
-            # pick a orientation
-            pose_pool = [-self.normal_vector, np.array([0, 0, np.pi/2])] # assuming the robot keeps the same approaching vector
-
-            # pick a gripper closing distance
-            gripper_pool = [0, 0.01, 0.02, 0.05]
-
-            gripper_dist = gripper_pool[request.grasp_id]
-
-            # todo after the first pick-up:
-            # train GraspNet that is given the pointclouds, outputs the grasping candidates, GraspNet doesn't output gripper_dist,
-            # assuming the gripper is flexible enough, we can just set a hard-code distance to close the finger.
-            # only get the most confident grasp
-            # might need to consider motion planning collision checking etc.
-            grasp_pose = PoseStamped(header=request.points.header, pose=Pose(position=Point(x=position[0], y=position[1], z=position[2]),orientation=self.align_to_bin_quat))
-
         print('Running-Graspnet')
         grasp_pose_se3 = self.graspnet()
         print('Graspnet ran successfully.')
