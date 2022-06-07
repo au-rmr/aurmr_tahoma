@@ -109,6 +109,7 @@ public:
     void executeCB(const tahoma_moveit_config::ServoToPoseGoalConstPtr &goal)
     {
 
+        ROS_INFO_NAMED(LOGNAME, "Accepted new target pose");
         Eigen::Vector3d lin_tol{ goal->positional_tolerance.data() };
         double rot_tol = goal->angular_tolerance;
         ros::Time timeout = ros::Time::now() + goal->timeout;
@@ -119,33 +120,47 @@ public:
         tracker_.targetPoseCallback(boost::make_shared<geometry_msgs::PoseStamped>(goal->pose));
 
         // Run the pose tracking in a new thread
+        // Ensure that the "done" signal var is cleared before the thread starts up. The thread will try to clear it
+        // when it begins, but it may lose the race with our first check in the monitor loop.
+        tracker_.done_moving_to_pose_ = false;
         std::thread move_to_pose_thread(
                 [this, &lin_tol, &rot_tol, timeout] { this->tracker_.moveToPose(lin_tol, rot_tol, timeout.toSec() /* target pose timeout */); });
 
+        // FIXME(nickswalker,6-6-22): There's a nicer way to do this I'm sure...
         feedback_.error.clear();
         feedback_.error.push_back(std::numeric_limits<double>::signaling_NaN());
         feedback_.error.push_back(std::numeric_limits<double>::signaling_NaN());
         feedback_.error.push_back(std::numeric_limits<double>::signaling_NaN());
         feedback_.error.push_back(std::numeric_limits<double>::signaling_NaN());
+        result_.error.clear();
+        result_.error.push_back(std::numeric_limits<double>::signaling_NaN());
+        result_.error.push_back(std::numeric_limits<double>::signaling_NaN());
+        result_.error.push_back(std::numeric_limits<double>::signaling_NaN());
+        result_.error.push_back(std::numeric_limits<double>::signaling_NaN());
         ros::Rate loop_rate(5);
         bool success = false;
+
         while (!tracker_.done_moving_to_pose_)
         {
             tracker_.getPIDErrors(feedback_.error[0], feedback_.error[1],feedback_.error[2],feedback_.error[3]);
             as_.publishFeedback(feedback_);
             if (as_.isPreemptRequested() || ros::Time::now() > timeout) {
               ROS_INFO_STREAM_NAMED(LOGNAME, "Timed out or preempted. Exiting monitor loop");
-              // Make sure the tracker is stopped and clean up
-              tracker_.stopMotion();
               break;
             }
             loop_rate.sleep();
         }
-
+        // Get final errors
+        tracker_.getPIDErrors(result_.error[0], result_.error[1],result_.error[2],result_.error[3]);
+        tracker_.stopMotion();
         if (tracker_.satisfiesPoseTolerance(lin_tol, rot_tol))
         {
           ROS_INFO_STREAM_NAMED(LOGNAME, "Pose tolerance satisfied.");
+          result_.error_code = 0;
           success = true;
+        } else {
+            ROS_WARN_NAMED(LOGNAME, "Goal not achieved with errors %.2f %.2f %.2f %.2f", result_.error[0], result_.error[1],result_.error[2],result_.error[3]);
+            result_.error_code = -2;
         }
 
         move_to_pose_thread.join();

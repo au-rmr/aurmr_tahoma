@@ -4,6 +4,7 @@ import std_msgs
 import visualization_msgs.msg
 
 import rospy
+from smach import State
 
 from aurmr_tasks.common.tahoma import Tahoma
 
@@ -17,7 +18,9 @@ from aurmr_tasks.visualization import create_gripper_pose_markers
 def main():
     rospy.loginfo('Getting robot resources')
     rospy.init_node("analyze_workspace")
-    robot = Tahoma()
+    simulation = rospy.get_param("/use_sim_time", False)
+    State.simulation = simulation
+    robot = Tahoma(simulation)
 
     align_to_bin_orientation = transformations.quaternion_from_euler(-1.57, 0, 0)
     align_to_bin_quat = Quaternion(x=align_to_bin_orientation[0], y=align_to_bin_orientation[1], z=align_to_bin_orientation[2], w=align_to_bin_orientation[3])
@@ -39,7 +42,7 @@ def main():
     marker_colors = []
     all_poses = BIN_APPROACH_POSES + BIN_INNER_POSES
     for i, pose in enumerate(all_poses):
-        solution = robot.compute_ik(pose, rospy.Duration(.01))
+        solution = robot.compute_ik(pose, rospy.Duration(0))
         if solution:
             REACHABLE_BIN_APPROACHES.append(pose)
             marker_colors.append((0, 1, 0))

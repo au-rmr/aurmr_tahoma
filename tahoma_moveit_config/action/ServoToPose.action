@@ -5,6 +5,10 @@ float64 angular_tolerance
 duration timeout
 ---
 #result definition
+int32 error_code
+int32 SUCCESSFUL = 0
+int32 INVALID_GOAL = -1
+int32 TOLERANCE_UNMET = -2
 float64[] error
 ---
 #feedback

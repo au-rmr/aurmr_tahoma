@@ -79,12 +79,11 @@ twist_stamped_pub_ =
     PoseTrackingStatusCode PoseTracking::moveToPose(const Eigen::Vector3d& positional_tolerance,
                                                     const double angular_tolerance, const double target_pose_timeout)
     {
+
         // Clear error left over from previous run so
         // we can tell when up to date information arrives
-        angular_error_ = boost::none;
-        done_moving_to_pose_ = false;
-        // Reset stop requested flag before starting motions
-        stop_requested_ = false;
+        doPostMotionReset();
+
         // Wait a bit for a target pose message to arrive.
         // The target pose may get updated by new messages as the robot moves (in a callback function).
         const ros::Time start_time = ros::Time::now();
@@ -121,14 +120,12 @@ twist_stamped_pub_ =
             if (!haveRecentEndEffectorPose(target_pose_timeout))
             {
                 ROS_ERROR_STREAM_NAMED(LOGNAME, "The end effector pose was not updated in time. Aborting.");
-                doPostMotionReset();
                 return PoseTrackingStatusCode::NO_RECENT_END_EFFECTOR_POSE;
             }
 
             if (stop_requested_)
             {
                 ROS_INFO_STREAM_NAMED(LOGNAME, "Halting servo motion, a stop was requested.");
-                doPostMotionReset();
                 return PoseTrackingStatusCode::STOP_REQUESTED;
             }
 
@@ -143,7 +140,7 @@ twist_stamped_pub_ =
 
         done_moving_to_pose_ = true;
         ROS_INFO_STREAM_NAMED(LOGNAME, "Pose tolerance met. Exiting control loop");
-        doPostMotionReset();
+
         return PoseTrackingStatusCode::SUCCESS;
     }
 
@@ -332,6 +329,8 @@ twist_stamped_pub_ =
 
     void PoseTracking::doPostMotionReset()
     {
+        done_moving_to_pose_ = false;
+        angular_error_ = boost::none;
         stopMotion();
         stop_requested_ = false;
 
