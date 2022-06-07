@@ -1,6 +1,8 @@
 import copy
 import sys
+from functools import wraps
 
+from actionlib import SimpleActionClient
 from control_msgs.msg import FollowJointTrajectoryAction, GripperCommandAction, GripperCommandGoal
 from control_msgs.msg import FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectoryPoint
@@ -11,15 +13,20 @@ import actionlib
 import control_msgs.msg
 import trajectory_msgs.msg
 import rospy
-import tf
+
 from aurmr_tasks.util import all_close, pose_dist
 from moveit_msgs.msg import MoveItErrorCodes, MoveGroupAction, DisplayTrajectory
 from moveit_msgs.srv import GetPositionIK, GetPositionIKRequest
-from tf.listener import TransformListener
+
 import moveit_commander
+from controller_manager_msgs.srv import ListControllers, SwitchController
+from tahoma_moveit_config.msg import ServoToPoseAction, ServoToPoseGoal
 
 ARM_GROUP_NAME = 'manipulator'
 JOINT_ACTION_SERVER = '/pos_joint_traj_controller/follow_joint_trajectory'
+JOINT_GROUP_CONTROLLER = 'joint_group_pos_controller'
+JOINT_TRAJ_CONTROLLER = 'scaled_pos_joint_traj_controller'
+JOINT_TRAJ_CONTROLLER_SIM = 'pos_joint_traj_controller'
 GRIPPER_ACTION_SERVER = '/gripper_controller/gripper_cmd'
 MOVE_GROUP_ACTION_SERVER = 'move_group'
 TIME_FROM_START = 5
@@ -52,6 +59,28 @@ MOVE_IT_ERROR_TO_STRING = {
 }
 
 
+def requires_controller(named):
+    """
+
+    Args:
+        named:
+
+    Returns: a decorator factory that replaces an invoked function
+    with a wrapped function call, ensuring that the correct controller
+    is activated before the call.
+
+    """
+    def decorator(function):
+        # Use this functools helper to make docstrings of the passed in function get bubbled up
+        @wraps(function)
+        def wrapper(self, *args, **kwargs):
+            if not self.is_controller_active(named):
+                self.activate_controller(named)
+            return function(self, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
 def moveit_error_string(val):
     """Returns a string associated with a MoveItErrorCode.
 
@@ -65,7 +94,8 @@ def moveit_error_string(val):
 
 
 class Tahoma:
-    def __init__(self):
+    def __init__(self, in_sim=False):
+        self.in_sim = in_sim
         self.joint_state = None
         self.point_cloud = None
 
@@ -87,7 +117,6 @@ class Tahoma:
             MOVE_GROUP_ACTION_SERVER, MoveGroupAction)
         self._move_group_client.wait_for_server(rospy.Duration(10))
         self._compute_ik = rospy.ServiceProxy('compute_ik', GetPositionIK)
-        self._tf_listener = TransformListener()
         moveit_commander.roscpp_initialize(sys.argv)
         self.commander = moveit_commander.RobotCommander()
         self.scene = moveit_commander.PlanningSceneInterface(synchronous=True)
@@ -98,6 +127,11 @@ class Tahoma:
             DisplayTrajectory,
             queue_size=20,
         )
+        self._controller_lister = rospy.ServiceProxy("/controller_manager/list_controllers", ListControllers)
+        self._controller_switcher = rospy.ServiceProxy("/controller_manager/switch_controller", SwitchController)
+        self.servo_to_pose_client = SimpleActionClient("/servo_server/servo_to_pose", ServoToPoseAction)
+
+
         planning_frame = self.move_group.get_planning_frame()
         eef_link = self.move_group.get_end_effector_link()
         group_names = self.commander.get_group_names()
@@ -106,6 +140,58 @@ class Tahoma:
         self.planning_frame = planning_frame
         self.eef_link = eef_link
         self.group_names = group_names
+
+        self.active_controllers = None
+        self.update_running_controllers()
+
+    def update_running_controllers(self):
+        controllers_status = self._controller_lister().controller
+        self.active_controllers = []
+        for controller in controllers_status:
+            if controller.state == "running":
+                self.active_controllers.append(controller.name)
+
+    def wait_for_controllers(self, timeout):
+        rate = rospy.Rate(1)
+        try_until = rospy.Time.now() + rospy.Duration(timeout)
+        while not rospy.is_shutdown() and rospy.Time.now() < try_until:
+            controllers_status = self._controller_lister().controller
+            for controller in controllers_status:
+                is_active = controller.state == "running"
+                if not is_active:
+                    continue
+                if self.in_sim and controller.name == JOINT_TRAJ_CONTROLLER_SIM:
+                    return True
+                elif not self.in_sim and controller.name == JOINT_TRAJ_CONTROLLER:
+                    return True
+            rate.sleep()
+        return False
+
+    def activate_controller(self, named):
+        # Hacked to work for what we need right now
+        if named == JOINT_TRAJ_CONTROLLER:
+            to_enable = named
+            to_disable = JOINT_GROUP_CONTROLLER
+            if self.in_sim:
+                to_enable = JOINT_TRAJ_CONTROLLER_SIM
+        elif named == JOINT_GROUP_CONTROLLER:
+            to_enable = named
+            to_disable = JOINT_TRAJ_CONTROLLER
+            if self.in_sim:
+                to_disable = JOINT_TRAJ_CONTROLLER_SIM
+        else:
+            raise RuntimeError(f"Asked to activate unknown controller {named}")
+        rospy.loginfo(f"Activating {named}")
+        ok = self._controller_switcher.call([to_enable], [to_disable], 1, False, 2.0)
+        if not ok:
+            raise RuntimeError(f"Failed to enable controller {named}")
+
+    def is_controller_active(self, named):
+        self.update_running_controllers()
+        to_check = named
+        if named == JOINT_TRAJ_CONTROLLER and self.in_sim:
+            to_check = JOINT_TRAJ_CONTROLLER_SIM
+        return to_check in self.active_controllers
 
     def open_gripper(self, return_before_done=False):
         goal = GripperCommandGoal(position=0, max_effort=1)
@@ -119,13 +205,14 @@ class Tahoma:
         if not return_before_done:
             self._gripper_client.wait_for_result()
 
+    @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_pose_unsafe(self, pose, return_before_done=False):
         joint_names = [key for key in pose]
         point = JointTrajectoryPoint()
         point.time_from_start = rospy.Duration(0, 1)
 
         trajectory_goal = FollowJointTrajectoryGoal()
-        trajectory_goal.goal_time_tolerance = rospy.Time(1.0)
+        trajectory_goal.goal_time_tolerance = rospy.Time(1)
         trajectory_goal.trajectory.joint_names = joint_names
 
         joint_positions = [pose[key] for key in joint_names]
@@ -139,6 +226,7 @@ class Tahoma:
             # print('Received the following result:')
             # print(self.trajectory_client.get_result())
 
+    @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_joint_angles_unsafe(self, joint_state):
         """
         Moves to an ArmJoints configuration
@@ -154,6 +242,7 @@ class Tahoma:
         self._joint_traj_client.send_goal(goal)
         self._joint_traj_client.wait_for_result(rospy.Duration(10))
 
+    @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_joint_angles(self,
                            joints,
                            allowed_planning_time=10.0,
@@ -200,15 +289,14 @@ class Tahoma:
         current_joints = self.move_group.get_current_joint_values()
         return all_close(joints, current_joints, 0.01)
 
+    @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_pose(self,
                           pose_stamped,
                           allowed_planning_time=10.0,
                           execution_timeout=15.0,
-                          group_name='manipulator',
                           num_planning_attempts=1,
                           orientation_constraint=None,
-                          plan_only=False,
-                          replan=False,
+                          replan=True,
                           replan_attempts=5,
                           tolerance=0.01):
         """Moves the end-effector to a pose, using motion planning.
@@ -220,15 +308,11 @@ class Tahoma:
             execution_timeout: float. The maximum duration to wait for an arm
                 motion to execute (or for planning to fail completely), in
                 seconds.
-            group_name: string.
             num_planning_attempts: int. The number of times to compute the same
                 plan. The shortest path is ultimately used. For random
                 planners, this can help get shorter, less weird paths.
             orientation_constraint: moveit_msgs/OrientationConstraint. An
                 orientation constraint for the entire path.
-            plan_only: bool. If True, then this method does not execute the
-                plan on the robot. Useful for determining whether this is
-                likely to succeed.
             replan: bool. If True, then if an execution fails (while the arm is
                 moving), then come up with a new plan and execute it.
             replan_attempts: int. How many times to replan if the execution
@@ -249,20 +333,24 @@ class Tahoma:
 
         goal_in_planning_frame = tf2_geometry_msgs.do_transform_pose(pose_stamped, transform)
         self.move_group.set_pose_target(pose_stamped)
-        plan = self.move_group.plan()[1]
+        self.move_group.set_planning_time(allowed_planning_time)
+        self.move_group.set_num_planning_attempts(num_planning_attempts)
+        self.move_group.allow_replanning(replan)
+        success, plan, planning_time, error_code = self.move_group.plan()
+        if not success:
+            return False
 
-
-        ## A `DisplayTrajectory`_ msg has two primary fields, trajectory_start and trajectory.
-        ## We populate the trajectory_start with our current robot state to copy over
-        ## any AttachedCollisionObjects and add our plan to the trajectory.
+        # A `DisplayTrajectory`_ msg has two primary fields, trajectory_start and trajectory.
+        # We populate the trajectory_start with our current robot state to copy over
+        # any AttachedCollisionObjects and add our plan to the trajectory.
         display_trajectory = DisplayTrajectory()
         display_trajectory.trajectory_start = self.commander.get_current_state()
         display_trajectory.trajectory.append(plan)
         # Publish
         self.display_trajectory_publisher.publish(display_trajectory)
 
-        ## Now, we call the planner to compute the plan and execute it.
-        plan = self.move_group.go(wait=True)
+        # Now, we call the planner to compute the plan and execute it.
+        self.move_group.execute(plan, wait=True)
         # Calling `stop()` ensures that there is no residual movement
         self.move_group.stop()
         # It is always good to clear your targets after planning with poses.
@@ -273,6 +361,7 @@ class Tahoma:
         rospy.loginfo(f"Pose dist: {pose_dist(goal_in_planning_frame, current_pose)}")
         return all_close(goal_in_planning_frame, current_pose, 0.01)
 
+    @requires_controller(JOINT_TRAJ_CONTROLLER)
     def straight_move_to_pose(self,
                               pose_stamped,
                               ee_step=0.025,
@@ -318,6 +407,30 @@ class Tahoma:
             rospy.logwarn(f"Not moving in cartesian path. Only {fraction} waypoints reached")
             return False
         return self.move_group.execute(plan, wait=True)
+
+    @requires_controller(JOINT_GROUP_CONTROLLER)
+    def servo_to_pose(self,
+                      pose_stamped,
+                      timeout=10,
+                      pos_tolerance=0.01,
+                      angular_tolerance=0.1):
+        if not self.servo_to_pose_client.wait_for_server(rospy.Duration(1)):
+            rospy.logerr("Servo action server couldn't be reached")
+            return False
+        goal = ServoToPoseGoal()
+        goal.pose = pose_stamped
+        goal.positional_tolerance = [pos_tolerance, pos_tolerance, pos_tolerance]
+        goal.angular_tolerance = angular_tolerance
+        goal.timeout = rospy.Duration(timeout)
+        self.servo_to_pose_client.send_goal(goal)
+        # 0 timeout to give the server an infinite time to come back.
+        finished = self.servo_to_pose_client.wait_for_result(rospy.Duration(0))
+        if not finished:
+            return False
+        result = self.servo_to_pose_client.get_result()
+        if not result:
+            return False
+        return result.error_code == 0
 
     def check_pose(self,
                    pose_stamped,

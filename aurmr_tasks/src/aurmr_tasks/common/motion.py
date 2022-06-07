@@ -112,15 +112,15 @@ class MoveEndEffectorInLineInOut(State):
         self.robot = robot
 
     def execute(self, userdata):
-        current = self.robot.move_group.get_current_pose().pose
-        current.position.x += .1
-        success = self.robot.straight_move_to_pose(current, avoid_collisions=False)
+        target = self.robot.move_group.get_current_pose()
+        target.pose.position.x += .1
+        success = self.robot.servo_to_pose(target)
         if not success:
-            return "aborted"
+            rospy.logerr("Failed to move forward. Going to attempt to move back to original pose")
         rospy.sleep(1)
-        current = self.robot.move_group.get_current_pose().pose
-        current.position.x -= .1
-        success = self.robot.straight_move_to_pose(current, avoid_collisions=False)
+
+        target.pose.position.x -= .1
+        success = self.robot.servo_to_pose(target)
         if not success:
             return "aborted"
         else:

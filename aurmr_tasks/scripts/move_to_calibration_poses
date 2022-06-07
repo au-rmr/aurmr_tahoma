@@ -20,7 +20,10 @@ import rospkg
 def main():
     rospy.loginfo('Getting robot resources')
     rospy.init_node("pick")
-    robot = Tahoma()
+    simulation = rospy.get_param("/use_sim_time", False)
+    State.simulation = simulation
+    robot = Tahoma(simulation)
+
     with open(rospkg.RosPack().get_path("tahoma_description") + "/config/camera_calibration_poses.yaml", "r") as stream:
         try:
             configs = yaml.safe_load(stream)
@@ -28,7 +31,6 @@ def main():
             exit(1)
 
     calibration_states = [JointState(name=configs["joint_names"], position=position) for position in configs["joint_values"]]
-    State.simulation = rospy.get_param("~simulation", False)
 
     move_to_poses = StateMachine(["succeeded", "preempted", "aborted"],
                            input_keys=[],

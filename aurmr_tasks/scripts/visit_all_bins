@@ -21,7 +21,9 @@ BIN_APPROACH_POSES = []
 def main():
     rospy.loginfo('Getting robot resources')
     rospy.init_node("visit_all_bins")
-    robot = Tahoma()
+    simulation = rospy.get_param("/use_sim_time", False)
+    State.simulation = simulation
+    robot = Tahoma(simulation)
 
     align_to_bin_orientation = transformations.quaternion_from_euler(-1.57, 0, 0)
     align_to_bin_quat = Quaternion(x=align_to_bin_orientation[0], y=align_to_bin_orientation[1], z=align_to_bin_orientation[2], w=align_to_bin_orientation[3])
@@ -37,9 +39,6 @@ def main():
             REACHABLE_BIN_APPROACHES.append(pose)
 
     print(f"{len(REACHABLE_BIN_APPROACHES)} of {len(BIN_APPROACH_POSES)} bins are approachable")
-    simulation = rospy.get_param("~simulation", False)
-
-    State.simulation = simulation
 
     pick_sm = StateMachine(["succeeded", "preempted", "aborted"],
                            input_keys=[],
@@ -55,7 +54,6 @@ def main():
                               motion.MoveEndEffectorToPose(robot),
                               ['succeeded',],
                               {
-                                  # NOTE: This fails most of the time due to tight position tolerances. Ignore for now
                                   'aborted': 'MOVE_TO_POSE'
                               })
         StateMachine.add_auto("POKE_BIN", motion.MoveEndEffectorInLineInOut(robot), ['succeeded', 'preempted', 'aborted'])

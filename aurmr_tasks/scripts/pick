@@ -35,10 +35,9 @@ BIN_APPROACH_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(p
 def main():
     rospy.loginfo('Getting robot resources')
     rospy.init_node("pick")
-    robot = Tahoma()
-
-    State.simulation = rospy.get_param("~simulation", False)
-
+    simulation = rospy.get_param("/use_sim_time", False)
+    State.simulation = simulation
+    robot = Tahoma(simulation)
     pick_sm = StateMachine(["succeeded", "preempted", "aborted"], input_keys=[], output_keys=[])
 
     picks = [["2f", "bottle"]]
@@ -74,7 +73,6 @@ def main():
         StateMachine.add_auto("LOAD_POD", load_sm([["2f", "bottle"]]), ["succeeded"])
 
         StateMachine.add_auto("PICK", pick_sm, ["succeeded"])
-
 
     rospy.loginfo('Beginning pick SM')
 
