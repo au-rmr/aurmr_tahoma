@@ -242,9 +242,12 @@ class AddPodCollisionGeometry(State):
         self.robot.scene.add_box("pod_right", PoseStamped(header=Header(frame_id="pod_base_link"),
                                                      pose=Pose(position=Point(x=.25, y=.25, z=1.27),
                                                                orientation=I_QUAT)), (.5, .5, .3))
-        self.robot.scene.add_box("camera_mount", PoseStamped(header=Header(frame_id="camera_beam_lower"),
+        self.robot.scene.add_box("camera_lower_left", PoseStamped(header=Header(frame_id="camera_lower_left_link"),
                                                      pose=Pose(position=Point(x=0, y=0, z=0),
-                                                               orientation=I_QUAT)), (.1, .1, .15))
+                                                               orientation=I_QUAT)), (.15, .15, .2))
+        self.robot.scene.add_box("camera_lower_right", PoseStamped(header=Header(frame_id="camera_lower_right_link"),
+                                                     pose=Pose(position=Point(x=0, y=0, z=0),
+                                                               orientation=I_QUAT)), (.15, .15, .2))
         start = rospy.get_time()
         seconds = rospy.get_time()
         timeout = 50.0
@@ -252,7 +255,7 @@ class AddPodCollisionGeometry(State):
             objects = self.robot.scene.get_objects()
 
             # Test if we are in the expected state
-            if len(objects) == 5:
+            if len(objects) == 6:
                 return "succeeded"
 
             # Sleep so that we give other threads time on the processor
