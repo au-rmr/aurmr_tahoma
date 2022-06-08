@@ -1,6 +1,7 @@
 <launch>
 
   <arg name="camera" default="camera_lower_right" />
+  <arg name="grasp_detector" default="heuristic" />
 
   <include file="$(find realsense2_camera)/launch/rs_camera.launch">
     <arg name="align_depth"              value="true"/>
@@ -18,8 +19,8 @@
     <param name="camera_name"                   value="$(arg camera)" />
   </node>
 
-  <node name="aurmr_grasping" pkg="aurmr_perception" type="aurmr_grasping" output="screen">
-
+  <node name="grasp_detection" pkg="aurmr_perception" type="grasp_detection_server" output="screen">
+    <param name="grasp_detector"                   value="$(arg grasp_detector)" />
   </node>
 
 </launch>

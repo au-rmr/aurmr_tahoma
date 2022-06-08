@@ -1,8 +1,6 @@
-#!/usr/bin/env python
-
 import argparse
 import cv2
-import numpy as np
+
 import rospy
 import ros_numpy
 import message_filters
@@ -16,6 +14,7 @@ from aurmr_perception.srv import *
 from geometry_msgs.msg import PoseStamped, Quaternion, Pose, Point
 from tf_conversions import transformations
 
+import numpy as np
 import sys
 import os
 os.chdir('/home/aurmr/workspaces/vatsa_ws/graspnet/pytorch_6dof-graspnet') # Location of graspnet
@@ -33,7 +32,77 @@ from data import DataLoader
 import open3d as o3d
 
 
-class AURMRGraspingNode():
+def make_graspnet_parser():
+    parser = argparse.ArgumentParser(
+    description='6-DoF GraspNet Demo',
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--grasp_sampler_folder',
+                        type=str,
+                        default='checkpoints/gan_pretrained/')
+    parser.add_argument('--grasp_evaluator_folder',
+                        type=str,
+                        default='checkpoints/evaluator_pretrained/')
+    parser.add_argument('--refinement_method',
+                        choices={"gradient", "sampling"},
+                        default='sampling')
+    parser.add_argument('--refine_steps', type=int, default=25)
+
+    parser.add_argument('--npy_folder', type=str, default='demo/data/')
+    parser.add_argument(
+        '--threshold',
+        type=float,
+        default=0.8,
+        help=
+        "When choose_fn is something else than all, all grasps with a score given by the evaluator notwork less than the threshold are removed"
+    )
+    parser.add_argument(
+        '--choose_fn',
+        choices={
+            "all", "better_than_threshold", "better_than_threshold_in_sequence"
+        },
+        default='better_than_threshold',
+        help=
+        "If all, no grasps are removed. If better than threshold, only the last refined grasps are considered while better_than_threshold_in_sequence consideres all refined grasps"
+    )
+
+    parser.add_argument('--target_pc_size', type=int, default=1024)
+    parser.add_argument('--num_grasp_samples', type=int, default=200)
+    parser.add_argument(
+        '--generate_dense_grasps',
+        action='store_true',
+        help=
+        "If enabled, it will create a [num_grasp_samples x num_grasp_samples] dense grid of latent space values and generate grasps from these."
+    )
+
+    parser.add_argument(
+        '--batch_size',
+        type=int,
+        default=30,
+        help=
+        "Set the batch size of the number of grasps we want to process and can fit into the GPU memory at each forward pass. The batch_size can be increased for a GPU with more memory."
+    )
+    parser.add_argument('--train_data', action='store_true')
+    opts, _ = parser.parse_known_args()
+    if opts.train_data:
+        parser.add_argument('--dataset_root_folder',
+                            required=True,
+                            type=str,
+                            help='path to root directory of the dataset.')
+    return parser
+
+
+def make_graspnet_estimator(args):
+    grasp_sampler_args = utils.read_checkpoint_args(args.grasp_sampler_folder)
+    grasp_sampler_args.is_train = False
+    grasp_evaluator_args = utils.read_checkpoint_args(
+        args.grasp_evaluator_folder)
+    grasp_evaluator_args.continue_train = True
+    estimator = grasp_estimator.GraspEstimator(grasp_sampler_args,
+                                               grasp_evaluator_args, args)
+    return estimator
+
+
+class GraspNetDetector:
     def __init__(self, estimator):
         align_to_bin_orientation = transformations.quaternion_from_euler(1.57, 0, 1.57)
         self.align_to_bin_quat = Quaternion(x=align_to_bin_orientation[0], y=align_to_bin_orientation[1],
@@ -73,7 +142,6 @@ class AURMRGraspingNode():
 
         self.object_pointcloud = np.asarray(cl.points)
 
-
     def filter_grasps(self, grasps, grasp_scores):
         filtered_grasps = []
         filtered_scores = []
@@ -86,7 +154,7 @@ class AURMRGraspingNode():
                 filtered_scores.append(grasp_score)
             # print(norm_euler_grasp)
         return filtered_grasps, filtered_scores
-    
+
     def backproject(self, depth_cv,
                 intrinsic_matrix,
                 return_finite_depth=True,
@@ -129,7 +197,7 @@ class AURMRGraspingNode():
         mask = np.where(np.logical_or(self.depth_image == 0, self.depth_image > 1.5))
         print('mask', mask)
         self.depth_image[mask] = np.nan
-        
+
         pc, selection = self.backproject(self.depth_image,
                                     self.camera_info,
                                     return_finite_depth=True,
@@ -208,14 +276,14 @@ class AURMRGraspingNode():
     def pose_publish(self, pose_stamped, pts):
         pub = rospy.Publisher('GraspPose', PoseStamped, queue_size=10, latch=True)
         pub_opc = rospy.Publisher('ObjectPC', PointCloud2, queue_size=10, latch=True)
-        
+
         print('Pose is being published')
         pub.publish(pose_stamped)
         pub_opc.publish(pts)
 
     def save_points(self):
-        np.savez('/home/enigma/catkin_ws/trial.npz', image=self.rgb_image, 
-                            depth=self.depth_image, 
+        np.savez('/home/enigma/catkin_ws/trial.npz', image=self.rgb_image,
+                            depth=self.depth_image,
                             intrinsics_matrix=self.camera_info,
                             smoothed_object_pc = self.object_pointcloud)
         print('Points Saved')
@@ -251,11 +319,11 @@ class AURMRGraspingNode():
         grasp_orientation_quat = transformations.quaternion_from_matrix(grasp_pose_se3)
         grasp_orientation = Quaternion(x=grasp_orientation_quat[0], y=grasp_orientation_quat[1],
                                        z=grasp_orientation_quat[2], w=grasp_orientation_quat[3])
-        
+
         grasp_pose = Pose(position=grasp_point,
                                 orientation=grasp_orientation)
 
-        grasp_pose_stamped = PoseStamped(header=request.points.header, 
+        grasp_pose_stamped = PoseStamped(header=request.points.header,
                                 pose=grasp_pose)
 
         self.pose_publish(grasp_pose_stamped, request.points)
@@ -263,99 +331,3 @@ class AURMRGraspingNode():
         return GraspPoseResponse(success=True, message=f"Grasping Pose has been set", # The function name will be different
                                 pose = grasp_pose_stamped,
                                 grasp = 0.02)      #gripper_dist
-
-
-    def main(self):
-        print('Grasping node running')
-        rospy.init_node('aurmr_grasping')
-        self.node_name = rospy.get_name()
-        rospy.loginfo("{0} started".format(self.node_name))
-
-        self.trigger_grasp = rospy.Service('/aurmr_perception/init_grasp', GraspPose, self.grasping_callback)
-
-        self.rate = 5.0
-        rate = rospy.Rate(self.rate)
-
-        while not rospy.is_shutdown():
-            rate.sleep()
-
-def make_graspnet_parser():
-    parser = argparse.ArgumentParser(
-    description='6-DoF GraspNet Demo',
-    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--grasp_sampler_folder',
-                        type=str,
-                        default='checkpoints/gan_pretrained/')
-    parser.add_argument('--grasp_evaluator_folder',
-                        type=str,
-                        default='checkpoints/evaluator_pretrained/')
-    parser.add_argument('--refinement_method',
-                        choices={"gradient", "sampling"},
-                        default='sampling')
-    parser.add_argument('--refine_steps', type=int, default=25)
-
-    parser.add_argument('--npy_folder', type=str, default='demo/data/')
-    parser.add_argument(
-        '--threshold',
-        type=float,
-        default=0.8,
-        help=
-        "When choose_fn is something else than all, all grasps with a score given by the evaluator notwork less than the threshold are removed"
-    )
-    parser.add_argument(
-        '--choose_fn',
-        choices={
-            "all", "better_than_threshold", "better_than_threshold_in_sequence"
-        },
-        default='better_than_threshold',
-        help=
-        "If all, no grasps are removed. If better than threshold, only the last refined grasps are considered while better_than_threshold_in_sequence consideres all refined grasps"
-    )
-
-    parser.add_argument('--target_pc_size', type=int, default=1024)
-    parser.add_argument('--num_grasp_samples', type=int, default=200)
-    parser.add_argument(
-        '--generate_dense_grasps',
-        action='store_true',
-        help=
-        "If enabled, it will create a [num_grasp_samples x num_grasp_samples] dense grid of latent space values and generate grasps from these."
-    )
-
-    parser.add_argument(
-        '--batch_size',
-        type=int,
-        default=30,
-        help=
-        "Set the batch size of the number of grasps we want to process and can fit into the GPU memory at each forward pass. The batch_size can be increased for a GPU with more memory."
-    )
-    parser.add_argument('--train_data', action='store_true')
-    opts, _ = parser.parse_known_args()
-    if opts.train_data:
-        parser.add_argument('--dataset_root_folder',
-                            required=True,
-                            type=str,
-                            help='path to root directory of the dataset.')
-    return parser
-
-if __name__ == '__main__':
-    try:
-        parser = argparse.ArgumentParser(description='AURMR Perception Module')
-        parser.add_argument('-v', '--viz', action='store_true', default=True)
-        parser.add_argument('--diff_threshold', type=int, default=140)
-        args, unknown = parser.parse_known_args()
-
-        graspnet_parser = make_graspnet_parser()
-        graspnet_args, unknown = graspnet_parser.parse_known_args()
-        grasp_sampler_args = utils.read_checkpoint_args(graspnet_args.grasp_sampler_folder)
-        grasp_sampler_args.is_train = False
-        grasp_evaluator_args = utils.read_checkpoint_args(
-            graspnet_args.grasp_evaluator_folder)
-        grasp_evaluator_args.continue_train = True
-        estimator = grasp_estimator.GraspEstimator(grasp_sampler_args,
-                                                   grasp_evaluator_args, graspnet_args)
-
-        node = AURMRGraspingNode(estimator)
-        node.main()
-        rospy.spin()
-    except KeyboardInterrupt:
-        print('interrupt received, so shutting down')
