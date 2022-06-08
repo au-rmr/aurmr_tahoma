@@ -19,6 +19,8 @@ from std_srvs.srv import Trigger
 
 from tf_conversions import transformations
 
+from aurmr_tasks.interaction import prompt_for_confirmation
+
 I_QUAT = Quaternion(x=0, y=0, z=0, w=1)
 
 
@@ -125,6 +127,40 @@ class MoveEndEffectorInLineInOut(State):
             return "aborted"
         else:
             return "succeeded"
+
+
+class CloseGripper(State):
+    def __init__(self, robot):
+        State.__init__(self, input_keys=[], outcomes=['succeeded', 'preempted', 'aborted'])
+        self.robot = robot
+
+    def execute(self, ud):
+        if State.simulation:
+            self.robot.close_gripper()
+            return "succeeded"
+        else:
+            confirmed = prompt_for_confirmation("Close the gripper using the teach pendant")
+            if confirmed:
+                return "succeeded"
+            else:
+                return "aborted"
+
+
+class OpenGripper(State):
+    def __init__(self, robot):
+        State.__init__(self, input_keys=[], outcomes=['succeeded', 'preempted', 'aborted'])
+        self.robot = robot
+
+    def execute(self, ud):
+        if State.simulation:
+            self.robot.open_gripper()
+            return "succeeded"
+        else:
+            confirmed = prompt_for_confirmation("Open the gripper using the teach pendant")
+            if confirmed:
+                return "succeeded"
+            else:
+                return "aborted"
 
 
 class ClearCollisionGeometry(State):
@@ -242,12 +278,7 @@ class AddPodCollisionGeometry(State):
         self.robot.scene.add_box("pod_right", PoseStamped(header=Header(frame_id="pod_base_link"),
                                                      pose=Pose(position=Point(x=.25, y=.25, z=1.27),
                                                                orientation=I_QUAT)), (.5, .5, .3))
-        self.robot.scene.add_box("camera_lower_left", PoseStamped(header=Header(frame_id="camera_lower_left_link"),
-                                                     pose=Pose(position=Point(x=0, y=0, z=0),
-                                                               orientation=I_QUAT)), (.15, .15, .2))
-        self.robot.scene.add_box("camera_lower_right", PoseStamped(header=Header(frame_id="camera_lower_right_link"),
-                                                     pose=Pose(position=Point(x=0, y=0, z=0),
-                                                               orientation=I_QUAT)), (.15, .15, .2))
+
         start = rospy.get_time()
         seconds = rospy.get_time()
         timeout = 50.0
@@ -255,7 +286,7 @@ class AddPodCollisionGeometry(State):
             objects = self.robot.scene.get_objects()
 
             # Test if we are in the expected state
-            if len(objects) == 6:
+            if len(objects) == 4:
                 return "succeeded"
 
             # Sleep so that we give other threads time on the processor

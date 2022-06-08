@@ -36,6 +36,7 @@ class CaptureObject(State):
             outcomes=['succeeded', 'preempted', 'aborted']
         )
         self.capture_object = rospy.ServiceProxy('/aurmr_perception/capture_object', aurmr_perception.srv.CaptureObject)
+        self.capture_object.wait_for_service(timeout=rospy.Duration(5))
 
     def execute(self, userdata):
         capture_obj_req = CaptureObjectRequest(
@@ -59,7 +60,7 @@ class GetGraspPose(State):
             outcomes=['succeeded', 'preempted', 'aborted']
         )
         self.get_points = rospy.ServiceProxy('/aurmr_perception/get_object_points', GetObjectPoints)
-        self.get_grasp = rospy.ServiceProxy('/aurmr_perception/init_grasp', GraspPose)
+        self.get_grasp = rospy.ServiceProxy('/grasp_detection/detect_grasps', GraspPose)
         # Crash during initialization if these aren't running so see the problem early
         self.get_points.wait_for_service(timeout=5)
         self.get_grasp.wait_for_service(timeout=5)
@@ -87,7 +88,7 @@ class GetGraspPose(State):
 
         if not grasp_response.success:
             return "aborted"
-        
+
         userdata['grasp_pose'] = grasp_response.pose
 
         return "succeeded"
