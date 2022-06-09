@@ -1,22 +1,12 @@
 <launch>
 
   <arg name="camera" default="camera_lower_right" />
+  <arg name="viz" default="true" />
   <arg name="grasp_detector" default="heuristic" />
-
-  <include file="$(find realsense2_camera)/launch/rs_camera.launch">
-    <arg name="align_depth"              value="true"/>
-    <arg name="camera"                   value="$(arg camera)" />
-    <arg name="enable_pointcloud"         value="true"/>
-  </include>
-
-  <rosparam>
-      /camera/motion_module/global_time_enabled: true
-      /camera/l500_depth_sensor/global_time_enabled: true
-      /camera/rgb_camera/global_time_enabled: true
-  </rosparam>
 
   <node name="aurmr_perception" pkg="aurmr_perception" type="aurmr_perception" output="screen">
     <param name="camera_name"                   value="$(arg camera)" />
+    <param name="viz"                   value="$(arg viz)" />
   </node>
 
   <node name="grasp_detection" pkg="aurmr_perception" type="grasp_detection_server" output="screen">

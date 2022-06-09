@@ -18,6 +18,8 @@
         <arg name="load_robot_description" value="false" />
     </include>
 
+    <include file="$(find tahoma_moveit_config)/launch/servo.launch"/>
+
     <group if="$(eval pod_id > 0)">
       <include file="$(find tahoma_description)/launch/load_pod.launch">
         <arg name="id" value="$(arg pod_id)"/>
@@ -25,7 +27,13 @@
       <include file="$(find tahoma_description)/launch/pod_transform.launch"/>
     </group>
 
-    <node name="fake_gripper_state" type="fake_gripper_state" pkg="tahoma_bringup" />
+    <include file="$(find tahoma_bringup)/launch/camera.launch">
+      <arg name="camera" value="camera_lower_right" />
+    </include>
+
+    <node name="fake_gripper_state" type="fake_gripper_state" pkg="tahoma_bringup" >
+      <param name="state" value="0.0" />
+    </node>
 
     <node name="rviz" pkg="rviz" type="rviz" required="true" args="-d $(find tahoma_description)/config/view_model.rviz"/>
 </launch>
