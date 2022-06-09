@@ -1,9 +1,0 @@
-sensor_msgs/PointCloud2 points
-float32 dist_th
-int8 pose_id
-int8 grasp_id
----
-bool success
-string message
-geometry_msgs/PoseStamped pose
-float32 grasp

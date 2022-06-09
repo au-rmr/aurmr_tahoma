@@ -1,0 +1,6 @@
+sensor_msgs/PointCloud2 points
+float32 dist_threshold
+---
+bool success
+string message
+geometry_msgs/PoseStamped[] poses

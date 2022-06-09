@@ -3,12 +3,11 @@ import rospy
 
 from smach import State
 from aurmr_perception.srv import (
+    DetectGraspPoses,
     ResetBin,
     ResetBinRequest,
     GetObjectPoints,
-    GraspPose,
     GetObjectPointsRequest,
-    GraspPoseRequest,
     CaptureObjectRequest,
 )
 
@@ -60,7 +59,7 @@ class GetGraspPose(State):
             outcomes=['succeeded', 'preempted', 'aborted']
         )
         self.get_points = rospy.ServiceProxy('/aurmr_perception/get_object_points', GetObjectPoints)
-        self.get_grasp = rospy.ServiceProxy('/grasp_detection/detect_grasps', GraspPose)
+        self.get_grasp = rospy.ServiceProxy('/grasp_detection/detect_grasps', DetectGraspPoses)
         # Crash during initialization if these aren't running so see the problem early
         self.get_points.wait_for_service(timeout=5)
         self.get_grasp.wait_for_service(timeout=5)
@@ -78,17 +77,13 @@ class GetGraspPose(State):
         if not points_response.success:
             return "aborted"
 
-        get_grasp_req = GraspPoseRequest(
-            points=points_response.points,
-            dist_th=self.distance_threshold,
-            pose_id=0,
-            grasp_id=0,
-        )
-        grasp_response = self.get_grasp(get_grasp_req)
+        grasp_response = self.get_grasp(points=points_response.points,
+            dist_threshold=self.distance_threshold)
 
         if not grasp_response.success:
             return "aborted"
 
-        userdata['grasp_pose'] = grasp_response.pose
+        # NOTE: No extra filtering or ranking on our part. Just take the first one
+        userdata['grasp_pose'] = grasp_response.poses[0]
 
         return "succeeded"

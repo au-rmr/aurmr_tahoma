@@ -1,10 +1,17 @@
+import math
+
 import numpy as np
 import ros_numpy
 import rospy
 
-from aurmr_perception.srv import *
+from aurmr_perception.srv import DetectGraspPoses
 from geometry_msgs.msg import PoseStamped, Quaternion, Pose, Point
 from tf_conversions import transformations
+from aurmr_perception.visualization import create_gripper_pose_markers
+
+# See moveit_grasps for inspiration on improved grasp ranking and filtering:
+# https://ros-planning.github.io/moveit_tutorials/doc/moveit_grasps/moveit_grasps_tutorial.html
+from visualization_msgs.msg import MarkerArray, Marker
 
 
 class HeuristicGraspDetector:
@@ -25,11 +32,9 @@ class HeuristicGraspDetector:
         center[2] -= 0.02
 
         position = self.dist_threshold * self.bin_normal + center  # center and extention_dir should be under the same coordiante!
-        align_to_bin_orientation = transformations.quaternion_from_euler(1.57, 0, 1.57)
-        align_to_bin_quat = Quaternion(x=align_to_bin_orientation[0], y=align_to_bin_orientation[1],
-                                            z=align_to_bin_orientation[2], w=align_to_bin_orientation[3])
+        align_to_bin_orientation = transformations.quaternion_from_euler(0, math.pi / 2., 0)
 
-        poses_stamped = [PoseStamped(header=points.header, pose=Pose(position=Point(x=position[0], y=position[1], z=position[2]),orientation=align_to_bin_quat))]
+        poses_stamped = [(position, align_to_bin_orientation)]
 
         return poses_stamped
 
@@ -37,7 +42,12 @@ class HeuristicGraspDetector:
 class GraspDetectionROS:
     def __init__(self, detector):
         self.detector = detector
-        self.detect_grasps = rospy.Service('~detect_grasps', GraspPose, self.detect_grasps_cb)
+        self.detect_grasps = rospy.Service('~detect_grasps', DetectGraspPoses, self.detect_grasps_cb)
+        self.dections_viz_pub = rospy.Publisher("~detected_grasps", MarkerArray, latch=True, queue_size=1)
+
+    def visualize_grasps(self, poses_stamped):
+        markers = create_gripper_pose_markers(poses_stamped, (1,0,1,1))
+        self.dections_viz_pub.publish(MarkerArray(markers=markers))
 
     def detect_grasps_cb(self, request):
         pts = ros_numpy.numpify(request.points)
@@ -45,4 +55,11 @@ class GraspDetectionROS:
                         pts['y'],
                         pts['z']], axis=1)
         detections = self.detector.detect(pts)
-        return True, "", detections[0], 0.0
+        stamped_detections = []
+        for position, orientation in detections:
+            as_quat = Quaternion(x=orientation[0], y=orientation[1],
+                                            z=orientation[2], w=orientation[3])
+            as_pose = Pose(position=Point(x=position[0], y=position[1], z=position[2]), orientation=as_quat)
+            stamped_detections.append(PoseStamped(header=request.points.header, pose=as_pose))
+        self.visualize_grasps(stamped_detections)
+        return True, "", stamped_detections
