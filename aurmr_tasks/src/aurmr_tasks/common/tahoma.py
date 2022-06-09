@@ -255,7 +255,7 @@ class Tahoma:
         """Moves the end-effector to a pose, using motion planning.
 
         Args:
-            joints: A list of (name, value) for the arm joints.
+            joints: A list of (name, value) for the arm joints. Alternatively a string name of a stored configuration
             allowed_planning_time: float. The maximum duration to wait for a
                 planning result.
             execution_timeout: float. The maximum duration to wait for an arm
@@ -278,16 +278,22 @@ class Tahoma:
             string describing the error if an error occurred, else None.
         """
 
+        self.move_group.set_num_planning_attempts(num_planning_attempts)
+        self.move_group.allow_replanning(replan)
+        self.move_group.set_goal_joint_tolerance(tolerance)
         self.move_group.set_planning_time(allowed_planning_time)
-        # The go command can be called with joint values, poses, or without any
-        # parameters if you have already set the pose or joint target for the group
-        self.move_group.go(joints, wait=True)
+
+        if isinstance(joints, str):
+            self.move_group.set_named_target(joints)
+        else:
+            self.move_group.set_joint_value_target(joints)
+        self.move_group.go(wait=True)
 
         # Calling ``stop()`` ensures that there is no residual movement
         self.move_group.stop()
 
         current_joints = self.move_group.get_current_joint_values()
-        return all_close(joints, current_joints, 0.01)
+        return all_close(joints, current_joints, tolerance)
 
     @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_pose(self,
@@ -401,7 +407,7 @@ class Tahoma:
         # ignoring the check for infeasible jumps in joint space, which is sufficient
         # for this tutorial.
         (plan, fraction) = self.move_group.compute_cartesian_path(
-            waypoints, 0.01, jump_threshold, avoid_collisions  # waypoints to follow  # eef_step
+            waypoints, ee_step, jump_threshold, avoid_collisions
         )
         if fraction < .9:
             rospy.logwarn(f"Not moving in cartesian path. Only {fraction} waypoints reached")

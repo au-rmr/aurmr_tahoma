@@ -6,15 +6,15 @@ import rospy
 from aurmr_perception.pod_model import PodPerceptionROS, DiffPodModel
 
 if __name__ == '__main__':
-
+    rospy.init_node('aurmr_perception')
     parser = argparse.ArgumentParser(description='AURMR Perception Module')
     parser.add_argument('-v', '--viz', action='store_true', default=False)
     parser.add_argument('--diff_threshold', type=int, default=140)
     parser.add_argument('--camera_name', default='stand_camera')
     args, unknown = parser.parse_known_args()
-    args.camera_name = rospy.get_param("camera_name", args.camera_name)
+    args.camera_name = rospy.get_param("~camera_name", args.camera_name)
     model = DiffPodModel(args.diff_threshold)
-    rospy.init_node('aurmr_perception')
+
     node = PodPerceptionROS(model, args.camera_name, args.viz)
     while not rospy.is_shutdown() and not node.received_images:
         rospy.logwarn_throttle(10, "Haven't received images yet")

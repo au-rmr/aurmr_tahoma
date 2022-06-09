@@ -57,19 +57,19 @@ class PodPerceptionROS:
 
     def get_object_callback(self, request):
         if not request.object_id or not request.frame_id:
-            return False, "object_id and frame_id are required"
+            return False, "object_id and frame_id are required", None, None
 
         result, message = self.model.get_object(None, request.object_id)
 
         if not result:
-            return result, message
+            return result, message, None, None
 
         bin_id, points = result
         if request.frame_id != self.camera_frame:
             # Transform points to requested frame_id
 
             stamped_transform = self.tf2_buffer.lookup_transform(request.frame_id, self.camera_frame, rospy.Time(0),
-                                                                 rospy.Duration(0.1))
+                                                                 rospy.Duration(1))
             camera_to_target_mat = ros_numpy.numpify(stamped_transform.transform)
 
             points = np.vstack([points, np.ones(points.shape[1])])  # convert to homogenous

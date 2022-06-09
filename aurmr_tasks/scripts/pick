@@ -18,13 +18,6 @@ from aurmr_tasks.pod import load_sm
 TARGET_BIN_ID = "001"
 TARGET_OBJECT_ID = "XYZ"
 
-DEG_TO_RAD = 2.0 * math.pi / 360.
-HIDE_ANGLES = [4,31,-25,-44,0,37]
-TOTE_APPROACH_ANGLES = [-182,-78,40,306,-270,270]
-
-HIDE_ANGLES = [DEG_TO_RAD * ang for ang in HIDE_ANGLES]
-TOTE_APPROACH_ANGLES = [DEG_TO_RAD * ang for ang in TOTE_APPROACH_ANGLES]
-
 align_to_bin_orientation = transformations.quaternion_from_euler(1.57, 0, 1.57)
 align_to_bin_quat = Quaternion(x=align_to_bin_orientation[0], y=align_to_bin_orientation[1], z=align_to_bin_orientation[2], w=align_to_bin_orientation[3])
 I_QUAT = Quaternion(x=0, y=0, z=0, w=1)
@@ -58,7 +51,7 @@ def main():
 
         StateMachine.add_auto("RETRACT_ARM", motion.MoveEndEffectorInLine(robot, (0, 0, -0.25)), ["succeeded", "aborted"])
         StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX", motion.AddInHandCollisionGeometry(robot), ["succeeded"])
-        StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, TOTE_APPROACH_ANGLES), ["succeeded"])
+        StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "tote_approach"), ["succeeded"])
         StateMachine.add_auto("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot), ["succeeded"])
 
     stow_and_pick_sm = StateMachine(["succeeded", "preempted", "aborted"],
@@ -68,7 +61,7 @@ def main():
     with stow_and_pick_sm:
         StateMachine.add_auto("CLEAR_SCENE", motion.ClearCollisionGeometry(robot), ["succeeded"])
         StateMachine.add_auto("SETUP_COLLISION_SCENE", motion.AddPodCollisionGeometry(robot), ["succeeded"])
-        StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, HIDE_ANGLES), ["succeeded"])
+        StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "hide"), ["succeeded"])
         StateMachine.add_auto("LOAD_POD", load_sm([["2f", "bottle"]]), ["succeeded"])
 
         StateMachine.add_auto("PICK", pick_sm, ["succeeded"])

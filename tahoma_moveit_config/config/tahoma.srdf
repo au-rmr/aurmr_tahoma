@@ -42,6 +42,14 @@
         <joint name="arm_wrist_2_joint" value="-1.57"/>
         <joint name="arm_wrist_3_joint" value="-1.57"/>
     </group_state>
+    <group_state name="tote_approach" group="manipulator">
+        <joint name="arm_elbow_joint" value="-3.18"/>
+        <joint name="arm_shoulder_lift_joint" value="-1.36"/>
+        <joint name="arm_shoulder_pan_joint" value="0.70"/>
+        <joint name="arm_wrist_1_joint" value="5.34"/>
+        <joint name="arm_wrist_2_joint" value="-4.71"/>
+        <joint name="arm_wrist_3_joint" value="4.71"/>
+    </group_state>
     <!--END EFFECTOR: Purpose: Represent information about an end effector.-->
     <!-- FIXME(nickswalker 6-2-22): Do we need this? Enabling this shrinks the manipulator interactive marker in RViz for some reason -->
     <!--end_effector name="gripper" parent_link="arm_tool0" group="hand" parent_group="manipulator"--/>
