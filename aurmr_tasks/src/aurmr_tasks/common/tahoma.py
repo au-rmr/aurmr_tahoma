@@ -31,6 +31,8 @@ GRIPPER_ACTION_SERVER = '/gripper_controller/gripper_cmd'
 MOVE_GROUP_ACTION_SERVER = 'move_group'
 TIME_FROM_START = 5
 
+CONFLICTING_CONTROLLERS = [JOINT_TRAJ_CONTROLLER, JOINT_TRAJ_CONTROLLER_SIM, JOINT_GROUP_CONTROLLER]
+
 MOVE_IT_ERROR_TO_STRING = {
     MoveItErrorCodes.SUCCESS: "SUCCESS",
     MoveItErrorCodes.FAILURE: 'FAILURE',
@@ -75,7 +77,9 @@ def requires_controller(named):
         @wraps(function)
         def wrapper(self, *args, **kwargs):
             if not self.is_controller_active(named):
-                self.activate_controller(named)
+                activated = self.activate_controller(named)
+                if not activated:
+                    return False
             return function(self, *args, **kwargs)
         return wrapper
     return decorator
@@ -101,7 +105,6 @@ class Tahoma:
 
         self.tf2_buffer = tf2_ros.Buffer()
         self.tf2_listener = tf2_ros.TransformListener(self.tf2_buffer)
-
         self.wrist_position = None
         self.lift_position = None
 
@@ -125,12 +128,12 @@ class Tahoma:
         self.display_trajectory_publisher = rospy.Publisher(
             "/move_group/display_planned_path",
             DisplayTrajectory,
-            queue_size=20,
+            queue_size=1,
+            latch=True
         )
         self._controller_lister = rospy.ServiceProxy("/controller_manager/list_controllers", ListControllers)
         self._controller_switcher = rospy.ServiceProxy("/controller_manager/switch_controller", SwitchController)
         self.servo_to_pose_client = SimpleActionClient("/servo_server/servo_to_pose", ServoToPoseAction)
-
 
         planning_frame = self.move_group.get_planning_frame()
         eef_link = self.move_group.get_end_effector_link()
@@ -169,22 +172,27 @@ class Tahoma:
 
     def activate_controller(self, named):
         # Hacked to work for what we need right now
-        if named == JOINT_TRAJ_CONTROLLER:
-            to_enable = named
-            to_disable = JOINT_GROUP_CONTROLLER
-            if self.in_sim:
-                to_enable = JOINT_TRAJ_CONTROLLER_SIM
-        elif named == JOINT_GROUP_CONTROLLER:
-            to_enable = named
-            to_disable = JOINT_TRAJ_CONTROLLER
-            if self.in_sim:
-                to_disable = JOINT_TRAJ_CONTROLLER_SIM
-        else:
+        to_enable = named
+        if named == JOINT_TRAJ_CONTROLLER and self.in_sim:
+            to_enable = JOINT_TRAJ_CONTROLLER_SIM
+        to_disable = []
+        for candidate in CONFLICTING_CONTROLLERS:
+            if candidate == named:
+                continue
+            # Only disable conflicting controllers that are enabled
+            if candidate in self.active_controllers:
+                to_disable.append(candidate)
+        if named not in CONFLICTING_CONTROLLERS:
             raise RuntimeError(f"Asked to activate unknown controller {named}")
-        rospy.loginfo(f"Activating {named}")
-        ok = self._controller_switcher.call([to_enable], [to_disable], 1, False, 2.0)
+        rospy.loginfo(f"Activating {named} and disabling {to_disable}")
+        ok = self._controller_switcher.call([to_enable], to_disable, 1, False, 2.0)
         if not ok:
-            raise RuntimeError(f"Failed to enable controller {named}")
+            rospy.logerr("Couldn't activate controller")
+            return False
+            # FIXME(nickswalker): We should crash out here but this exception seems to get swallowed
+            # raise RuntimeError(f"Failed to enable controller {named}")
+        else:
+            return True
 
     def is_controller_active(self, named):
         self.update_running_controllers()
@@ -242,6 +250,11 @@ class Tahoma:
         self._joint_traj_client.send_goal(goal)
         self._joint_traj_client.wait_for_result(rospy.Duration(10))
 
+    def get_joint_values_for_name(self, name):
+        self.move_group.set_named_target(name)
+        values = self.move_group.get_joint_value_target()
+        return values
+
     @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_joint_angles(self,
                            joints,
@@ -283,7 +296,9 @@ class Tahoma:
         self.move_group.set_goal_joint_tolerance(tolerance)
         self.move_group.set_planning_time(allowed_planning_time)
 
+        joint_values = joints
         if isinstance(joints, str):
+            joint_values = self.get_joint_values_for_name(joints)
             self.move_group.set_named_target(joints)
         else:
             self.move_group.set_joint_value_target(joints)
@@ -293,7 +308,7 @@ class Tahoma:
         self.move_group.stop()
 
         current_joints = self.move_group.get_current_joint_values()
-        return all_close(joints, current_joints, tolerance)
+        return all_close(joint_values, current_joints, tolerance)
 
     @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_pose(self,
@@ -329,15 +344,9 @@ class Tahoma:
             string describing the error if an error occurred, else None.
         """
 
-        transform = self.tf2_buffer.lookup_transform(self.move_group.get_planning_frame(),
-                                       # source frame:
-                                       pose_stamped.header.frame_id,
-                                       # get the tf at the time the pose was valid
-                                       pose_stamped.header.stamp,
-                                       # wait for at most 1 second for transform, otherwise throw
-                                       rospy.Duration(1.0))
+        goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.move_group.get_planning_frame(),
+                                       rospy.Duration(1))
 
-        goal_in_planning_frame = tf2_geometry_msgs.do_transform_pose(pose_stamped, transform)
         self.move_group.set_pose_target(pose_stamped)
         self.move_group.set_planning_time(allowed_planning_time)
         self.move_group.set_num_planning_attempts(num_planning_attempts)
@@ -365,19 +374,18 @@ class Tahoma:
 
         current_pose = self.move_group.get_current_pose()
         rospy.loginfo(f"Pose dist: {pose_dist(goal_in_planning_frame, current_pose)}")
-        return all_close(goal_in_planning_frame, current_pose, 0.01)
+        return all_close(goal_in_planning_frame, current_pose, tolerance)
 
     @requires_controller(JOINT_TRAJ_CONTROLLER)
     def straight_move_to_pose(self,
                               pose_stamped,
+                              tolerance=0.01,
                               ee_step=0.025,
                               jump_threshold=2.0,
                               avoid_collisions=True):
         """Moves the end-effector to a pose in a straight line.
 
         Args:
-          group: moveit_commander.MoveGroupCommander. The planning group for
-            the arm.
           pose_stamped: geometry_msgs/PoseStamped. The goal pose for the
             gripper.
           ee_step: float. The distance in meters to interpolate the path.
@@ -389,37 +397,29 @@ class Tahoma:
         Returns:
             string describing the error if an error occurred, else None.
         """
-        transform = self.tf2_buffer.lookup_transform(self.planning_frame,
-                                       # source frame:
-                                       pose_stamped.header.frame_id,
-                                       # get the tf at the time the pose was valid
-                                       pose_stamped.header.stamp,
-                                       # wait for at most 1 second for transform, otherwise throw
-                                       rospy.Duration(1.0))
+        goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.planning_frame, rospy.Duration(1))
 
-        pose_planning_frame = tf2_geometry_msgs.do_transform_pose(pose_stamped, transform)
+        waypoints = [goal_in_planning_frame.pose]
 
-        waypoints = [pose_planning_frame.pose]
-
-        # We want the Cartesian path to be interpolated at a resolution of 1 cm
-        # which is why we will specify 0.01 as the eef_step in Cartesian
-        # translation.  We will disable the jump threshold by setting it to 0.0,
-        # ignoring the check for infeasible jumps in joint space, which is sufficient
-        # for this tutorial.
         (plan, fraction) = self.move_group.compute_cartesian_path(
             waypoints, ee_step, jump_threshold, avoid_collisions
         )
         if fraction < .9:
             rospy.logwarn(f"Not moving in cartesian path. Only {fraction} waypoints reached")
             return False
-        return self.move_group.execute(plan, wait=True)
+        self.move_group.execute(plan, wait=True)
+
+        current_pose = self.move_group.get_current_pose()
+        rospy.loginfo(f"Pose dist: {pose_dist(goal_in_planning_frame, current_pose)}")
+        return all_close(goal_in_planning_frame, current_pose, tolerance)
 
     @requires_controller(JOINT_GROUP_CONTROLLER)
     def servo_to_pose(self,
                       pose_stamped,
                       timeout=10,
                       pos_tolerance=0.01,
-                      angular_tolerance=0.1):
+                      angular_tolerance=0.2,
+                      avoid_collisions=True):
         if not self.servo_to_pose_client.wait_for_server(rospy.Duration(1)):
             rospy.logerr("Servo action server couldn't be reached")
             return False

@@ -126,7 +126,7 @@
       <joint name="camera_beam_lower_camera_lower_right_mount_joint" type="fixed">
         <parent link="camera_beam_lower"/>
         <child link="camera_lower_right_mount"/>
-        <origin xyz="-0.00 ${-0.0215 + -camera_baseline / 2} 0.09"
+        <origin xyz="-0.00 ${-0.0215 + -camera_baseline / 2} 0.13"
                 rpy="${pi / 2} 0 ${math.atan2((camera_baseline /2),camera_focal_depth)}"/>
       </joint>
     </xacro:if>

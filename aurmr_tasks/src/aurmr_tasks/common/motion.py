@@ -3,7 +3,7 @@ import rospy
 import std_msgs.msg
 from sensor_msgs.msg import JointState
 
-from smach import State
+from smach import State, StateMachine
 
 from geometry_msgs.msg import (
     PoseStamped,
@@ -20,6 +20,10 @@ from std_srvs.srv import Trigger
 from tf_conversions import transformations
 
 from aurmr_tasks.interaction import prompt_for_confirmation
+
+from aurmr_tasks.util import apply_offset_to_pose
+
+from src.aurmr_tasks import interaction
 
 I_QUAT = Quaternion(x=0, y=0, z=0, w=1)
 
@@ -67,11 +71,6 @@ class MoveEndEffectorToPose(State):
             pose = self.default_pose
         else:
             pose = userdata["pose"]
-        v = qv_mult([pose.pose.orientation.x, pose.pose.orientation.y, pose.pose.orientation.z, pose.pose.orientation.w], [0,0,-0.15])
-
-        pose.pose.position.x += v[0]
-        pose.pose.position.y += v[1]
-        pose.pose.position.z += v[2]
 
         self.target_pose_visualizer.publish(pose)
         success = self.robot.move_to_pose(pose)
@@ -81,31 +80,101 @@ class MoveEndEffectorToPose(State):
             return "aborted"
 
 
-class MoveEndEffectorInLine(State):
-    def __init__(self, robot, to_point, frame=None):
+class MoveEndEffectorToPoseLinear(State):
+    def __init__(self, robot, to_pose):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
-        self.to_point = to_point
-        self.frame = frame
+        self.to_pose = to_pose
 
     def execute(self, userdata):
-        offset = self.to_point
-        movement_frame = self.frame
-        if movement_frame is None:
-            movement_frame = 'arm_tool0'
-        current = self.robot.move_group.get_current_pose(movement_frame)
-
-        v = qv_mult([current.pose.orientation.x, current.pose.orientation.y, current.pose.orientation.z, current.pose.orientation.w], offset)
-
-        current.pose.position.x += v[0]
-        current.pose.position.y += v[1]
-        current.pose.position.z += v[2]
-        error = self.robot.straight_move_to_pose(current, avoid_collisions=False)
-        if error is None:
+        target_pose = self.to_pose
+        if target_pose is None:
+            target_pose = userdata["pose"]
+        success = self.robot.straight_move_to_pose(target_pose, avoid_collisions=False)
+        if success:
             return "succeeded"
         else:
-            print(error)
             return "aborted"
+
+
+class MoveEndEffectorToOffset(State):
+    def __init__(self, robot, offset, frame=None):
+        State.__init__(self, input_keys=['offset'], outcomes=['succeeded', 'preempted', 'aborted'])
+        self.robot = robot
+        self.offset = offset
+        self.offset_frame = frame
+
+    def execute(self, userdata):
+        offset = self.offset
+        if offset is None:
+            offset = userdata["offset"]
+        offset_frame = self.offset_frame
+        if offset_frame is None:
+            offset_frame = 'arm_tool0'
+        # In base_link by default
+        current = self.robot.move_group.get_current_pose()
+        target_pose = apply_offset_to_pose(current, offset, offset_frame, self.robot.tf2_buffer)
+        succeeded = self.robot.straight_move_to_pose(target_pose, avoid_collisions=False)
+        if succeeded:
+            return "succeeded"
+        else:
+            return "aborted"
+
+
+class ServoEndEffectorToPose(State):
+    def __init__(self, robot, to_pose, pos_tolerance=.01, angular_tolerance=.1, frame=None):
+        State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
+        self.robot = robot
+        self.to_pose = to_pose
+        self.frame = frame
+        self.pos_tolerance = pos_tolerance
+        self.angular_tolerance = angular_tolerance
+
+    def execute(self, userdata):
+        target = self.to_pose
+        if target is None:
+            target = userdata["pose"]
+
+        succeeded = self.robot.servo_to_pose(target, self.pos_tolerance, self.angular_tolerance, avoid_collisions=False)
+        if succeeded:
+            return "succeeded"
+        else:
+            return "aborted"
+
+
+class ServoEndEffectorToOffset(State):
+    def __init__(self, robot, offset, frame=None):
+        State.__init__(self, input_keys=['offset'], outcomes=['succeeded', 'preempted', 'aborted'])
+        self.robot = robot
+        self.offset = offset
+        self.offset_frame = frame
+
+    def execute(self, userdata):
+        offset = self.offset
+        if offset is None:
+            offset = userdata["offset"]
+        offset_frame = self.offset_frame
+        if offset_frame is None:
+            offset_frame = 'arm_tool0'
+        # In base_link by default
+        current = self.robot.move_group.get_current_pose()
+        target_pose = apply_offset_to_pose(current, offset, offset_frame, self.robot.tf2_buffer)
+        succeeded = self.robot.servo_to_pose(target_pose, avoid_collisions=False)
+        if succeeded:
+            return "succeeded"
+        else:
+            return "aborted"
+
+
+def robust_move_to_offset(robot, offset, frame=None):
+    sm = StateMachine(["succeeded", "preempted", "aborted"])
+    if frame is None:
+        frame = "arm_tool0"
+    with sm:
+        StateMachine.add_auto("TRY_CARTESIAN_MOVE", MoveEndEffectorToOffset(robot, offset, frame), ["aborted"], transitions={"succeeded": "succeeded"})
+        StateMachine.add_auto("TRY_SERVO_MOVE", ServoEndEffectorToOffset(robot, offset, frame), ["aborted"], transitions={"succeeded": "succeeded"})
+        StateMachine.add_auto("ASK_HUMAN_TO_MOVE", interaction.AskForHumanAction(f"Please move the end effector by {offset} in the {frame} frame"), ["succeeded", "aborted"])
+    return sm
 
 
 class MoveEndEffectorInLineInOut(State):

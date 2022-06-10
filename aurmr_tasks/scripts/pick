@@ -15,6 +15,8 @@ from tf_conversions import transformations
 import aurmr_tasks.common.control_flow as cf
 from aurmr_tasks.pod import load_sm
 
+from src.aurmr_tasks.common.motion import robust_move_to_offset
+
 TARGET_BIN_ID = "001"
 TARGET_OBJECT_ID = "XYZ"
 
@@ -33,23 +35,23 @@ def main():
     robot = Tahoma(simulation)
     pick_sm = StateMachine(["succeeded", "preempted", "aborted"], input_keys=[], output_keys=[])
 
-    picks = [["2f", "bottle"]]
+    stows = [["2f", "bottle"], ["3h", "syrup"]]
+    picks = [["3h", "syrup"]]
     with pick_sm:
         cf.inject_userdata_auto("LOAD_PICKS", "picks", picks)
 
         StateMachine.add("ITERATE_STOWS", cf.IterateList("picks", "pick"),
                          {"repeat": "SPLAT_PICK", "done": "succeeded"})
         cf.splat_auto("SPLAT_PICK", "pick", ["target_bin_id", "target_object_id"])
-        StateMachine.add_auto("GET_GRASP_POSE", perception.GetGraspPose(), ["succeeded"])
+        StateMachine.add_auto("GET_GRASP_POSE", perception.GetGraspPose(.2), ["succeeded"])
         StateMachine.add_auto("REMAP_GRASP_POSE", cf.input_to_output("grasp_pose", "pose"), ["succeeded"])
         StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPose(robot), ["succeeded"])
-        StateMachine.add_auto("ASK_FOR_GRIPPER_OPEN_TO_GRASP",
-                              interaction.AskForHumanAction("Open the gripper using the teach pendant"), ["succeeded"])
-        StateMachine.add_auto("MOVE_TO_GRASP", motion.MoveEndEffectorInLine(robot, (0, 0, 0.075)), ["succeeded", "aborted"])
+        StateMachine.add_auto("OPEN_BEFORE_GRASP", motion.OpenGripper(robot), ["succeeded"])
+        StateMachine.add_auto("MOVE_TO_GRASP", robust_move_to_offset(robot, (0, 0, 0.075)), ["succeeded", "aborted"])
         StateMachine.add_auto("GRASP", motion.CloseGripper(robot), ["succeeded"])
-        StateMachine.add_auto("LIFT_OBJ", motion.MoveEndEffectorInLine(robot, (0, 0, 0.05), 'base_link'), ["succeeded", "aborted"])
+        StateMachine.add_auto("LIFT_OBJ", robust_move_to_offset(robot, (0, 0, 0.05), 'base_link'), ["succeeded", "aborted"])
 
-        StateMachine.add_auto("RETRACT_ARM", motion.MoveEndEffectorInLine(robot, (0, 0, -0.25)), ["succeeded", "aborted"])
+        StateMachine.add_auto("RETRACT_ARM", robust_move_to_offset(robot, (0, 0, -0.25)), ["succeeded", "aborted"])
         StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX", motion.AddInHandCollisionGeometry(robot), ["succeeded"])
         StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "tote_approach"), ["succeeded"])
         StateMachine.add_auto("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot), ["succeeded"])
@@ -62,7 +64,7 @@ def main():
         StateMachine.add_auto("CLEAR_SCENE", motion.ClearCollisionGeometry(robot), ["succeeded"])
         StateMachine.add_auto("SETUP_COLLISION_SCENE", motion.AddPodCollisionGeometry(robot), ["succeeded"])
         StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "hide"), ["succeeded"])
-        StateMachine.add_auto("LOAD_POD", load_sm([["2f", "bottle"]]), ["succeeded"])
+        StateMachine.add_auto("LOAD_POD", load_sm(stows), ["succeeded"])
 
         StateMachine.add_auto("PICK", pick_sm, ["succeeded"])
 

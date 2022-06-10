@@ -1,9 +1,28 @@
+from copy import deepcopy
+
 import geometry_msgs.msg
 from math import pi, tau, dist, fabs, cos
 
 import rospy
+from geometry_msgs.msg import PoseStamped
 from moveit_commander.conversions import pose_to_list
 from smach import State, StateMachine
+
+
+def apply_offset_to_pose(pose, offset, offset_frame=None, tf_buffer=None):
+    if not isinstance(pose, PoseStamped):
+        raise RuntimeError("Can't offset without knowing pose frame")
+    offset_pose = deepcopy(pose)
+    if offset_frame is None:
+        offset_frame = offset_pose.header.frame_id
+
+    offset_pose = tf_buffer.transform(offset_pose, offset_frame, rospy.Duration(1))
+    offset_pose.pose.position.x += offset[0]
+    offset_pose.pose.position.y += offset[1]
+    offset_pose.pose.position.z += offset[2]
+    # It would be better to grab the transform once and apply it to the offset vector
+    offset_pose = tf_buffer.transform(offset_pose, pose.header.frame_id, rospy.Duration(1))
+    return offset_pose
 
 
 class Formulator(State):
