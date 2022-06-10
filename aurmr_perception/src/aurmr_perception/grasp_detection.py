@@ -3,6 +3,7 @@ import math
 import numpy as np
 import ros_numpy
 import rospy
+import tf2_ros
 
 from aurmr_perception.srv import DetectGraspPoses
 from geometry_msgs.msg import PoseStamped, Quaternion, Pose, Point
@@ -31,8 +32,8 @@ class HeuristicGraspDetector:
         # due to the lip of the bin
         center[2] -= 0.02
 
-        position = self.dist_threshold * self.bin_normal + center  # center and extention_dir should be under the same coordiante!
-        align_to_bin_orientation = transformations.quaternion_from_euler(0, math.pi / 2., 0)
+        position = self.dist_threshold * self.bin_normal + center
+        align_to_bin_orientation = transformations.quaternion_from_euler(math.pi / 2., 0, math.pi / 2.)
 
         poses_stamped = [(position, align_to_bin_orientation)]
 
@@ -44,9 +45,11 @@ class GraspDetectionROS:
         self.detector = detector
         self.detect_grasps = rospy.Service('~detect_grasps', DetectGraspPoses, self.detect_grasps_cb)
         self.dections_viz_pub = rospy.Publisher("~detected_grasps", MarkerArray, latch=True, queue_size=1)
+        self.tf_buffer = tf2_ros.Buffer()
+        self.listener = tf2_ros.TransformListener(self.tf_buffer)
 
     def visualize_grasps(self, poses_stamped):
-        markers = create_gripper_pose_markers(poses_stamped, (1,0,1,1))
+        markers = create_gripper_pose_markers(poses_stamped, (1,0,1,1), tf_buffer=self.tf_buffer)
         self.dections_viz_pub.publish(MarkerArray(markers=markers))
 
     def detect_grasps_cb(self, request):

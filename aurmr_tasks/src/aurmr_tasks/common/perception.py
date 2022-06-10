@@ -1,4 +1,5 @@
 import aurmr_perception
+import geometry_msgs
 import rospy
 
 from smach import State
@@ -65,6 +66,8 @@ class GetGraspPose(State):
         self.get_grasp.wait_for_service(timeout=5)
         self.frame_id = frame_id
         self.distance_threshold = distance_threshold
+        self.pose_viz = rospy.Publisher("selected_grasp_pose", geometry_msgs.msg.PoseStamped,
+                                                      queue_size=1, latch=True)
 
     def execute(self, userdata):
         get_points_req = GetObjectPointsRequest(
@@ -85,5 +88,6 @@ class GetGraspPose(State):
 
         # NOTE: No extra filtering or ranking on our part. Just take the first one
         userdata['grasp_pose'] = grasp_response.poses[0]
+        self.pose_viz.publish(grasp_response.poses[0])
 
         return "succeeded"
