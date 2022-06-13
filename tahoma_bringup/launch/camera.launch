@@ -1,15 +1,21 @@
 <?xml version="1.0" ?>
 <launch>
   <arg name="camera" />
+  <arg name="usb_port_id" default=""/>
+  <arg name="serial_no" default=""/>
   <rosparam ns="$(arg camera)">
       motion_module/global_time_enabled: true
       l500_depth_sensor/global_time_enabled: true
       rgb_camera/global_time_enabled: true
   </rosparam>
   <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+    <arg name="usb_port_id"                value="$(arg usb_port_id)"/>
+    <arg name="serial_no"                value="$(arg serial_no)"/>
     <arg name="align_depth"              value="true"/>
     <arg name="camera"                   value="$(arg camera)" />
-    <arg name="enable_pointcloud"         value="true"/>
+    <!-- Use depth cloud viz in RViz, and manually use the depth image if you need a point cloud -->
+    <arg name="enable_pointcloud"         value="false"/>
+    <arg name="reconnect_timeout"         value="6.0"/>
   </include>
 
 </launch>

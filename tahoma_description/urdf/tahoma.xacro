@@ -120,14 +120,14 @@
         <parent link="camera_beam_lower"/>
         <child link="camera_lower_left_mount"/>
         <!-- Link is centered on the optical frames. Slight offset in Y direction to compensate -->
-        <origin xyz="-0.00 0.02 0.06"
-                rpy="0 0 0"/>
+        <origin xyz="0.02 ${-0.0215 + (camera_baseline / 2)} 0.14"
+                rpy="${pi / 2} ${radians(15)} ${-math.atan2((camera_baseline /2),camera_focal_depth)}"/>
       </joint>
       <joint name="camera_beam_lower_camera_lower_right_mount_joint" type="fixed">
         <parent link="camera_beam_lower"/>
         <child link="camera_lower_right_mount"/>
-        <origin xyz="-0.00 ${-0.0215 + -camera_baseline / 2} 0.13"
-                rpy="${pi / 2} 0 ${math.atan2((camera_baseline /2),camera_focal_depth)}"/>
+        <origin xyz="0.02 ${0.0215 + (-camera_baseline / 2)} 0.14"
+                rpy="${pi / 2} ${radians(15)} ${math.atan2((camera_baseline /2),camera_focal_depth)}"/>
       </joint>
     </xacro:if>
 

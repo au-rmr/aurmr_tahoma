@@ -35,6 +35,22 @@
         <joint name="arm_wrist_3_joint" value="0"/>
     </group_state>
     <group_state name="hide" group="manipulator">
+        <joint name="arm_elbow_joint" value="-1.38"/>
+        <joint name="arm_shoulder_lift_joint" value="0.42"/>
+        <joint name="arm_shoulder_pan_joint" value="3.12"/>
+        <joint name="arm_wrist_1_joint" value="4.05"/>
+        <joint name="arm_wrist_2_joint" value="3.09"/>
+        <joint name="arm_wrist_3_joint" value="-3.23"/>
+    </group_state>
+    <group_state name="hide_left" group="manipulator">
+        <joint name="arm_elbow_joint" value="1.47"/>
+        <joint name="arm_shoulder_lift_joint" value="-3.16"/>
+        <joint name="arm_shoulder_pan_joint" value="-2.91"/>
+        <joint name="arm_wrist_1_joint" value="4.85"/>
+        <joint name="arm_wrist_2_joint" value="2.83"/>
+        <joint name="arm_wrist_3_joint" value="3.12"/>
+    </group_state>
+    <group_state name="hide_up" group="manipulator">
         <joint name="arm_elbow_joint" value="-1.97"/>
         <joint name="arm_shoulder_lift_joint" value="-3.96"/>
         <joint name="arm_shoulder_pan_joint" value="1.19"/>
@@ -43,12 +59,12 @@
         <joint name="arm_wrist_3_joint" value="-1.57"/>
     </group_state>
     <group_state name="tote_approach" group="manipulator">
-        <joint name="arm_elbow_joint" value="-3.18"/>
-        <joint name="arm_shoulder_lift_joint" value="-1.36"/>
-        <joint name="arm_shoulder_pan_joint" value="0.70"/>
-        <joint name="arm_wrist_1_joint" value="5.34"/>
-        <joint name="arm_wrist_2_joint" value="-4.71"/>
-        <joint name="arm_wrist_3_joint" value="4.71"/>
+        <joint name="arm_elbow_joint" value="1.58"/>
+        <joint name="arm_shoulder_lift_joint" value="-1.47"/>
+        <joint name="arm_shoulder_pan_joint" value="2.86"/>
+        <joint name="arm_wrist_1_joint" value="4.75"/>
+        <joint name="arm_wrist_2_joint" value="1.59"/>
+        <joint name="arm_wrist_3_joint" value="4.83"/>
     </group_state>
     <!--END EFFECTOR: Purpose: Represent information about an end effector.-->
     <!-- FIXME(nickswalker 6-2-22): Do we need this? Enabling this shrinks the manipulator interactive marker in RViz for some reason -->
