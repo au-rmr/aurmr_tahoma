@@ -7,7 +7,7 @@ if __name__ == '__main__':
     detector_name = rospy.get_param("detector", "heuristic")
     if detector_name == "heuristic":
         from aurmr_perception.grasp_detection import HeuristicGraspDetector
-        detector = HeuristicGraspDetector(.1, [-1,0,0])
+        detector = HeuristicGraspDetector(0, [-1,0,0])
     elif detector_name == "graspnet":
         # FIXME: Graspnet doesn't yet work on just any machine. These imports will raise exceptions until the code is rewritten to be more portable.
         from aurmr_perception import graspnet

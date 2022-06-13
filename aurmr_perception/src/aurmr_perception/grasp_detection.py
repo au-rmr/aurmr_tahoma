@@ -16,8 +16,8 @@ from visualization_msgs.msg import MarkerArray, Marker
 
 
 class HeuristicGraspDetector:
-    def __init__(self, dist_threshold, bin_normal):
-        self.dist_threshold = dist_threshold
+    def __init__(self, grasp_offset, bin_normal):
+        self.grasp_offset = grasp_offset
         self.bin_normal = np.array(bin_normal)
 
     def detect(self, points):
@@ -30,10 +30,10 @@ class HeuristicGraspDetector:
         center = np.mean(points, axis=0)
         # NOTE(nickswalker,4-29-22): Hack to compensate for the chunk of points that don't get observed
         # due to the lip of the bin
-        center[2] -= 0.02
+        #center[2] -= 0.02
 
-        position = self.dist_threshold * self.bin_normal + center
-        align_to_bin_orientation = transformations.quaternion_from_euler(math.pi / 2., 0, math.pi / 2.)
+        position = self.grasp_offset * self.bin_normal + center
+        align_to_bin_orientation = transformations.quaternion_from_euler(math.pi / 2., -math.pi / 2., math.pi / 2.)
 
         poses_stamped = [(position, align_to_bin_orientation)]
 

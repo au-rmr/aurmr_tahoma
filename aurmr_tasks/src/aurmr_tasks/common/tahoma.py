@@ -260,7 +260,7 @@ class Tahoma:
                            joints,
                            allowed_planning_time=10.0,
                            execution_timeout=15.0,
-                           num_planning_attempts=1,
+                           num_planning_attempts=8,
                            plan_only=False,
                            replan=False,
                            replan_attempts=5,
@@ -315,7 +315,7 @@ class Tahoma:
                           pose_stamped,
                           allowed_planning_time=10.0,
                           execution_timeout=15.0,
-                          num_planning_attempts=1,
+                          num_planning_attempts=8,
                           orientation_constraint=None,
                           replan=True,
                           replan_attempts=5,
@@ -347,10 +347,12 @@ class Tahoma:
         goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.move_group.get_planning_frame(),
                                        rospy.Duration(1))
 
+        self.move_group.set_end_effector_link("gripper_equilibrium_grasp")
         self.move_group.set_pose_target(pose_stamped)
         self.move_group.set_planning_time(allowed_planning_time)
         self.move_group.set_num_planning_attempts(num_planning_attempts)
         self.move_group.allow_replanning(replan)
+        self.move_group.set_goal_position_tolerance(tolerance)
         success, plan, planning_time, error_code = self.move_group.plan()
         if not success:
             return False
@@ -380,7 +382,7 @@ class Tahoma:
     def straight_move_to_pose(self,
                               pose_stamped,
                               tolerance=0.01,
-                              ee_step=0.025,
+                              ee_step=0.0025,
                               jump_threshold=2.0,
                               avoid_collisions=True):
         """Moves the end-effector to a pose in a straight line.
@@ -397,6 +399,7 @@ class Tahoma:
         Returns:
             string describing the error if an error occurred, else None.
         """
+        self.move_group.set_end_effector_link("arm_tool0")
         goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.planning_frame, rospy.Duration(1))
 
         waypoints = [goal_in_planning_frame.pose]

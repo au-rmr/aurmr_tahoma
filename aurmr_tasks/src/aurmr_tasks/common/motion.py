@@ -1,40 +1,14 @@
 import geometry_msgs.msg
-import rospy
-import std_msgs.msg
 from sensor_msgs.msg import JointState
-
 from smach import State, StateMachine
-
-from geometry_msgs.msg import (
-    PoseStamped,
-
-)
 import rospy
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from smach import State
-from smach_ros import SimpleActionState
-from std_msgs.msg import String, Header
-from std_srvs.srv import Trigger
-
-
-from tf_conversions import transformations
-
+from std_msgs.msg import Header
 from aurmr_tasks.interaction import prompt_for_confirmation
-
 from aurmr_tasks.util import apply_offset_to_pose
-
-from src.aurmr_tasks import interaction
-
-I_QUAT = Quaternion(x=0, y=0, z=0, w=1)
-
-
-def qv_mult(q1, v1):
-        q2 = list(v1)
-        q2.append(0.0)
-        return transformations.quaternion_multiply(
-            transformations.quaternion_multiply(q1, q2),
-            transformations.quaternion_conjugate(q1)
-        )[:3]
+from aurmr_tasks import interaction
+from aurmr_perception.util import I_QUAT
 
 
 class MoveToJointAngles(State):
@@ -52,7 +26,7 @@ class MoveToJointAngles(State):
         if isinstance(target, JointState):
             to_log = target.position
         rospy.loginfo(f"Moving to {to_log}")
-        success = self.robot.move_to_joint_angles(target,)
+        success = self.robot.move_to_joint_angles(target)
         if success:
             return "succeeded"
         else:
@@ -64,7 +38,8 @@ class MoveEndEffectorToPose(State):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
         self.default_pose = default_pose
-        self.target_pose_visualizer = rospy.Publisher("end_effector_target", geometry_msgs.msg.PoseStamped, queue_size=1, latch=True)
+        self.target_pose_visualizer = rospy.Publisher("end_effector_target", geometry_msgs.msg.PoseStamped,
+                                                      queue_size=1, latch=True)
 
     def execute(self, userdata):
         if self.default_pose:
@@ -143,11 +118,13 @@ class ServoEndEffectorToPose(State):
 
 
 class ServoEndEffectorToOffset(State):
-    def __init__(self, robot, offset, frame=None):
+    def __init__(self, robot, offset, pos_tolerance=0.01, angular_tolerance=0.2, frame=None):
         State.__init__(self, input_keys=['offset'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
         self.offset = offset
         self.offset_frame = frame
+        self.pos_tolerance = pos_tolerance
+        self.angular_tolerance = angular_tolerance
 
     def execute(self, userdata):
         offset = self.offset
@@ -159,7 +136,7 @@ class ServoEndEffectorToOffset(State):
         # In base_link by default
         current = self.robot.move_group.get_current_pose()
         target_pose = apply_offset_to_pose(current, offset, offset_frame, self.robot.tf2_buffer)
-        succeeded = self.robot.servo_to_pose(target_pose, avoid_collisions=False)
+        succeeded = self.robot.servo_to_pose(target_pose, pos_tolerance=self.pos_tolerance, angular_tolerance=self.angular_tolerance, avoid_collisions=False)
         if succeeded:
             return "succeeded"
         else:
@@ -171,9 +148,16 @@ def robust_move_to_offset(robot, offset, frame=None):
     if frame is None:
         frame = "arm_tool0"
     with sm:
-        StateMachine.add_auto("TRY_CARTESIAN_MOVE", MoveEndEffectorToOffset(robot, offset, frame), ["aborted"], transitions={"succeeded": "succeeded"})
-        StateMachine.add_auto("TRY_SERVO_MOVE", ServoEndEffectorToOffset(robot, offset, frame), ["aborted"], transitions={"succeeded": "succeeded"})
-        StateMachine.add_auto("ASK_HUMAN_TO_MOVE", interaction.AskForHumanAction(f"Please move the end effector by {offset} in the {frame} frame"), ["succeeded", "aborted"])
+        StateMachine.add_auto("TRY_CARTESIAN_MOVE", MoveEndEffectorToOffset(robot, offset, frame), ["aborted"],
+                              transitions={"succeeded": "succeeded"})
+        # Generous allowances here to try and get some motion
+        StateMachine.add_auto("TRY_SERVO_MOVE", ServoEndEffectorToOffset(robot, offset, 0.02, 0.3, frame=frame), ["aborted"],
+                              transitions={"succeeded": "succeeded"})
+        # HACK: Servo's underlying controller freaks out when reengaged after teach pendent intervention. Switch to follow_traj with a nonce goal
+        StateMachine.add_auto("SWITCH_TO_TRAJ_CONTROLLER", MoveEndEffectorToOffset(robot, (0,0,0), frame), ["succeeded", "aborted"],
+                              transitions={"succeeded": "succeeded"})
+        StateMachine.add_auto("ASK_HUMAN_TO_MOVE", interaction.AskForHumanAction(
+            f"Please move the end effector by {offset} in the {frame} frame"), ["succeeded", "aborted"])
     return sm
 
 
@@ -266,7 +250,9 @@ class AddInHandCollisionGeometry(State):
         self.robot.scene.add_box("item", PoseStamped(header=Header(frame_id="arm_tool0"),
                                                 pose=Pose(position=Point(x=0, y=0, z=0.13), orientation=Quaternion(x=0, y=0, z=0, w=1))),
                             (.06, .13, .06))
-        self.robot.scene.attach_box("arm_tool0", "item")
+        self.robot.scene.attach_box("arm_tool0", "item", touch_links=["gripper_robotiq_arg2f_base_link", "gripper_left_distal_phalanx",
+                                                 "gripper_left_proximal_phalanx", "gripper_right_proximal_phalanx",
+                                                 "gripper_right_distal_phalanx"])
         start = rospy.get_time()
         seconds = rospy.get_time()
         timeout = 5.0
@@ -364,4 +350,3 @@ class AddPodCollisionGeometry(State):
 
         # If we exited the while loop without returning then we timed out
         return "aborted"
-

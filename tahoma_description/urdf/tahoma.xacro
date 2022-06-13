@@ -216,6 +216,15 @@
     </xacro:if>
   </xacro:macro>
 
+  <link name="gripper_equilibrium_grasp"/>
+
+  <joint name="gripper_base_link_gripper_equilibrium_grasp" type="fixed">
+    <parent link="gripper_base_link"/>
+      <child link="gripper_equilibrium_grasp"/>
+      <origin xyz="0 0 0.13"
+              rpy="0 0 0"/>
+  </joint>
+
 </robot>
 
 

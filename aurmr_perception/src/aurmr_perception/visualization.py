@@ -6,9 +6,7 @@ import tf2_geometry_msgs
 import tf2_ros
 from tf_conversions import transformations
 
-
-def quat_msg_to_vec(msg):
-    return [msg.x, msg.y, msg.z, msg.w]
+from aurmr_perception.util import quat_msg_to_vec, qv_mult, vec_to_quat_msg
 
 
 def create_gripper_pose_markers(poses, color, ns="gripper_poses", tf_buffer=None):
@@ -18,7 +16,7 @@ def create_gripper_pose_markers(poses, color, ns="gripper_poses", tf_buffer=None
         listener = tf2_ros.TransformListener(tf_buffer)
     # We're drawing the bulky part of the gripper, which is notably different in orientation and offset
     # than say, arm_tool0. Figure out how to get from the given frame to the gripper_base_link frame
-    transform = tf_buffer.lookup_transform("gripper_base_link", "arm_tool0", rospy.Time(0),
+    transform = tf_buffer.lookup_transform("gripper_base_link", "gripper_equilibrium_grasp", rospy.Time(0),
                                                    rospy.Duration(1)).transform
 
     markers = []
@@ -44,14 +42,16 @@ def create_gripper_pose_markers(poses, color, ns="gripper_poses", tf_buffer=None
         marker.color.g = colors[i][1]
         marker.color.b = colors[i][2]
         marker.color.a = colors[i][3]
-        marker.mesh_resource = "package://robotiq_2f_85_gripper_visualization/meshes/visual/base_link.dae"
+        marker.mesh_resource = "package://robotiq_2f_85_gripper_visualization/meshes/visual/full_opened.stl"
 
         transformed_pose = deepcopy(pose.pose)
         rotated_quat = transformations.quaternion_multiply(quat_msg_to_vec(pose.pose.orientation), quat_msg_to_vec(transform.rotation))
-        transformed_pose.orientation.x = rotated_quat[0]
-        transformed_pose.orientation.y = rotated_quat[1]
-        transformed_pose.orientation.z = rotated_quat[2]
-        transformed_pose.orientation.w = rotated_quat[3]
+        # This grasp is the pose between the fingers. Push the marker back along the z axis to have the fingers over the grasp point
+        offset = qv_mult(quat_msg_to_vec(pose.pose.orientation), (-transform.translation.x, -transform.translation.y, -transform.translation.z))
+        transformed_pose.position.x += offset[0]
+        transformed_pose.position.y += offset[1]
+        transformed_pose.position.z += offset[2]
+        transformed_pose.orientation = vec_to_quat_msg(rotated_quat)
         marker.pose = transformed_pose
 
         markers.append(marker)
