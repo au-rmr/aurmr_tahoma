@@ -15,16 +15,16 @@ from tf_conversions import transformations
 import aurmr_tasks.common.control_flow as cf
 from aurmr_tasks.pod import load_sm
 
-from src.aurmr_tasks.common.motion import robust_move_to_offset
+from aurmr_tasks.common.motion import robust_move_to_offset
+from aurmr_perception.util import vec_to_quat_msg, I_QUAT
 
 TARGET_BIN_ID = "001"
 TARGET_OBJECT_ID = "XYZ"
 
-align_to_bin_orientation = transformations.quaternion_from_euler(1.57, 0, 1.57)
-align_to_bin_quat = Quaternion(x=align_to_bin_orientation[0], y=align_to_bin_orientation[1], z=align_to_bin_orientation[2], w=align_to_bin_orientation[3])
-I_QUAT = Quaternion(x=0, y=0, z=0, w=1)
+align_to_tote_orientation = transformations.quaternion_from_euler(math.pi, 0, 0)
+align_to_bin_quat = vec_to_quat_msg(align_to_tote_orientation)
 
-BIN_APPROACH_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=.6046, y=.311,z=1.235), orientation=align_to_bin_quat))
+TOTE_APPROACH_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=.108, y=-.514,z=0.884), orientation=align_to_bin_quat))
 
 
 def main():
@@ -35,30 +35,28 @@ def main():
     robot = Tahoma(simulation)
     pick_sm = StateMachine(["succeeded", "preempted", "aborted"], input_keys=[], output_keys=[])
 
-    stows = [["2f", "bottle"], ["3h", "syrup"]]
-    picks = [["3h", "syrup"]]
+    stows = [["4f", "mouthwash"], ["4f", "soda"], ["4f", "syrup"]]
+    picks = [["4f", "syrup"]]
     with pick_sm:
         cf.inject_userdata_auto("LOAD_PICKS", "picks", picks)
 
-        StateMachine.add("ITERATE_STOWS", cf.IterateList("picks", "pick"),
+        StateMachine.add("ITERATE_PICKS", cf.IterateList("picks", "pick"),
                          {"repeat": "SPLAT_PICK", "done": "succeeded"})
         cf.splat_auto("SPLAT_PICK", "pick", ["target_bin_id", "target_object_id"])
-        StateMachine.add_auto("GET_GRASP_POSE", perception.GetGraspPose(.2), ["succeeded"])
-        StateMachine.add_auto("REMAP_GRASP_POSE", cf.input_to_output("grasp_pose", "pose"), ["succeeded"])
+        StateMachine.add_auto("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=.125), ["succeeded"])
+        StateMachine.add_auto("REMAP_PRE_GRASP_POSE", cf.input_to_output("pre_grasp_pose", "pose"), ["succeeded"])
         StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPose(robot), ["succeeded"])
         StateMachine.add_auto("OPEN_BEFORE_GRASP", motion.OpenGripper(robot), ["succeeded"])
-        StateMachine.add_auto("MOVE_TO_GRASP", robust_move_to_offset(robot, (0, 0, 0.075)), ["succeeded", "aborted"])
+        StateMachine.add_auto("MOVE_TO_GRASP", robust_move_to_offset(robot, (0, 0, 0.125)), ["succeeded", "aborted"])
         StateMachine.add_auto("GRASP", motion.CloseGripper(robot), ["succeeded"])
-        StateMachine.add_auto("LIFT_OBJ", robust_move_to_offset(robot, (0, 0, 0.05), 'base_link'), ["succeeded", "aborted"])
+        StateMachine.add_auto("LIFT_OBJ", robust_move_to_offset(robot, (0, 0, 0.03), 'base_link'), ["succeeded", "aborted"])
 
-        StateMachine.add_auto("RETRACT_ARM", robust_move_to_offset(robot, (0, 0, -0.25)), ["succeeded", "aborted"])
+        StateMachine.add_auto("RETRACT_ARM", robust_move_to_offset(robot, (0, 0, -0.20)), ["succeeded", "aborted"])
         StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX", motion.AddInHandCollisionGeometry(robot), ["succeeded"])
-        StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "tote_approach"), ["succeeded"])
+        StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveEndEffectorToPose(robot, TOTE_APPROACH_POSE), ["succeeded"])
         StateMachine.add_auto("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot), ["succeeded"])
 
-    stow_and_pick_sm = StateMachine(["succeeded", "preempted", "aborted"],
-                           input_keys=[],
-                           output_keys=[])
+    stow_and_pick_sm = StateMachine(["succeeded", "preempted", "aborted"])
 
     with stow_and_pick_sm:
         StateMachine.add_auto("CLEAR_SCENE", motion.ClearCollisionGeometry(robot), ["succeeded"])
