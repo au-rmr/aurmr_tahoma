@@ -20,6 +20,7 @@
   <!-- These should override the nominal values from the URDF -->
   <include file="$(find tahoma_description)/launch/camera_lower_right_transform.launch" />
   <include file="$(find tahoma_description)/launch/camera_lower_left_transform.launch" />
+  <include file="$(find tahoma_description)/launch/camera_wrist_transform.launch" />
 
   <node name="rviz" pkg="rviz" type="rviz" required="true" args="-d $(find tahoma_description)/config/view_model.rviz"/>
 </launch>

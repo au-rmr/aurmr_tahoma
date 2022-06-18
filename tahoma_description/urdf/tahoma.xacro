@@ -192,6 +192,14 @@
               rpy="0 ${radians(15)} 0"/>
     </joint>
 
+    <!-- Wrist Camera -->
+    <link name="camera_wrist_mount"/>
+    <joint name="arm_wrist_3_link_camera_wrist_mount_joint" type="fixed">
+        <parent link="arm_wrist_3_link"/>
+        <child link="camera_wrist_mount"/>
+        <origin xyz="0.07 0.00 0.00" rpy="${pi} ${-pi / 2} 0"/>
+    </joint>
+
     <xacro:if value="${realsense}">
       <xacro:sensor_l515 name="camera_lower_right" parent="camera_lower_right_mount" use_nominal_extrinsics="${use_nominal_camera_extrinsics}">
         <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -213,6 +221,11 @@
       <xacro:sensor_l515 name="camera_upper_left" parent="camera_upper_left_mount" use_nominal_extrinsics="${use_nominal_camera_extrinsics}">
         <origin xyz="0 0 0" rpy="0 0 0"/>
       </xacro:sensor_l515> -->
+
+      <!-- Wrist Camera -->
+      <xacro:sensor_l515 name="camera_wrist" parent="camera_wrist_mount" use_nominal_extrinsics="${use_nominal_camera_extrinsics}">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+      </xacro:sensor_l515>
     </xacro:if>
   </xacro:macro>
 
