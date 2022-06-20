@@ -8,6 +8,7 @@ To view the model
 
     roslaunch tahoma_description view_model.launch
 
+Note that the STL files in this repo are low quality exports and aren't suitable for printing.
 
 ## Development
 
