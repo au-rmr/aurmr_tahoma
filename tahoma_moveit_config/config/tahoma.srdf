@@ -25,7 +25,6 @@
         <joint name="arm_wrist_2_joint" value="-5.264"/>
         <joint name="arm_wrist_3_joint" value="3.14"/>
     </group_state>
-    <!-- Note that this is a singularity. Use this if you need to 0 joints only -->
     <group_state name="straight" group="manipulator">
         <joint name="arm_elbow_joint" value="0"/>
         <joint name="arm_shoulder_lift_joint" value="-1.57"/>
@@ -79,12 +78,14 @@
     <disable_collisions link1="arm_base_link_inertia" link2="arm_shoulder_link" reason="Adjacent"/>
     <disable_collisions link1="arm_base_link_inertia" link2="arm_upper_arm_link" reason="Never"/>
     <disable_collisions link1="arm_base_link_inertia" link2="arm_wrist_1_link" reason="Never"/>
-    <disable_collisions link1="arm_base_link_inertia" link2="arm_wrist_2_link" reason="Never"/>
     <disable_collisions link1="arm_base_link_inertia" link2="back_left_caster" reason="Never"/>
     <disable_collisions link1="arm_base_link_inertia" link2="back_right_caster" reason="Never"/>
     <disable_collisions link1="arm_base_link_inertia" link2="camera_beam_lower" reason="Never"/>
     <disable_collisions link1="arm_base_link_inertia" link2="camera_lower_left_link" reason="Never"/>
+    <disable_collisions link1="arm_base_link_inertia" link2="camera_lower_left_mount" reason="Never"/>
     <disable_collisions link1="arm_base_link_inertia" link2="camera_lower_right_link" reason="Never"/>
+    <disable_collisions link1="arm_base_link_inertia" link2="camera_lower_right_mount" reason="Never"/>
+    <disable_collisions link1="arm_base_link_inertia" link2="camera_upper_link" reason="Never"/>
     <disable_collisions link1="arm_base_link_inertia" link2="cantilever" reason="Never"/>
     <disable_collisions link1="arm_base_link_inertia" link2="control_box" reason="Never"/>
     <disable_collisions link1="arm_base_link_inertia" link2="control_box_mount" reason="Never"/>
@@ -113,7 +114,10 @@
     <disable_collisions link1="arm_shoulder_link" link2="back_right_caster" reason="Never"/>
     <disable_collisions link1="arm_shoulder_link" link2="camera_beam_lower" reason="Never"/>
     <disable_collisions link1="arm_shoulder_link" link2="camera_lower_left_link" reason="Never"/>
+    <disable_collisions link1="arm_shoulder_link" link2="camera_lower_left_mount" reason="Never"/>
     <disable_collisions link1="arm_shoulder_link" link2="camera_lower_right_link" reason="Never"/>
+    <disable_collisions link1="arm_shoulder_link" link2="camera_lower_right_mount" reason="Never"/>
+    <disable_collisions link1="arm_shoulder_link" link2="camera_upper_link" reason="Never"/>
     <disable_collisions link1="arm_shoulder_link" link2="cantilever" reason="Never"/>
     <disable_collisions link1="arm_shoulder_link" link2="control_box" reason="Never"/>
     <disable_collisions link1="arm_shoulder_link" link2="control_box_mount" reason="Never"/>
@@ -131,7 +135,10 @@
     <disable_collisions link1="arm_upper_arm_link" link2="back_right_caster" reason="Never"/>
     <disable_collisions link1="arm_upper_arm_link" link2="camera_beam_lower" reason="Never"/>
     <disable_collisions link1="arm_upper_arm_link" link2="camera_lower_left_link" reason="Never"/>
+    <disable_collisions link1="arm_upper_arm_link" link2="camera_lower_left_mount" reason="Never"/>
     <disable_collisions link1="arm_upper_arm_link" link2="camera_lower_right_link" reason="Never"/>
+    <disable_collisions link1="arm_upper_arm_link" link2="camera_lower_right_mount" reason="Never"/>
+    <disable_collisions link1="arm_upper_arm_link" link2="camera_upper_link" reason="Never"/>
     <disable_collisions link1="arm_upper_arm_link" link2="control_box" reason="Never"/>
     <disable_collisions link1="arm_upper_arm_link" link2="control_box_mount" reason="Never"/>
     <disable_collisions link1="arm_upper_arm_link" link2="front_left_caster" reason="Never"/>
@@ -146,8 +153,8 @@
     <disable_collisions link1="arm_wrist_1_link" link2="arm_wrist_3_link" reason="Never"/>
     <disable_collisions link1="arm_wrist_1_link" link2="back_left_caster" reason="Never"/>
     <disable_collisions link1="arm_wrist_1_link" link2="back_right_caster" reason="Never"/>
+    <disable_collisions link1="arm_wrist_1_link" link2="camera_wrist_link" reason="Never"/>
     <disable_collisions link1="arm_wrist_1_link" link2="control_box" reason="Never"/>
-    <disable_collisions link1="arm_wrist_1_link" link2="control_box_mount" reason="Never"/>
     <disable_collisions link1="arm_wrist_1_link" link2="coupling" reason="Never"/>
     <disable_collisions link1="arm_wrist_1_link" link2="front_left_caster" reason="Never"/>
     <disable_collisions link1="arm_wrist_1_link" link2="front_right_caster" reason="Never"/>
@@ -165,7 +172,7 @@
     <disable_collisions link1="arm_wrist_2_link" link2="arm_wrist_3_link" reason="Adjacent"/>
     <disable_collisions link1="arm_wrist_2_link" link2="back_left_caster" reason="Never"/>
     <disable_collisions link1="arm_wrist_2_link" link2="back_right_caster" reason="Never"/>
-    <disable_collisions link1="arm_wrist_2_link" link2="control_box" reason="Never"/>
+    <disable_collisions link1="arm_wrist_2_link" link2="camera_wrist_link" reason="Never"/>
     <disable_collisions link1="arm_wrist_2_link" link2="coupling" reason="Never"/>
     <disable_collisions link1="arm_wrist_2_link" link2="front_left_caster" reason="Never"/>
     <disable_collisions link1="arm_wrist_2_link" link2="front_right_caster" reason="Never"/>
@@ -182,8 +189,7 @@
     <disable_collisions link1="arm_wrist_2_link" link2="stand_brace" reason="Never"/>
     <disable_collisions link1="arm_wrist_3_link" link2="back_left_caster" reason="Never"/>
     <disable_collisions link1="arm_wrist_3_link" link2="back_right_caster" reason="Never"/>
-    <disable_collisions link1="arm_wrist_3_link" link2="camera_lower_right_link" reason="Never"/>
-    <disable_collisions link1="arm_wrist_3_link" link2="control_box" reason="Never"/>
+    <disable_collisions link1="arm_wrist_3_link" link2="camera_wrist_link" reason="Never"/>
     <disable_collisions link1="arm_wrist_3_link" link2="coupling" reason="Adjacent"/>
     <disable_collisions link1="arm_wrist_3_link" link2="front_left_caster" reason="Never"/>
     <disable_collisions link1="arm_wrist_3_link" link2="front_right_caster" reason="Never"/>
@@ -201,7 +207,11 @@
     <disable_collisions link1="back_left_caster" link2="back_right_caster" reason="Never"/>
     <disable_collisions link1="back_left_caster" link2="camera_beam_lower" reason="Never"/>
     <disable_collisions link1="back_left_caster" link2="camera_lower_left_link" reason="Never"/>
+    <disable_collisions link1="back_left_caster" link2="camera_lower_left_mount" reason="Never"/>
     <disable_collisions link1="back_left_caster" link2="camera_lower_right_link" reason="Never"/>
+    <disable_collisions link1="back_left_caster" link2="camera_lower_right_mount" reason="Never"/>
+    <disable_collisions link1="back_left_caster" link2="camera_upper_link" reason="Never"/>
+    <disable_collisions link1="back_left_caster" link2="camera_wrist_link" reason="Never"/>
     <disable_collisions link1="back_left_caster" link2="cantilever" reason="Never"/>
     <disable_collisions link1="back_left_caster" link2="control_box" reason="Never"/>
     <disable_collisions link1="back_left_caster" link2="control_box_mount" reason="Never"/>
@@ -227,7 +237,11 @@
     <disable_collisions link1="back_left_caster" link2="stand_upright" reason="Never"/>
     <disable_collisions link1="back_right_caster" link2="camera_beam_lower" reason="Never"/>
     <disable_collisions link1="back_right_caster" link2="camera_lower_left_link" reason="Never"/>
+    <disable_collisions link1="back_right_caster" link2="camera_lower_left_mount" reason="Never"/>
     <disable_collisions link1="back_right_caster" link2="camera_lower_right_link" reason="Never"/>
+    <disable_collisions link1="back_right_caster" link2="camera_lower_right_mount" reason="Never"/>
+    <disable_collisions link1="back_right_caster" link2="camera_upper_link" reason="Never"/>
+    <disable_collisions link1="back_right_caster" link2="camera_wrist_link" reason="Never"/>
     <disable_collisions link1="back_right_caster" link2="cantilever" reason="Never"/>
     <disable_collisions link1="back_right_caster" link2="control_box" reason="Never"/>
     <disable_collisions link1="back_right_caster" link2="control_box_mount" reason="Never"/>
@@ -251,34 +265,33 @@
     <disable_collisions link1="back_right_caster" link2="stand" reason="Adjacent"/>
     <disable_collisions link1="back_right_caster" link2="stand_brace" reason="Never"/>
     <disable_collisions link1="back_right_caster" link2="stand_upright" reason="Never"/>
-    <disable_collisions link1="camera_beam_lower" link2="camera_lower_left_link" reason="Adjacent"/>
-    <disable_collisions link1="camera_beam_lower" link2="camera_lower_right_link" reason="Adjacent"/>
+    <disable_collisions link1="camera_beam_lower" link2="camera_lower_left_link" reason="Never"/>
+    <disable_collisions link1="camera_beam_lower" link2="camera_lower_left_mount" reason="Adjacent"/>
+    <disable_collisions link1="camera_beam_lower" link2="camera_lower_right_link" reason="Never"/>
+    <disable_collisions link1="camera_beam_lower" link2="camera_lower_right_mount" reason="Adjacent"/>
+    <disable_collisions link1="camera_beam_lower" link2="camera_upper_link" reason="Never"/>
     <disable_collisions link1="camera_beam_lower" link2="cantilever" reason="Never"/>
     <disable_collisions link1="camera_beam_lower" link2="control_box" reason="Never"/>
     <disable_collisions link1="camera_beam_lower" link2="control_box_mount" reason="Never"/>
     <disable_collisions link1="camera_beam_lower" link2="front_left_caster" reason="Never"/>
     <disable_collisions link1="camera_beam_lower" link2="front_right_caster" reason="Never"/>
+    <disable_collisions link1="camera_beam_lower" link2="left_light_panel" reason="Never"/>
+    <disable_collisions link1="camera_beam_lower" link2="left_light_panel_emitter" reason="Never"/>
     <disable_collisions link1="camera_beam_lower" link2="right_light_panel" reason="Never"/>
     <disable_collisions link1="camera_beam_lower" link2="right_light_panel_emitter" reason="Never"/>
     <disable_collisions link1="camera_beam_lower" link2="robot_plate" reason="Never"/>
     <disable_collisions link1="camera_beam_lower" link2="stand" reason="Never"/>
     <disable_collisions link1="camera_beam_lower" link2="stand_brace" reason="Never"/>
     <disable_collisions link1="camera_beam_lower" link2="stand_upright" reason="Adjacent"/>
+    <disable_collisions link1="camera_lower_left_link" link2="camera_lower_left_mount" reason="Adjacent"/>
     <disable_collisions link1="camera_lower_left_link" link2="camera_lower_right_link" reason="Never"/>
+    <disable_collisions link1="camera_lower_left_link" link2="camera_lower_right_mount" reason="Never"/>
+    <disable_collisions link1="camera_lower_left_link" link2="camera_upper_link" reason="Never"/>
     <disable_collisions link1="camera_lower_left_link" link2="cantilever" reason="Never"/>
     <disable_collisions link1="camera_lower_left_link" link2="control_box" reason="Never"/>
     <disable_collisions link1="camera_lower_left_link" link2="control_box_mount" reason="Never"/>
     <disable_collisions link1="camera_lower_left_link" link2="front_left_caster" reason="Never"/>
     <disable_collisions link1="camera_lower_left_link" link2="front_right_caster" reason="Never"/>
-    <disable_collisions link1="camera_lower_left_link" link2="gripper_left_bar" reason="Never"/>
-    <disable_collisions link1="camera_lower_left_link" link2="gripper_left_distal_phalanx" reason="Never"/>
-    <disable_collisions link1="camera_lower_left_link" link2="gripper_left_outer_knuckle" reason="Never"/>
-    <disable_collisions link1="camera_lower_left_link" link2="gripper_left_proximal_phalanx" reason="Never"/>
-    <disable_collisions link1="camera_lower_left_link" link2="gripper_right_bar" reason="Never"/>
-    <disable_collisions link1="camera_lower_left_link" link2="gripper_right_distal_phalanx" reason="Never"/>
-    <disable_collisions link1="camera_lower_left_link" link2="gripper_right_outer_knuckle" reason="Never"/>
-    <disable_collisions link1="camera_lower_left_link" link2="gripper_right_proximal_phalanx" reason="Never"/>
-    <disable_collisions link1="camera_lower_left_link" link2="gripper_robotiq_arg2f_base_link" reason="Never"/>
     <disable_collisions link1="camera_lower_left_link" link2="left_light_panel" reason="Never"/>
     <disable_collisions link1="camera_lower_left_link" link2="left_light_panel_emitter" reason="Never"/>
     <disable_collisions link1="camera_lower_left_link" link2="right_light_panel" reason="Never"/>
@@ -287,19 +300,29 @@
     <disable_collisions link1="camera_lower_left_link" link2="stand" reason="Never"/>
     <disable_collisions link1="camera_lower_left_link" link2="stand_brace" reason="Never"/>
     <disable_collisions link1="camera_lower_left_link" link2="stand_upright" reason="Never"/>
+    <disable_collisions link1="camera_lower_left_mount" link2="camera_lower_right_link" reason="Never"/>
+    <disable_collisions link1="camera_lower_left_mount" link2="camera_lower_right_mount" reason="Never"/>
+    <disable_collisions link1="camera_lower_left_mount" link2="camera_upper_link" reason="Never"/>
+    <disable_collisions link1="camera_lower_left_mount" link2="cantilever" reason="Never"/>
+    <disable_collisions link1="camera_lower_left_mount" link2="control_box" reason="Never"/>
+    <disable_collisions link1="camera_lower_left_mount" link2="control_box_mount" reason="Never"/>
+    <disable_collisions link1="camera_lower_left_mount" link2="front_left_caster" reason="Never"/>
+    <disable_collisions link1="camera_lower_left_mount" link2="front_right_caster" reason="Never"/>
+    <disable_collisions link1="camera_lower_left_mount" link2="left_light_panel" reason="Never"/>
+    <disable_collisions link1="camera_lower_left_mount" link2="left_light_panel_emitter" reason="Never"/>
+    <disable_collisions link1="camera_lower_left_mount" link2="right_light_panel" reason="Never"/>
+    <disable_collisions link1="camera_lower_left_mount" link2="right_light_panel_emitter" reason="Never"/>
+    <disable_collisions link1="camera_lower_left_mount" link2="robot_plate" reason="Never"/>
+    <disable_collisions link1="camera_lower_left_mount" link2="stand" reason="Never"/>
+    <disable_collisions link1="camera_lower_left_mount" link2="stand_brace" reason="Never"/>
+    <disable_collisions link1="camera_lower_left_mount" link2="stand_upright" reason="Never"/>
+    <disable_collisions link1="camera_lower_right_link" link2="camera_lower_right_mount" reason="Adjacent"/>
+    <disable_collisions link1="camera_lower_right_link" link2="camera_upper_link" reason="Never"/>
     <disable_collisions link1="camera_lower_right_link" link2="cantilever" reason="Never"/>
     <disable_collisions link1="camera_lower_right_link" link2="control_box" reason="Never"/>
     <disable_collisions link1="camera_lower_right_link" link2="control_box_mount" reason="Never"/>
     <disable_collisions link1="camera_lower_right_link" link2="front_left_caster" reason="Never"/>
     <disable_collisions link1="camera_lower_right_link" link2="front_right_caster" reason="Never"/>
-    <disable_collisions link1="camera_lower_right_link" link2="gripper_left_bar" reason="Never"/>
-    <disable_collisions link1="camera_lower_right_link" link2="gripper_left_distal_phalanx" reason="Never"/>
-    <disable_collisions link1="camera_lower_right_link" link2="gripper_left_outer_knuckle" reason="Never"/>
-    <disable_collisions link1="camera_lower_right_link" link2="gripper_left_proximal_phalanx" reason="Never"/>
-    <disable_collisions link1="camera_lower_right_link" link2="gripper_right_bar" reason="Never"/>
-    <disable_collisions link1="camera_lower_right_link" link2="gripper_right_distal_phalanx" reason="Never"/>
-    <disable_collisions link1="camera_lower_right_link" link2="gripper_right_outer_knuckle" reason="Never"/>
-    <disable_collisions link1="camera_lower_right_link" link2="gripper_right_proximal_phalanx" reason="Never"/>
     <disable_collisions link1="camera_lower_right_link" link2="left_light_panel" reason="Never"/>
     <disable_collisions link1="camera_lower_right_link" link2="left_light_panel_emitter" reason="Never"/>
     <disable_collisions link1="camera_lower_right_link" link2="right_light_panel" reason="Never"/>
@@ -308,6 +331,47 @@
     <disable_collisions link1="camera_lower_right_link" link2="stand" reason="Never"/>
     <disable_collisions link1="camera_lower_right_link" link2="stand_brace" reason="Never"/>
     <disable_collisions link1="camera_lower_right_link" link2="stand_upright" reason="Never"/>
+    <disable_collisions link1="camera_lower_right_mount" link2="camera_upper_link" reason="Never"/>
+    <disable_collisions link1="camera_lower_right_mount" link2="cantilever" reason="Never"/>
+    <disable_collisions link1="camera_lower_right_mount" link2="control_box" reason="Never"/>
+    <disable_collisions link1="camera_lower_right_mount" link2="control_box_mount" reason="Never"/>
+    <disable_collisions link1="camera_lower_right_mount" link2="front_left_caster" reason="Never"/>
+    <disable_collisions link1="camera_lower_right_mount" link2="front_right_caster" reason="Never"/>
+    <disable_collisions link1="camera_lower_right_mount" link2="left_light_panel" reason="Never"/>
+    <disable_collisions link1="camera_lower_right_mount" link2="left_light_panel_emitter" reason="Never"/>
+    <disable_collisions link1="camera_lower_right_mount" link2="right_light_panel" reason="Never"/>
+    <disable_collisions link1="camera_lower_right_mount" link2="right_light_panel_emitter" reason="Never"/>
+    <disable_collisions link1="camera_lower_right_mount" link2="robot_plate" reason="Never"/>
+    <disable_collisions link1="camera_lower_right_mount" link2="stand" reason="Never"/>
+    <disable_collisions link1="camera_lower_right_mount" link2="stand_brace" reason="Never"/>
+    <disable_collisions link1="camera_lower_right_mount" link2="stand_upright" reason="Never"/>
+    <disable_collisions link1="camera_upper_link" link2="cantilever" reason="Adjacent"/>
+    <disable_collisions link1="camera_upper_link" link2="control_box" reason="Never"/>
+    <disable_collisions link1="camera_upper_link" link2="control_box_mount" reason="Never"/>
+    <disable_collisions link1="camera_upper_link" link2="front_left_caster" reason="Never"/>
+    <disable_collisions link1="camera_upper_link" link2="front_right_caster" reason="Never"/>
+    <disable_collisions link1="camera_upper_link" link2="left_light_panel" reason="Never"/>
+    <disable_collisions link1="camera_upper_link" link2="left_light_panel_emitter" reason="Never"/>
+    <disable_collisions link1="camera_upper_link" link2="right_light_panel" reason="Never"/>
+    <disable_collisions link1="camera_upper_link" link2="right_light_panel_emitter" reason="Never"/>
+    <disable_collisions link1="camera_upper_link" link2="robot_plate" reason="Never"/>
+    <disable_collisions link1="camera_upper_link" link2="stand" reason="Never"/>
+    <disable_collisions link1="camera_upper_link" link2="stand_brace" reason="Never"/>
+    <disable_collisions link1="camera_upper_link" link2="stand_upright" reason="Never"/>
+    <disable_collisions link1="camera_wrist_link" link2="coupling" reason="Adjacent"/>
+    <disable_collisions link1="camera_wrist_link" link2="front_left_caster" reason="Never"/>
+    <disable_collisions link1="camera_wrist_link" link2="front_right_caster" reason="Never"/>
+    <disable_collisions link1="camera_wrist_link" link2="gripper_left_bar" reason="Never"/>
+    <disable_collisions link1="camera_wrist_link" link2="gripper_left_distal_phalanx" reason="Never"/>
+    <disable_collisions link1="camera_wrist_link" link2="gripper_left_outer_knuckle" reason="Never"/>
+    <disable_collisions link1="camera_wrist_link" link2="gripper_left_proximal_phalanx" reason="Never"/>
+    <disable_collisions link1="camera_wrist_link" link2="gripper_right_bar" reason="Never"/>
+    <disable_collisions link1="camera_wrist_link" link2="gripper_right_distal_phalanx" reason="Never"/>
+    <disable_collisions link1="camera_wrist_link" link2="gripper_right_outer_knuckle" reason="Never"/>
+    <disable_collisions link1="camera_wrist_link" link2="gripper_right_proximal_phalanx" reason="Never"/>
+    <disable_collisions link1="camera_wrist_link" link2="gripper_robotiq_arg2f_base_link" reason="Never"/>
+    <disable_collisions link1="camera_wrist_link" link2="stand" reason="Never"/>
+    <disable_collisions link1="camera_wrist_link" link2="stand_brace" reason="Never"/>
     <disable_collisions link1="cantilever" link2="control_box" reason="Never"/>
     <disable_collisions link1="cantilever" link2="control_box_mount" reason="Never"/>
     <disable_collisions link1="cantilever" link2="front_left_caster" reason="Never"/>
@@ -321,7 +385,6 @@
     <disable_collisions link1="cantilever" link2="stand_brace" reason="Never"/>
     <disable_collisions link1="cantilever" link2="stand_upright" reason="Adjacent"/>
     <disable_collisions link1="control_box" link2="control_box_mount" reason="Adjacent"/>
-    <disable_collisions link1="control_box" link2="coupling" reason="Never"/>
     <disable_collisions link1="control_box" link2="front_left_caster" reason="Never"/>
     <disable_collisions link1="control_box" link2="front_right_caster" reason="Never"/>
     <disable_collisions link1="control_box" link2="left_light_panel" reason="Never"/>
@@ -334,13 +397,6 @@
     <disable_collisions link1="control_box" link2="stand_upright" reason="Never"/>
     <disable_collisions link1="control_box_mount" link2="front_left_caster" reason="Never"/>
     <disable_collisions link1="control_box_mount" link2="front_right_caster" reason="Never"/>
-    <disable_collisions link1="control_box_mount" link2="gripper_left_bar" reason="Never"/>
-    <disable_collisions link1="control_box_mount" link2="gripper_left_outer_knuckle" reason="Never"/>
-    <disable_collisions link1="control_box_mount" link2="gripper_left_proximal_phalanx" reason="Never"/>
-    <disable_collisions link1="control_box_mount" link2="gripper_right_bar" reason="Never"/>
-    <disable_collisions link1="control_box_mount" link2="gripper_right_outer_knuckle" reason="Never"/>
-    <disable_collisions link1="control_box_mount" link2="gripper_right_proximal_phalanx" reason="Never"/>
-    <disable_collisions link1="control_box_mount" link2="gripper_robotiq_arg2f_base_link" reason="Never"/>
     <disable_collisions link1="control_box_mount" link2="left_light_panel" reason="Never"/>
     <disable_collisions link1="control_box_mount" link2="left_light_panel_emitter" reason="Never"/>
     <disable_collisions link1="control_box_mount" link2="right_light_panel" reason="Never"/>

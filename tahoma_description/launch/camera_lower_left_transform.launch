@@ -3,5 +3,5 @@
        http://wiki.ros.org/geometry2/RotationMethods and https://en.wikipedia.org/wiki/Euler_angles for more info. -->
 
   <node pkg="tf2_ros" type="static_transform_publisher" name="camera_lower_left_broadcaster"
-      args="0 0 0 0 0 0 camera_lower_left_mount camera_lower_left_link" />
+      args="0 0 0 0 0 0 camera_lower_left_mount_attach_point camera_lower_left_back_to_bottom_shim" />
 </launch>
