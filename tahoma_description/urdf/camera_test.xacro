@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<robot name="camera_test" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:arg name="use_nominal_extrinsics" default="true"/>
+  <xacro:arg name="add_plug" default="false" />
+  <xacro:arg name="use_mesh" default="true" />
+  <xacro:include filename="$(find tahoma_description)/urdf/l515.xacro" />
+  <xacro:include filename="$(find tahoma_description)/urdf/d405.xacro" />
+
+  <link name="base_link" />
+  <xacro:sensor_l515 name="l515_bottom" parent="base_link" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </xacro:sensor_l515>
+    <xacro:sensor_l515 name="l515_back" parent="base_link" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)" attach_at_bottom="false">
+    <origin xyz="0 .1 0" rpy="0 0 0"/>
+  </xacro:sensor_l515>
+  <xacro:sensor_d405 name="d405_bottom" parent="base_link" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)" attach_at_bottom="true">
+    <origin xyz="0 .2 0" rpy="0 0 0"/>
+  </xacro:sensor_d405>
+  <xacro:sensor_d405 name="d405_back" parent="base_link" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)" attach_at_bottom="false">
+    <origin xyz="0 .3 0" rpy="0 0 0"/>
+  </xacro:sensor_d405>
+</robot>
