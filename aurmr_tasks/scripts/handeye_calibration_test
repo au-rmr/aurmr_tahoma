@@ -1,0 +1,147 @@
+#!/usr/bin/env python
+import math
+
+from sensor_msgs.msg import JointState
+from std_msgs.msg import Header
+import smach_ros
+
+from smach import State, StateMachine
+
+import rospy
+
+from aurmr_tasks.common.tahoma import Tahoma
+from aurmr_tasks.common import motion, perception
+from aurmr_tasks import interaction
+import aurmr_tasks.common.control_flow as cf
+import yaml
+import rospkg
+import message_filters
+import numpy as np
+from sensor_msgs.msg import Image, CameraInfo
+from geometry_msgs.msg import PoseStamped 
+import ros_numpy
+import tf2_ros
+import tf
+
+import matplotlib.pyplot as plt
+
+CAMERA_LINK = "camera_lower_right_link"
+depth = None
+rgb = None
+info = None
+
+def depth_to_pointcloud(depth_image, points, info_msg):
+
+    fp_x = info_msg.K[0]
+    fp_y = info_msg.K[4]
+    ppo_x = info_msg.K[2]
+    ppo_y = info_msg.K[5] 
+    # Convert the masked depth into a point cloud
+    nx = points[:, 0]
+    ny = points[:, 1]
+    #u, v = np.meshgrid(nx, ny)
+    x = (nx.flatten() - ppo_x) / fp_x
+    y = (ny.flatten() - ppo_y) / fp_y
+
+    depth_points = [depth_image[p[1], p[0]] for p in points]
+    z = np.asarray(depth_points) / 1000;
+    x = np.multiply(x,z)
+    y = np.multiply(y,z)
+
+    x = x[np.nonzero(z)]
+    y = y[np.nonzero(z)]
+    z = z[np.nonzero(z)]
+
+    # Rearrange axes to match ROS axes
+    # Camera: X- right, Y- down, Z- forward
+    # ROS: X- forward, Y- left, Z- up
+    x_ros = z
+    y_ros = -x
+    z_ros = -y
+
+    return np.vstack((x_ros,y_ros,z_ros))
+
+def camera_callback(depth_msg, rgb_msg, info_msg):
+    global depth, rgb, info
+    if info is None:
+        depth = ros_numpy.numpify(depth_msg)
+        rgb = ros_numpy.numpify(rgb_msg)
+        info = info_msg
+
+def main():
+    global depth, rgb, info
+    rospy.loginfo('Getting robot resources')
+    rospy.init_node("pick")
+    tf_listener = tf.TransformListener()
+    camera_depth_subscriber = message_filters.Subscriber(f'/stand_camera/aligned_depth_to_color/image_raw', Image)
+    camera_rgb_subscriber = message_filters.Subscriber(f'/stand_camera/color/image_raw', Image)
+    camera_info_subscriber = message_filters.Subscriber(f'/stand_camera/color/camera_info', CameraInfo)
+
+    camera_synchronizer = message_filters.TimeSynchronizer([
+        camera_depth_subscriber, camera_rgb_subscriber, camera_info_subscriber], 10)
+    camera_synchronizer.registerCallback(camera_callback)
+    while info is None and not rospy.is_shutdown():
+        rospy.sleep(.1)
+
+    plt.imshow(rgb)
+    pts = plt.ginput(n=-1)
+    pts = np.asarray([[math.floor(i) for i in p] for p in pts])
+
+    pointcloud = depth_to_pointcloud(depth, pts, info)
+    print(pointcloud)
+    poses = []
+    for pt in pointcloud.T:
+        pose = PoseStamped()
+
+        pose.header.stamp = rospy.Time.now()
+        pose.header.frame_id = CAMERA_LINK
+
+        pose.pose.position.x = float(pt[0])
+        pose.pose.position.y = float(pt[1])
+        pose.pose.position.z = float(pt[2])-.2
+
+        quat = tf.transformations.quaternion_from_euler(
+                    float(0),float(0),float(0))
+        pose.pose.orientation.x = quat[0]
+        pose.pose.orientation.y = quat[1]
+        pose.pose.orientation.z = quat[2]
+        pose.pose.orientation.w = quat[3]
+
+        frame_to = "base_link"
+        pose = tf_listener.transformPose(frame_to, pose)
+        poses.append(pose)
+
+    robot = Tahoma()
+    print(poses)
+    calibration_states = poses
+    State.simulation = rospy.get_param("~simulation", False)
+
+    move_to_poses = StateMachine(["succeeded", "preempted", "aborted"],
+                           input_keys=[],
+                           output_keys=[])
+
+    with move_to_poses:
+        StateMachine.add_auto("CLEAR_SCENE", motion.ClearCollisionGeometry(robot), ["succeeded"])
+        StateMachine.add_auto("SETUP_COLLISION_SCENE", motion.AddPodCollisionGeometry(robot), ["succeeded"])
+        cf.inject_userdata_auto("LOAD_POSES", "positions", calibration_states)
+
+        StateMachine.add("SELECT_POSITION", cf.IterateList("positions", "pose"),
+                         {"repeat": "MOVE_TO_POSITION", "done": "aborted"})
+
+        StateMachine.add_auto("MOVE_TO_POSITION", motion.MoveEndEffectorToPose(robot), ["succeeded"])
+        StateMachine.add("ASK_TO_PROCEED",
+                              interaction.AskForHumanAction("Continue to next position"), {"succeeded": "SELECT_POSITION"})
+
+    rospy.loginfo('Beginning pick SM')
+
+    sis = smach_ros.IntrospectionServer('pick_sm', move_to_poses, '/pick')
+    sis.start()
+
+    outcome = move_to_poses.execute()
+
+    rospy.spin()
+    sis.stop()
+
+
+if __name__ == '__main__':
+    main()
