@@ -36,7 +36,7 @@ The tool will produce the static transform between the "base frame" and the "sen
 
 ### End-effector camera (eye in hand)
 
-Use moveit_calibration. Place the calibration target statically in the scene.
+Use moveit_calibration. If you haven't already done so, clone move_it calibration into your src directory and rebuild your catkin_ws. Place the calibration target statically in the scene.
 
 * Sensor frame: camera_hand_link (root of camera system)
 * Object frame: handeye_target
