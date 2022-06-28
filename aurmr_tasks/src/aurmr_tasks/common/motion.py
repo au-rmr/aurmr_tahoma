@@ -188,15 +188,8 @@ class CloseGripper(State):
         self.robot = robot
 
     def execute(self, ud):
-        if State.simulation:
-            self.robot.close_gripper()
-            return "succeeded"
-        else:
-            confirmed = prompt_for_confirmation("Close the gripper using the teach pendant")
-            if confirmed:
-                return "succeeded"
-            else:
-                return "aborted"
+        self.robot.close_gripper()
+        return "succeeded"
 
 
 class OpenGripper(State):
@@ -205,15 +198,9 @@ class OpenGripper(State):
         self.robot = robot
 
     def execute(self, ud):
-        if State.simulation:
-            self.robot.open_gripper()
-            return "succeeded"
-        else:
-            confirmed = prompt_for_confirmation("Open the gripper using the teach pendant")
-            if confirmed:
-                return "succeeded"
-            else:
-                return "aborted"
+        self.robot.open_gripper()
+        return "succeeded"
+
 
 
 class ClearCollisionGeometry(State):

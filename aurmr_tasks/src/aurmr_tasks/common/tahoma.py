@@ -27,7 +27,7 @@ JOINT_ACTION_SERVER = '/pos_joint_traj_controller/follow_joint_trajectory'
 JOINT_GROUP_CONTROLLER = 'joint_group_pos_controller'
 JOINT_TRAJ_CONTROLLER = 'scaled_pos_joint_traj_controller'
 JOINT_TRAJ_CONTROLLER_SIM = 'pos_joint_traj_controller'
-GRIPPER_ACTION_SERVER = '/gripper_controller/gripper_cmd'
+GRIPPER_ACTION_SERVER = 'gripper_action_server'
 MOVE_GROUP_ACTION_SERVER = 'move_group'
 TIME_FROM_START = 5
 
@@ -202,16 +202,21 @@ class Tahoma:
         return to_check in self.active_controllers
 
     def open_gripper(self, return_before_done=False):
-        goal = GripperCommandGoal(position=0, max_effort=1)
+        goal = GripperCommandGoal()
+        goal.command.position = 0
+        goal.command.max_effort = 1
         self._gripper_client.send_goal(goal)
         if not return_before_done:
             self._gripper_client.wait_for_result()
 
     def close_gripper(self, return_before_done=False):
-        goal = GripperCommandGoal(position=0.83, max_effort=1)
+        goal = GripperCommandGoal()
+        goal.command.position = 0.83
+        goal.command.max_effort = 1
         self._gripper_client.send_goal(goal)
         if not return_before_done:
             self._gripper_client.wait_for_result()
+            
 
     @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_pose_unsafe(self, pose, return_before_done=False):
