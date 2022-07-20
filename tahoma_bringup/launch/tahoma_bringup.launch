@@ -39,8 +39,11 @@
     </include>-->
 
     <node name="fake_gripper_state" type="fake_gripper_state" pkg="tahoma_bringup" >
-      <param name="state" value="0.0" />
+      <param name="state" value="1.0" />
     </node>
+
+    <include file="$(find robotiq_2f_gripper_control)/launch/robotiq_2f_gripper_socket.launch"/>
+    <include file="$(find robotiq_2f_gripper_action_server)/launch/robotiq_2f_gripper_socket_action_server.launch"/>
 
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tahoma_description)/config/view_model.rviz"/>
 </launch>
