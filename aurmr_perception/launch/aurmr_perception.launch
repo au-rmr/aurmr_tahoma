@@ -2,7 +2,7 @@
 
   <arg name="camera" default="camera_lower_right" />
   <arg name="viz" default="true" />
-  <arg name="grasp_detector" default="heuristic" />
+  <arg name="grasp_detector" default="contact_graspnet" />
 
   <node name="aurmr_perception" pkg="aurmr_perception" type="aurmr_perception" output="screen">
     <param name="camera_name"                   value="$(arg camera)" />

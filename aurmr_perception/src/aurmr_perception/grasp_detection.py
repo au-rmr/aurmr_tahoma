@@ -39,7 +39,6 @@ class HeuristicGraspDetector:
 
         return poses_stamped
 
-
 class GraspDetectionROS:
     def __init__(self, detector):
         self.detector = detector

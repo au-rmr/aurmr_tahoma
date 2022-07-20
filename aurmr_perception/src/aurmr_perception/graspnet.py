@@ -31,7 +31,6 @@ from utils import utils
 from data import DataLoader
 import open3d as o3d
 
-
 def make_graspnet_parser():
     parser = argparse.ArgumentParser(
     description='6-DoF GraspNet Demo',

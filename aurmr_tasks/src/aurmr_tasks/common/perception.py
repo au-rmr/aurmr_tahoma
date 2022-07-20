@@ -89,6 +89,7 @@ class GetGraspPose(State):
             return "aborted"
 
         grasp_response = self.get_grasp(points=points_response.points,
+                                        mask=points_response.mask,
                                         dist_threshold=self.pre_grasp_offset)
 
         if not grasp_response.success:

@@ -1,18 +1,23 @@
 import copy
 import sys
 from functools import wraps
+from turtle import pos
 
 from actionlib import SimpleActionClient
 from control_msgs.msg import FollowJointTrajectoryAction, GripperCommandAction, GripperCommandGoal
 from control_msgs.msg import FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectoryPoint
 import tf2_ros
-import tf2_geometry_msgs
+
+#import tf2_geometry_msgs
 
 import actionlib
 import control_msgs.msg
 import trajectory_msgs.msg
 import rospy
+
+from tf2_geometry_msgs import from_msg_msg
+from geometry_msgs.msg import PoseStamped
 
 from aurmr_tasks.util import all_close, pose_dist
 from moveit_msgs.msg import MoveItErrorCodes, MoveGroupAction, DisplayTrajectory
@@ -21,6 +26,8 @@ from moveit_msgs.srv import GetPositionIK, GetPositionIKRequest
 import moveit_commander
 from controller_manager_msgs.srv import ListControllers, SwitchController
 from tahoma_moveit_config.msg import ServoToPoseAction, ServoToPoseGoal
+
+
 
 ARM_GROUP_NAME = 'manipulator'
 JOINT_ACTION_SERVER = '/pos_joint_traj_controller/follow_joint_trajectory'
@@ -134,6 +141,8 @@ class Tahoma:
         self._controller_lister = rospy.ServiceProxy("/controller_manager/list_controllers", ListControllers)
         self._controller_switcher = rospy.ServiceProxy("/controller_manager/switch_controller", SwitchController)
         self.servo_to_pose_client = SimpleActionClient("/servo_server/servo_to_pose", ServoToPoseAction)
+
+        self.grasp_pose_pub = rospy.Publisher("~grasp_pose", PoseStamped)
 
         planning_frame = self.move_group.get_planning_frame()
         eef_link = self.move_group.get_end_effector_link()
@@ -320,7 +329,7 @@ class Tahoma:
                           pose_stamped,
                           allowed_planning_time=10.0,
                           execution_timeout=15.0,
-                          num_planning_attempts=8,
+                          num_planning_attempts=20,
                           orientation_constraint=None,
                           replan=True,
                           replan_attempts=5,
@@ -348,6 +357,8 @@ class Tahoma:
         Returns:
             string describing the error if an error occurred, else None.
         """
+
+        pose_stamped = from_msg_msg(pose_stamped )
 
         goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.move_group.get_planning_frame(),
                                        rospy.Duration(1))
@@ -404,17 +415,19 @@ class Tahoma:
         Returns:
             string describing the error if an error occurred, else None.
         """
-        self.move_group.set_end_effector_link("arm_tool0")
+        self.move_group.set_end_effector_link("gripper_equilibrium_grasp")
         goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.planning_frame, rospy.Duration(1))
+
+        self.grasp_pose_pub.publish(pose_stamped)
 
         waypoints = [goal_in_planning_frame.pose]
 
         (plan, fraction) = self.move_group.compute_cartesian_path(
             waypoints, ee_step, jump_threshold, avoid_collisions
         )
-        if fraction < .9:
-            rospy.logwarn(f"Not moving in cartesian path. Only {fraction} waypoints reached")
-            return False
+        # if fraction < .9:
+        #     rospy.logwarn(f"Not moving in cartesian path. Only {fraction} waypoints reached")
+        #     return False
         self.move_group.execute(plan, wait=True)
 
         current_pose = self.move_group.get_current_pose()

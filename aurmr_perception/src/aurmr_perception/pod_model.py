@@ -1,3 +1,6 @@
+import encodings
+from fileinput import filename
+from unittest import result
 import cv2
 from aurmr_perception.srv import CaptureObject, RemoveObject, GetObjectPoints, ResetBin
 import numpy as np
@@ -42,7 +45,7 @@ class PodPerceptionROS:
         if not request.bin_id or not request.object_id:
             return False, "bin_id and object_id are required"
 
-        result, message = self.model.capture_object(request.bin_id, request.object_id, self.rgb_image, self.depth_image, self.camera_info.K)
+        result, message, mask = self.model.capture_object(request.bin_id, request.object_id, self.rgb_image, self.depth_image, self.camera_info.K)
 
         if result and self.visualize:
             bin_im_viz = self.model.latest_captures[request.bin_id]
@@ -53,7 +56,7 @@ class PodPerceptionROS:
             mask_im_viz = self.model.latest_masks[request.bin_id].astype(float)
             cv2.imshow('latest_mask', mask_im_viz)
             cv2.waitKey(1)
-        return result, message
+        return result, message, mask
 
     def get_object_callback(self, request):
         if not request.object_id or not request.frame_id:
@@ -64,7 +67,17 @@ class PodPerceptionROS:
         if not result:
             return result, message, None, None
 
-        bin_id, points = result
+        bin_id, points, mask = result
+
+        mask = ros_numpy.msgify(Image, mask.astype(np.uint8), encoding="mono8")
+
+        if request.mask_only:
+            return True,\
+               f"Mask successfully retrieved for object {request.object_id} in bin {bin_id}",\
+               bin_id,\
+               None,\
+               mask
+
         if request.frame_id != self.camera_frame:
             # Transform points to requested frame_id
 
@@ -101,9 +114,10 @@ class PodPerceptionROS:
         )
 
         return True,\
-               f"Points successfully retrieved for object {request.object_id} in bin {bin_id}",\
+               f"Points and mask successfully retrieved for object {request.object_id} in bin {bin_id}",\
                bin_id,\
-               pointcloud
+               pointcloud,\
+               mask
 
     def remove_object_callback(self, request):
         if not request.bin_id or not request.object_id:
@@ -116,6 +130,19 @@ class PodPerceptionROS:
     def reset_callback(self, request):
         if not request.bin_id:
             return False, "bin_id is required"
+    
+        import os
+        filename = '/tmp/empty_bin.png'
+        if os.path.exists(filename):
+            img = cv2.imread(filename)
+            self.rgb_image = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            rospy.loginfo(f"Using cached empty pod image. Delete {filename} to regenerate the image.")
+        elif self.rgb_image is not None:
+            img = cv2.cvtColor(self.rgb_image, cv2.COLOR_BGR2RGB)
+            cv2.imwrite(filename, img)
+            
+            rospy.loginfo("Caching Empty Pod Image for Later use")
+            
         if self.rgb_image is None:
             return False, "No images have been streamed"
 
@@ -141,6 +168,7 @@ class DiffPodModel:
         self.latest_captures = {}
         self.latest_masks = {}
         self.points_table = {}
+        self.masks_table = {}
         self.object_bin_queues = defaultdict(ObjectBinQueue)
         self.bin_normals = {}
 
@@ -200,14 +228,16 @@ class DiffPodModel:
 
         if bin_id not in self.points_table:
             self.points_table[bin_id] = {}
+            self.masks_table[bin_id] = {}
 
         self.points_table[bin_id][object_id] = np.vstack((x_ros,y_ros,z_ros))
+        self.masks_table[bin_id][object_id] = mask
         self.object_bin_queues[object_id].put(bin_id)
 
         self.latest_captures[bin_id] = current_rgb
         self.latest_masks[bin_id] = mask
 
-        return True, f"Object {object_id} in bin {bin_id} has been captured with {x.shape[0]} points."
+        return True, f"Object {object_id} in bin {bin_id} has been captured with {x.shape[0]} points.", ros_numpy.msgify(Image, mask.astype(np.uint8), encoding="mono8")
 
     def get_object(self, bin_id, object_id):
         if not object_id:
@@ -226,7 +256,8 @@ class DiffPodModel:
             return False, f"Object {object_id} was not found in bin {bin_id}"
 
         points = self.points_table[bin_id][object_id]
-        return (bin_id, points), None
+        mask = self.masks_table[bin_id][object_id]
+        return (bin_id, points, mask), None
 
     def remove_object(self, bin_id, object_id, rgb_image):
         if not bin_id or not object_id:
