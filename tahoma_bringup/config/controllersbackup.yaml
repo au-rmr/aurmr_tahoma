@@ -16,6 +16,7 @@ ur_hardware_interface:
 joint_state_controller:
    type:         joint_state_controller/JointStateController
    publish_rate: *loop_hz
+   joints: *robot_joints
 
 # Publish wrench ----------------------------------
 force_torque_sensor_controller:

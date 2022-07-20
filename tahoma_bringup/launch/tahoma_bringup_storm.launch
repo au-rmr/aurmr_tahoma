@@ -4,8 +4,8 @@
     <arg name="pod_id" default="1" />
 
     <include file="$(find ur_robot_driver)/launch/ur16e_bringup.launch">
-        <arg name="controllers" default="scaled_pos_joint_traj_controller joint_state_controller  force_torque_sensor_controller robot_status_controller"/>
-        <arg name="stopped_controllers" default="pos_joint_traj_controller joint_group_pos_controller joint_group_vel_controller" doc="Controllers that are initally loaded, but not started."/>        <arg name="robot_ip" value="192.168.43.92" />
+        <arg name="controllers" default="joint_group_vel_controller joint_state_controller  force_torque_sensor_controller robot_status_controller "/> 
+        <arg name="stopped_controllers" default="scaled_pos_joint_traj_controller pos_joint_traj_controller joint_group_pos_controller" doc="Controllers that are initally loaded, but not started."/>        <arg name="robot_ip" value="192.168.43.92" />
         <arg name="robot_description_file" value="$(find tahoma_description)/launch/load_tahoma.launch" />
         <arg name="controller_config_file" default="$(find tahoma_bringup)/config/controllers.yaml" />
         <arg name="kinematics_config" value="$(find tahoma_description)/config/arm_calibration.yaml" />
@@ -44,15 +44,6 @@
 
     <include file="$(find robotiq_2f_gripper_control)/launch/robotiq_2f_gripper_socket.launch"/>
     <include file="$(find robotiq_2f_gripper_action_server)/launch/robotiq_2f_gripper_socket_action_server.launch"/>
-
-    <node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" />
-
-    <node pkg="nodelet" type="nodelet" name="nodelet1"
-          args="load depth_image_proc/point_cloud_xyz nodelet_manager">
-      <remap from="camera_info" to="/camera_lower_right/aligned_depth_to_color/camera_info"/>
-      <remap from="image_rect" to="/camera_lower_right/aligned_depth_to_color/image_raw"/>
-      <remap from="points" to="/camera/depth/points"/>
-    </node>
 
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tahoma_description)/config/view_model.rviz"/>
 </launch>

@@ -85,11 +85,12 @@ class MoveEndEffectorToOffset(State):
             offset = userdata["offset"]
         offset_frame = self.offset_frame
         if offset_frame is None:
-            offset_frame = 'arm_tool0'
+            offset_frame = 'gripper_equilibrium'
         # In base_link by default
         current = self.robot.move_group.get_current_pose()
         target_pose = apply_offset_to_pose(current, offset, offset_frame, self.robot.tf2_buffer)
         succeeded = self.robot.straight_move_to_pose(target_pose, avoid_collisions=False)
+        
         if succeeded:
             return "succeeded"
         else:
@@ -118,7 +119,7 @@ class ServoEndEffectorToPose(State):
 
 
 class ServoEndEffectorToOffset(State):
-    def __init__(self, robot, offset, pos_tolerance=0.01, angular_tolerance=0.2, frame=None):
+    def __init__(self, robot, offset, pos_tolerance=0.01, angular_tolerance=0.1, frame=None):
         State.__init__(self, input_keys=['offset'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
         self.offset = offset
@@ -146,16 +147,16 @@ class ServoEndEffectorToOffset(State):
 def robust_move_to_offset(robot, offset, frame=None):
     sm = StateMachine(["succeeded", "preempted", "aborted"])
     if frame is None:
-        frame = "arm_tool0"
+        frame = "gripper_equilibrium_grasp"
     with sm:
-        StateMachine.add_auto("TRY_CARTESIAN_MOVE", MoveEndEffectorToOffset(robot, offset, frame), ["aborted"],
-                              transitions={"succeeded": "succeeded"})
-        # Generous allowances here to try and get some motion
-        StateMachine.add_auto("TRY_SERVO_MOVE", ServoEndEffectorToOffset(robot, offset, 0.02, 0.3, frame=frame), ["aborted"],
-                              transitions={"succeeded": "succeeded"})
-        # HACK: Servo's underlying controller freaks out when reengaged after teach pendent intervention. Switch to follow_traj with a nonce goal
-        StateMachine.add_auto("SWITCH_TO_TRAJ_CONTROLLER", MoveEndEffectorToOffset(robot, (0,0,0), frame), ["succeeded", "aborted"],
-                              transitions={"succeeded": "succeeded"})
+        # StateMachine.add_auto("TRY_CARTESIAN_MOVE", MoveEndEffectorToOffset(robot, offset, frame), ["aborted"],
+        #                       transitions={"succeeded": "succeeded"})
+        # # Generous allowances here to try and get some motion
+        # StateMachine.add_auto("TRY_SERVO_MOVE", ServoEndEffectorToOffset(robot, offset, 0.02, 0.3, frame=frame), ["aborted"],
+        #                       transitions={"succeeded": "succeeded"})
+        # # HACK: Servo's underlying controller freaks out when reengaged after teach pendent intervention. Switch to follow_traj with a nonce goal
+        # StateMachine.add_auto("SWITCH_TO_TRAJ_CONTROLLER", MoveEndEffectorToOffset(robot, (0,0,0), frame), ["succeeded", "aborted"],
+        #                       transitions={"succeeded": "succeeded"})
         StateMachine.add_auto("ASK_HUMAN_TO_MOVE", interaction.AskForHumanAction(
             f"Please move the end effector by {offset} in the {frame} frame"), ["succeeded", "aborted"])
     return sm
@@ -239,7 +240,7 @@ class AddInHandCollisionGeometry(State):
                             (.06, .13, .06))
         self.robot.scene.attach_box("arm_tool0", "item", touch_links=["gripper_robotiq_arg2f_base_link", "gripper_left_distal_phalanx",
                                                  "gripper_left_proximal_phalanx", "gripper_right_proximal_phalanx",
-                                                 "gripper_right_distal_phalanx"])
+                                                 "gripper_right_distal_phalanx", "gripper_left_bar", "gripper_right_bar"])
         start = rospy.get_time()
         seconds = rospy.get_time()
         timeout = 5.0
