@@ -2,17 +2,19 @@ import encodings
 from fileinput import filename
 from unittest import result
 import cv2
+import matplotlib
 from aurmr_perception.srv import CaptureObject, RemoveObject, GetObjectPoints, ResetBin
 import numpy as np
 import ros_numpy
 import rospy
 import message_filters
 import tf2_ros
-
+import matplotlib.pyplot as plt
 from collections import defaultdict
 from sensor_msgs.msg import Image, CameraInfo, PointField, PointCloud2
 from std_msgs.msg import Header
 
+from aurmr_unseen_object_clustering.tools.run_network import clustering_network
 
 class PodPerceptionROS:
     def __init__(self, model, camera_name, visualize):
@@ -155,15 +157,15 @@ class PodPerceptionROS:
         self.rgb_image = ros_numpy.numpify(ros_rgb_image)
         self.depth_image = ros_numpy.numpify(ros_depth_image)
         self.camera_info = ros_camera_info
-
-        if self.visualize:
-            rgb_im_viz = cv2.cvtColor(self.rgb_image, cv2.COLOR_RGB2BGR)
-            cv2.imshow('rgb_image', rgb_im_viz)
-            cv2.waitKey(1)
+        # rospy.loginfo("GOT IMAGES")
+        # if self.visualize:
+        #     rgb_im_viz = cv2.cvtColor(self.rgb_image, cv2.COLOR_RGB2BGR)
+        #     cv2.imshow('rgb_image', rgb_im_viz)
+        #     cv2.waitKey(1)
 
 
 class DiffPodModel:
-    def __init__(self, diff_threshold):
+    def __init__(self, diff_threshold, segmentation_method):
         self.diff_threshold = diff_threshold
         self.latest_captures = {}
         self.latest_masks = {}
@@ -171,6 +173,7 @@ class DiffPodModel:
         self.masks_table = {}
         self.object_bin_queues = defaultdict(ObjectBinQueue)
         self.bin_normals = {}
+        self.segmentation_method = segmentation_method
 
     def capture_object(self, bin_id, object_id, rgb_image, depth_image, camera_intrinsics):
         if not bin_id or not object_id:
@@ -182,19 +185,30 @@ class DiffPodModel:
         last_rgb = self.latest_captures[bin_id]
         current_rgb = rgb_image
 
-        # Get the difference of the two captured RGB images
-        difference = cv2.absdiff(last_rgb, current_rgb)
+        if(self.segmentation_method == "clustering"):
+            net = clustering_network()
+            camera_intrinsics_3x3 = np.reshape(camera_intrinsics, (3,3))
+            mask = net.run_net(current_rgb, depth_image, camera_intrinsics_3x3)
+            mask = mask*(255//np.max(mask))
+            rospy.loginfo(np.unique(mask, return_counts=True))
+            cv2.imwrite("/tmp/mask.bmp", mask)
+            # plt.imshow(mask)
+            # plt.show()
+        elif(self.segmentation_method == "pixel_difference"):
+            # Get the difference of the two captured RGB images
+            difference = cv2.absdiff(last_rgb, current_rgb)
 
-        # Threshold the difference image to get the initial mask
-        mask = difference.sum(axis=2) >= self.diff_threshold
+            # Threshold the difference image to get the initial mask
+            mask = difference.sum(axis=2) >= self.diff_threshold
 
-        # Group the masked pixels and leave only the group with the largest area
-        (numLabels, labels, stats, centroids) = cv2.connectedComponentsWithStats(mask.astype(np.uint8), 8, cv2.CV_32S)
-        areas = np.array([stats[i, cv2.CC_STAT_AREA] for i in range(len(stats))])
-        max_area = np.max(areas[1:])
-        max_area_idx = np.where(areas == max_area)[0][0]
-        mask[np.where(labels != max_area_idx)] = 0.0
-
+            # Group the masked pixels and leave only the group with the largest area
+            (numLabels, labels, stats, centroids) = cv2.connectedComponentsWithStats(mask.astype(np.uint8), 8, cv2.CV_32S)
+            areas = np.array([stats[i, cv2.CC_STAT_AREA] for i in range(len(stats))])
+            max_area = np.max(areas[1:])
+            max_area_idx = np.where(areas == max_area)[0][0]
+            mask[np.where(labels != max_area_idx)] = 0.0    
+        else:
+            raise RuntimeError(f"Unknown segmentation method requested: {self.segmentation_method}")
         # Apply mask to the depth image
         masked_depth = depth_image * mask
 

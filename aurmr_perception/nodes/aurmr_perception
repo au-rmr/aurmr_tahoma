@@ -16,7 +16,7 @@ if __name__ == '__main__':
     args.viz = rospy.get_param("~viz", args.viz)
     args.camera_name = rospy.get_param("~camera_name", args.camera_name)
     args.segmentation_method = rospy.get_param("~segmentation_method", args.segmentation_method)
-    model = DiffPodModel(args.diff_threshold)
+    model = DiffPodModel(args.diff_threshold, args.segmentation_method)
 
     node = PodPerceptionROS(model, args.camera_name, args.viz)
     while not rospy.is_shutdown() and not node.received_images:
