@@ -149,9 +149,9 @@ def robust_move_to_offset(robot, offset, frame=None):
     if frame is None:
         frame = "gripper_equilibrium_grasp"
     with sm:
-        # StateMachine.add_auto("TRY_CARTESIAN_MOVE", MoveEndEffectorToOffset(robot, offset, frame), ["aborted"],
-        #                       transitions={"succeeded": "succeeded"})
-        # # Generous allowances here to try and get some motion
+        StateMachine.add_auto("TRY_CARTESIAN_MOVE", MoveEndEffectorToOffset(robot, offset, frame), ["aborted"],
+                              transitions={"succeeded": "succeeded"})
+        # Generous allowances here to try and get some motion
         # StateMachine.add_auto("TRY_SERVO_MOVE", ServoEndEffectorToOffset(robot, offset, 0.02, 0.3, frame=frame), ["aborted"],
         #                       transitions={"succeeded": "succeeded"})
         # # HACK: Servo's underlying controller freaks out when reengaged after teach pendent intervention. Switch to follow_traj with a nonce goal

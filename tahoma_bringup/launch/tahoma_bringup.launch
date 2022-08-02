@@ -28,22 +28,27 @@
     </group>
 
     <!-- Use realsense-enumerate-devices to examine physical port layout -->
-    <include file="$(find tahoma_bringup)/launch/camera.launch">
+    <!-- <include file="$(find tahoma_bringup)/launch/camera.launch">
       <arg name="camera" value="camera_lower_right" />
       <arg name="usb_port_id" value="4-1" />
-    </include>
+    </include> -->
     <!-- FIXME(nickswalker,6-9-22): Depth interference when both cameras are running -->
     <!--include file="$(find tahoma_bringup)/launch/camera.launch">
       <arg name="camera" value="camera_lower_left" />
       <arg name="usb_port_id" value="4-3" />
     </include>-->
-
+    
     <node name="fake_gripper_state" type="fake_gripper_state" pkg="tahoma_bringup" >
       <param name="state" value="1.0" />
     </node>
 
-    <include file="$(find robotiq_2f_gripper_control)/launch/robotiq_2f_gripper_socket.launch"/>
-    <include file="$(find robotiq_2f_gripper_action_server)/launch/robotiq_2f_gripper_socket_action_server.launch"/>
+    <arg name="gripper_type" default="vacuum" />
+    <include file="$(find robotiq_2f_gripper_control)/launch/robotiq_2f_gripper_socket.launch">
+      <arg name="gripper_type" default="$(arg gripper_type)" />
+    </include>
+    <include file="$(find robotiq_2f_gripper_action_server)/launch/robotiq_2f_gripper_socket_action_server.launch">
+      <arg name="gripper_type" default="$(arg gripper_type)" />
+    </include>
 
     <node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" />
 
