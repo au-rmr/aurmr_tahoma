@@ -73,11 +73,13 @@ class MoveEndEffectorToPoseLinear(State):
 
 
 class MoveEndEffectorToOffset(State):
-    def __init__(self, robot, offset, frame=None):
+    def __init__(self, robot, offset, frame=None, use_force=False, use_gripper=False):
         State.__init__(self, input_keys=['offset'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
         self.offset = offset
         self.offset_frame = frame
+        self.use_force = use_force
+        self.use_gripper = use_gripper
 
     def execute(self, userdata):
         offset = self.offset
@@ -85,11 +87,11 @@ class MoveEndEffectorToOffset(State):
             offset = userdata["offset"]
         offset_frame = self.offset_frame
         if offset_frame is None:
-            offset_frame = 'gripper_equilibrium'
+            offset_frame = 'arm_tool0'
         # In base_link by default
         current = self.robot.move_group.get_current_pose()
         target_pose = apply_offset_to_pose(current, offset, offset_frame, self.robot.tf2_buffer)
-        succeeded = self.robot.straight_move_to_pose(target_pose, avoid_collisions=False)
+        succeeded = self.robot.straight_move_to_pose(target_pose, avoid_collisions=False, jump_threshold=10.0, use_force=self.use_force, use_gripper=self.use_gripper)
         
         if succeeded:
             return "succeeded"
@@ -111,7 +113,7 @@ class ServoEndEffectorToPose(State):
         if target is None:
             target = userdata["pose"]
 
-        succeeded = self.robot.servo_to_pose(target, self.pos_tolerance, self.angular_tolerance, avoid_collisions=False)
+        succeeded = self.robot.servo_to_pose(target, self.pos_tolerance, self.angular_tolerance, avoid_collisions=True)
         if succeeded:
             return "succeeded"
         else:
@@ -137,7 +139,7 @@ class ServoEndEffectorToOffset(State):
         # In base_link by default
         current = self.robot.move_group.get_current_pose()
         target_pose = apply_offset_to_pose(current, offset, offset_frame, self.robot.tf2_buffer)
-        succeeded = self.robot.servo_to_pose(target_pose, pos_tolerance=self.pos_tolerance, angular_tolerance=self.angular_tolerance, avoid_collisions=False)
+        succeeded = self.robot.servo_to_pose(target_pose, pos_tolerance=self.pos_tolerance, angular_tolerance=self.angular_tolerance, avoid_collisions=True)
         if succeeded:
             return "succeeded"
         else:
@@ -147,11 +149,11 @@ class ServoEndEffectorToOffset(State):
 def robust_move_to_offset(robot, offset, frame=None):
     sm = StateMachine(["succeeded", "preempted", "aborted"])
     if frame is None:
-        frame = "gripper_equilibrium_grasp"
+        frame = "arm_tool0"
     with sm:
-        # StateMachine.add_auto("TRY_CARTESIAN_MOVE", MoveEndEffectorToOffset(robot, offset, frame), ["aborted"],
-        #                       transitions={"succeeded": "succeeded"})
-        # # Generous allowances here to try and get some motion
+        StateMachine.add_auto("TRY_CARTESIAN_MOVE", MoveEndEffectorToOffset(robot, offset, frame, use_force=True, use_gripper=False), ["aborted"],
+                              transitions={"succeeded": "succeeded"})
+        # Generous allowances here to try and get some motion
         # StateMachine.add_auto("TRY_SERVO_MOVE", ServoEndEffectorToOffset(robot, offset, 0.02, 0.3, frame=frame), ["aborted"],
         #                       transitions={"succeeded": "succeeded"})
         # # HACK: Servo's underlying controller freaks out when reengaged after teach pendent intervention. Switch to follow_traj with a nonce goal
@@ -161,6 +163,22 @@ def robust_move_to_offset(robot, offset, frame=None):
             f"Please move the end effector by {offset} in the {frame} frame"), ["succeeded", "aborted"])
     return sm
 
+def grasp_move_to_offset(robot, offset, fame=None):
+    sm = StateMachine(["succeeded", "preempted", "aborted"])
+    if frame is None:
+        frame = "arm_tool0"
+    with sm:
+        StateMachine.add_auto("TRY_CARTESIAN_MOVE", MoveEndEffectorToOffset(robot, offset, frame, use_force=True, use_gripper=True), ["aborted"],
+                              transitions={"succeeded": "succeeded"})
+        # Generous allowances here to try and get some motion
+        # StateMachine.add_auto("TRY_SERVO_MOVE", ServoEndEffectorToOffset(robot, offset, 0.02, 0.3, frame=frame), ["aborted"],
+        #                       transitions={"succeeded": "succeeded"})
+        # # HACK: Servo's underlying controller freaks out when reengaged after teach pendent intervention. Switch to follow_traj with a nonce goal
+        # StateMachine.add_auto("SWITCH_TO_TRAJ_CONTROLLER", MoveEndEffectorToOffset(robot, (0,0,0), frame), ["succeeded", "aborted"],
+        #                       transitions={"succeeded": "succeeded"})
+        StateMachine.add_auto("ASK_HUMAN_TO_MOVE", interaction.AskForHumanAction(
+            f"Please move the end effector by {offset} in the {frame} frame"), ["succeeded", "aborted"])
+    return sm
 
 class MoveEndEffectorInLineInOut(State):
     def __init__(self, robot):
@@ -184,22 +202,24 @@ class MoveEndEffectorInLineInOut(State):
 
 
 class CloseGripper(State):
-    def __init__(self, robot):
+    def __init__(self, robot, return_before_done=False):
         State.__init__(self, input_keys=[], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
+        self.return_before_done = return_before_done
 
     def execute(self, ud):
-        self.robot.close_gripper()
+        self.robot.close_gripper(return_before_done=self.return_before_done)
         return "succeeded"
 
 
 class OpenGripper(State):
-    def __init__(self, robot):
+    def __init__(self, robot, return_before_done=False):
         State.__init__(self, input_keys=[], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
+        self.return_before_done = return_before_done
 
     def execute(self, ud):
-        self.robot.open_gripper()
+        self.robot.open_gripper(return_before_done=self.return_before_done)
         return "succeeded"
 
 

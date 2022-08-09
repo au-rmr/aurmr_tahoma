@@ -2,6 +2,7 @@
 
 from smach import State, StateMachine
 
+import rospy
 
 from aurmr_tasks.common import motion, perception
 from aurmr_tasks import interaction
@@ -17,12 +18,13 @@ for letter in "abcdefghijklm":
 
 
 def load_sm(stows):
-
     sm = StateMachine(["succeeded", "preempted", "aborted"],
                            input_keys=[],
                            output_keys=[])
+    print("STOWS:", stows)
 
     with sm:
+        
         cf.inject_userdata_auto("LOAD_STOWS", "stows", stows)
 
         StateMachine.add("ITERATE_STOWS", cf.IterateList("stows", "stow"), {"repeat": "SPLAT_STOW", "done": "succeeded" })

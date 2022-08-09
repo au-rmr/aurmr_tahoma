@@ -15,7 +15,7 @@ from tf_conversions import transformations
 import aurmr_tasks.common.control_flow as cf
 from aurmr_tasks.pod import load_sm
 
-from aurmr_tasks.common.motion import robust_move_to_offset
+from aurmr_tasks.common.motion import robust_move_to_offset, grasp_move_to_offset
 from aurmr_perception.util import vec_to_quat_msg, I_QUAT
 
 TARGET_BIN_ID = "001"
@@ -54,8 +54,8 @@ def main():
         StateMachine.add_auto("REMAP_PRE_GRASP_POSE", cf.input_to_output("pre_grasp_pose", "pose"), ["succeeded"])
         StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPose(robot), ["succeeded"])
         StateMachine.add_auto("OPEN_BEFORE_GRASP", motion.OpenGripper(robot), ["succeeded"])
-        StateMachine.add_auto("MOVE_TO_GRASP", robust_move_to_offset(robot, (0, 0, 0.170)), ["succeeded", "aborted"])
-        StateMachine.add_auto("GRASP", motion.CloseGripper(robot), ["succeeded"])
+        # StateMachine.add_auto("GRASP", motion.CloseGripper(robot, return_before_done=True), ["succeeded"])
+        StateMachine.add_auto("MOVE_TO_GRASP", grasp_move_to_offset(robot, (0, 0, 0.170)), ["succeeded", "aborted"])
         StateMachine.add_auto("LIFT_OBJ", robust_move_to_offset(robot, (0, 0, 0.03), 'base_link'), ["succeeded", "aborted"])
 
         StateMachine.add_auto("RETRACT_ARM", robust_move_to_offset(robot, (0, 0, -0.25)), ["succeeded", "aborted"])
