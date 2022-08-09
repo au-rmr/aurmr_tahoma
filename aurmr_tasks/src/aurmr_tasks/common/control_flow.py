@@ -79,11 +79,13 @@ class Splat(smach.State):
     def __init__(self, input_key, output_keys):
         assert isinstance(output_keys, list)
         smach.State.__init__(self, outcomes=['succeeded'], input_keys=[input_key], output_keys=output_keys)
+        # output keys need to be ordered, smach turns them into sets (unordered) save them here as a list
+        self.output_key_list = output_keys
 
     def execute(self, userdata):
         input_key = list(self._input_keys)[0]
         in_data = userdata[input_key]
-        for output_key, data in zip(self._output_keys, in_data):
+        for output_key, data in zip(self.output_key_list, in_data):
             userdata[output_key] = data
         return 'succeeded'
 
