@@ -430,7 +430,7 @@ class Tahoma:
                               pose_stamped,
                               tolerance=0.01,
                               ee_step=0.01,
-                              jump_threshold=0.5,
+                              jump_threshold=6.0,
                               avoid_collisions=True,
                               use_force=False,
                               use_gripper=False):

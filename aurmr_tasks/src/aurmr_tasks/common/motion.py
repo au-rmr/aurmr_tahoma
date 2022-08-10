@@ -48,7 +48,15 @@ class MoveEndEffectorToPose(State):
             pose = userdata["pose"]
 
         self.target_pose_visualizer.publish(pose)
-        success = self.robot.move_to_pose(pose)
+        success = self.robot.move_to_pose(
+                          pose,
+                          allowed_planning_time=15.0,
+                          execution_timeout=15.0,
+                          num_planning_attempts=20,
+                          orientation_constraint=None,
+                          replan=True,
+                          replan_attempts=8,
+                          tolerance=0.01)
         if success:
             return "succeeded"
         else:
@@ -91,7 +99,7 @@ class MoveEndEffectorToOffset(State):
         # In base_link by default
         current = self.robot.move_group.get_current_pose()
         target_pose = apply_offset_to_pose(current, offset, offset_frame, self.robot.tf2_buffer)
-        succeeded = self.robot.straight_move_to_pose(target_pose, avoid_collisions=False, jump_threshold=10.0, use_force=self.use_force, use_gripper=self.use_gripper)
+        succeeded = self.robot.straight_move_to_pose(target_pose, ee_step = 0.05, avoid_collisions=True, jump_threshold=6.0, use_force=self.use_force, use_gripper=self.use_gripper)
         
         if succeeded:
             return "succeeded"
