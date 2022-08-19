@@ -91,7 +91,7 @@ class MoveEndEffectorToOffset(State):
         # In base_link by default
         current = self.robot.move_group.get_current_pose()
         target_pose = apply_offset_to_pose(current, offset, offset_frame, self.robot.tf2_buffer)
-        succeeded = self.robot.straight_move_to_pose(target_pose, avoid_collisions=False, jump_threshold=10.0, use_force=self.use_force, use_gripper=self.use_gripper)
+        succeeded = self.robot.straight_move_to_pose(target_pose, avoid_collisions=True, jump_threshold=10.0, use_force=self.use_force, use_gripper=self.use_gripper)
         
         if succeeded:
             return "succeeded"
@@ -159,11 +159,11 @@ def robust_move_to_offset(robot, offset, frame=None):
         # # HACK: Servo's underlying controller freaks out when reengaged after teach pendent intervention. Switch to follow_traj with a nonce goal
         # StateMachine.add_auto("SWITCH_TO_TRAJ_CONTROLLER", MoveEndEffectorToOffset(robot, (0,0,0), frame), ["succeeded", "aborted"],
         #                       transitions={"succeeded": "succeeded"})
-        StateMachine.add_auto("ASK_HUMAN_TO_MOVE", interaction.AskForHumanAction(
-            f"Please move the end effector by {offset} in the {frame} frame"), ["succeeded", "aborted"])
+        # StateMachine.add_auto("ASK_HUMAN_TO_MOVE", interaction.AskForHumanAction(
+        #     f"Please move the end effector by {offset} in the {frame} frame"), ["succeeded", "aborted"])
     return sm
 
-def grasp_move_to_offset(robot, offset, fame=None):
+def grasp_move_to_offset(robot, offset, frame=None):
     sm = StateMachine(["succeeded", "preempted", "aborted"])
     if frame is None:
         frame = "arm_tool0"
@@ -176,8 +176,8 @@ def grasp_move_to_offset(robot, offset, fame=None):
         # # HACK: Servo's underlying controller freaks out when reengaged after teach pendent intervention. Switch to follow_traj with a nonce goal
         # StateMachine.add_auto("SWITCH_TO_TRAJ_CONTROLLER", MoveEndEffectorToOffset(robot, (0,0,0), frame), ["succeeded", "aborted"],
         #                       transitions={"succeeded": "succeeded"})
-        StateMachine.add_auto("ASK_HUMAN_TO_MOVE", interaction.AskForHumanAction(
-            f"Please move the end effector by {offset} in the {frame} frame"), ["succeeded", "aborted"])
+        # StateMachine.add_auto("ASK_HUMAN_TO_MOVE", interaction.AskForHumanAction(
+        #     f"Please move the end effector by {offset} in the {frame} frame"), ["succeeded", "aborted"])
     return sm
 
 class MoveEndEffectorInLineInOut(State):
@@ -230,6 +230,7 @@ class ClearCollisionGeometry(State):
         self.robot = robot
 
     def execute(self, ud):
+        print("CLEARING")
         self.robot.scene.clear()
         start = rospy.get_time()
         seconds = rospy.get_time()
@@ -260,7 +261,7 @@ class AddInHandCollisionGeometry(State):
                             (.06, .13, .06))
         self.robot.scene.attach_box("arm_tool0", "item", touch_links=["gripper_robotiq_arg2f_base_link", "gripper_left_distal_phalanx",
                                                  "gripper_left_proximal_phalanx", "gripper_right_proximal_phalanx",
-                                                 "gripper_right_distal_phalanx", "gripper_left_bar", "gripper_right_bar"])
+                                                 "gripper_right_distal_phalanx", "gripper_left_bar", "gripper_right_bar", "gripper_base_link", "epick_end_effector"])
         start = rospy.get_time()
         seconds = rospy.get_time()
         timeout = 5.0
@@ -318,6 +319,47 @@ class AddCalibrationTargetInHandCollision(State):
         # If we exited the while loop without returning then we timed out
         return "aborted"
 
+# Original
+# class AddPodCollisionGeometry(State):
+#     def __init__(self, robot):
+#         State.__init__(self, outcomes=["succeeded", "aborted"])
+#         self.robot = robot
+
+#     def execute(self, ud):
+#         # FIXME: We should probably read this in from transforms or something
+#         POD_SIZE = .9398
+#         HALF_POD_SIZE = POD_SIZE / 2
+#         self.robot.scene.add_box("pod_top", PoseStamped(header=Header(frame_id="pod_base_link"),
+#                                                    pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.03),
+#                                                              orientation=I_QUAT)), (POD_SIZE, POD_SIZE, 1.5))
+
+#         self.robot.scene.add_box("pod_bottom", PoseStamped(header=Header(frame_id="pod_base_link"),
+#                                                       pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=.68),
+#                                                                 orientation=I_QUAT)), (POD_SIZE, POD_SIZE, 1))
+#         self.robot.scene.add_box("pod_left", PoseStamped(header=Header(frame_id="pod_base_link"),
+#                                                     pose=Pose(position=Point(x=.75, y=.25, z=1.27),
+#                                                               orientation=I_QUAT)), (.5, .5, .3))
+#         self.robot.scene.add_box("pod_right", PoseStamped(header=Header(frame_id="pod_base_link"),
+#                                                      pose=Pose(position=Point(x=.25, y=.25, z=1.27),
+#                                                                orientation=I_QUAT)), (.5, .5, .3))
+
+#         start = rospy.get_time()
+#         seconds = rospy.get_time()
+#         timeout = 50.0
+#         while (seconds - start < timeout) and not rospy.is_shutdown():
+#             objects = self.robot.scene.get_objects()
+
+#             # Test if we are in the expected state
+#             if len(objects) == 4:
+#                 return "succeeded"
+
+#             # Sleep so that we give other threads time on the processor
+#             rospy.sleep(0.1)
+#             seconds = rospy.get_time()
+
+#         # If we exited the while loop without returning then we timed out
+#         return "aborted"
+
 
 class AddPodCollisionGeometry(State):
     def __init__(self, robot):
@@ -328,19 +370,70 @@ class AddPodCollisionGeometry(State):
         # FIXME: We should probably read this in from transforms or something
         POD_SIZE = .9398
         HALF_POD_SIZE = POD_SIZE / 2
-        self.robot.scene.add_box("pod_top", PoseStamped(header=Header(frame_id="pod_base_link"),
-                                                   pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.03),
-                                                             orientation=I_QUAT)), (POD_SIZE, POD_SIZE, 1.5))
-
-        self.robot.scene.add_box("pod_bottom", PoseStamped(header=Header(frame_id="pod_base_link"),
-                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=.68),
-                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, 1))
-        self.robot.scene.add_box("pod_left", PoseStamped(header=Header(frame_id="pod_base_link"),
-                                                    pose=Pose(position=Point(x=.75, y=.25, z=1.27),
-                                                              orientation=I_QUAT)), (.5, .5, .3))
-        self.robot.scene.add_box("pod_right", PoseStamped(header=Header(frame_id="pod_base_link"),
-                                                     pose=Pose(position=Point(x=.25, y=.25, z=1.27),
-                                                               orientation=I_QUAT)), (.5, .5, .3))
+        WALL_WIDTH = 0.003
+        # self.robot.scene.add_box("pod_top", PoseStamped(header=Header(frame_id="pod_base_link"),
+        #                                            pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.03),
+        #                                                      orientation=I_QUAT)), (POD_SIZE, POD_SIZE, 1.5))
+        self.robot.scene.add_box("col_01", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=0.045, y=HALF_POD_SIZE, z=1.45),
+                                                                orientation=I_QUAT)), (WALL_WIDTH, POD_SIZE, 2.3))
+        self.robot.scene.add_box("col_02", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=0.5*HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.45),
+                                                                orientation=I_QUAT)), (WALL_WIDTH, POD_SIZE, 2.3))                                                       
+        self.robot.scene.add_box("col_03", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.45),
+                                                                orientation=I_QUAT)), (WALL_WIDTH, POD_SIZE, 2.3))
+        self.robot.scene.add_box("col_04", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=1.5*HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.45),
+                                                                orientation=I_QUAT)), (WALL_WIDTH, POD_SIZE, 2.3))
+        self.robot.scene.add_box("col_05", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=POD_SIZE-0.045, y=HALF_POD_SIZE, z=1.45),
+                                                                orientation=I_QUAT)), (WALL_WIDTH, POD_SIZE, 2.3))
+        self.robot.scene.add_box("row_01", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=0.34),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
+        self.robot.scene.add_box("row_02", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=0.56),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))                                           
+        self.robot.scene.add_box("row_03", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=0.70),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
+        self.robot.scene.add_box("row_04", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=0.89),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH)) 
+        self.robot.scene.add_box("row_05", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.04),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
+        self.robot.scene.add_box("row_06", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.16),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
+        self.robot.scene.add_box("row_07", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.38),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
+        self.robot.scene.add_box("row_08", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.51),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))                                                       
+        self.robot.scene.add_box("row_09", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.66),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
+        self.robot.scene.add_box("row_10", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.79),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
+        self.robot.scene.add_box("row_11", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.01),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH)) 
+        self.robot.scene.add_box("row_12", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.14),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
+        self.robot.scene.add_box("row_13", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.29),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
+        self.robot.scene.add_box("row_14", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.57),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
+        self.robot.scene.add_box("back_frame", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                    pose=Pose(position=Point(x=0.415, y=-0.98, z=1.27),
+                                                              orientation=I_QUAT)), (1.45, .2, 1.5))
 
         start = rospy.get_time()
         seconds = rospy.get_time()
@@ -349,7 +442,7 @@ class AddPodCollisionGeometry(State):
             objects = self.robot.scene.get_objects()
 
             # Test if we are in the expected state
-            if len(objects) == 4:
+            if len(objects) == 20:
                 return "succeeded"
 
             # Sleep so that we give other threads time on the processor

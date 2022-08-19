@@ -171,18 +171,17 @@ class Tahoma:
         self.torque_mag = math.sqrt(msg.wrench.torque.x**2 + msg.wrench.torque.y**2+ msg.wrench.torque.z**2)
 
     def gripper_status_cb(self, msg: VacuumGripperStatus):
-        self.object_detected = msg.gVAS == 1
+        self.object_detected = (msg.gOBJ == 1 or msg.gOBJ == 2)
 
     def goal_status_cb(self, msg: GoalStatusArray):
         latest_time = 0
         latest_status = GoalStatus.SUCCEEDED
         for g in msg.status_list:
             if g.goal_id.stamp.secs > latest_time:
-                latest_time = g.goal_id.stamp.secs 
+                latest_time = g.goal_id.stamp.secs + g.goal_id.stamp.secs*10**(-9)
                 latest_status = g.status
         self.goal_finished = latest_status != GoalStatus.PENDING and latest_status != GoalStatus.ACTIVE
         self.goal_stamp = latest_time
-        
     def update_running_controllers(self):
         controllers_status = self._controller_lister().controller
         self.active_controllers = []
@@ -335,7 +334,8 @@ class Tahoma:
         Returns:
             string describing the error if an error occurred, else None.
         """
-
+        self.move_group.stop()
+        
         self.move_group.set_num_planning_attempts(num_planning_attempts)
         self.move_group.allow_replanning(replan)
         self.move_group.set_goal_joint_tolerance(tolerance)
@@ -471,28 +471,39 @@ class Tahoma:
         if use_gripper:
             self.close_gripper(return_before_done=True)
 
-        while not wait and (self.goal_stamp == old_goal_stamp):
-            rospy.loginfo(str(old_goal_stamp) + " " + str(self.goal_stamp))
-            rospy.sleep(.01)
+        if not wait:
+            timeout = 1
+            steps = 0
+            while steps < timeout and (self.goal_stamp == old_goal_stamp):
+                rospy.loginfo("Waiting for moveit goal to update:" + str(old_goal_stamp) + " " + str(self.goal_stamp))
+                rospy.sleep(.01)
+                steps = steps + .01
 
-        force_limit = 50
-        rospy.loginfo("Waiting?: " + str(wait) + " " + str(self.goal_finished))
-        while not wait and not self.goal_finished:
-            # rospy.loginfo("Waiting for feedback or goal finishing")
-            if use_force and self.force_mag > force_limit:
-                self.move_group.stop()
-                rospy.loginfo("Stopping movement due to force feedback")
-                break
-            elif use_gripper and self.object_detected:
-                self.move_group.stop()
-                rospy.loginfo("Stopping movement due to object detection")
-                break
-            rospy.sleep(.01)
+
+            force_limit = 50
+            early_stop = False
+            rospy.loginfo("Waiting?: " + str(wait) + " " + str(self.goal_finished))
+            timeout = 5
+            steps = 0
+            while steps < timeout and not self.goal_finished:
+                # rospy.loginfo("Waiting for feedback or goal finishing")
+                if use_force and self.force_mag > force_limit:
+                    self.move_group.stop()
+                    rospy.loginfo("Stopping movement due to force feedback")
+                    early_stop = True
+                    break
+                elif use_gripper and self.object_detected:
+                    self.move_group.stop()
+                    rospy.loginfo("Stopping movement due to object detection")
+                    early_stop = True
+                    break
+                rospy.sleep(.01)
+                steps = steps + .01
         
  
         current_pose = self.move_group.get_current_pose()
         rospy.loginfo(f"Pose dist: {pose_dist(goal_in_planning_frame, current_pose)}")
-        return all_close(goal_in_planning_frame, current_pose, tolerance)
+        return early_stop or all_close(goal_in_planning_frame, current_pose, tolerance)
 
     @requires_controller(JOINT_GROUP_CONTROLLER)
     def servo_to_pose(self,
