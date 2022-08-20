@@ -62,7 +62,7 @@ def main():
         StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX", motion.AddInHandCollisionGeometry(robot), ["succeeded"])
         StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveEndEffectorToPose(robot, TOTE_APPROACH_POSE), ["succeeded"])
         StateMachine.add_auto("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot), ["succeeded"])
-
+    
     stow_and_pick_sm = StateMachine(["succeeded", "preempted", "aborted"])
 
     with stow_and_pick_sm:
@@ -70,7 +70,6 @@ def main():
         StateMachine.add_auto("SETUP_COLLISION_SCENE", motion.AddPodCollisionGeometry(robot), ["succeeded"])
         StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "hide"), ["succeeded"])
         StateMachine.add_auto("LOAD_POD", load_sm(stows), ["succeeded"])
-
         StateMachine.add_auto("PICK", pick_sm, ["succeeded"])
 
     rospy.loginfo('Beginning pick SM')

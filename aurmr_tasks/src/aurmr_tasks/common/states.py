@@ -49,7 +49,6 @@ class WaitForStart(State):
         except rospy.ServiceException():
             return 'not_signalled'
 
-
 class WaitForKeyPress(State):
     def __init__(self):
         State.__init__(self, outcomes=['signalled', 'not_signalled', 'aborted'])
@@ -60,3 +59,6 @@ class WaitForKeyPress(State):
             return 'signalled'
         except KeyboardInterrupt:
             return 'aborted'
+
+
+

@@ -13,6 +13,7 @@ from aurmr_perception.srv import (
     GetObjectPointsRequest,
     CaptureObjectRequest,
 )
+from std_srvs.srv import Trigger
 
 from aurmr_perception.util import qv_mult, quat_msg_to_vec, vec_to_quat_msg
 
@@ -31,6 +32,18 @@ class CaptureEmptyBin(State):
         else:
             return "aborted"
 
+class CaptureEmptyPod(State):
+    def __init__(self):
+        State.__init__(self, input_keys=[], outcomes=['succeeded'])
+        self.capture_empty = rospy.ServiceProxy('/aurmr_perception/capture_empty_pod', Trigger)
+
+    def execute(self, userdata):
+        res = self.capture_empty()
+
+        if res.success:
+            return "succeeded"
+        else:
+            return "aborted"
 
 class CaptureObject(State):
     def __init__(self):
@@ -55,6 +68,52 @@ class CaptureObject(State):
         else:
             return "aborted"
 
+
+class StowObject(State):
+    def __init__(self):
+        State.__init__(
+            self,
+            input_keys=['target_bin_id', 'target_object_id'],
+            outcomes=['succeeded', 'preempted', 'aborted']
+        )
+        self.capture_object = rospy.ServiceProxy('/aurmr_perception/stow_object', aurmr_perception.srv.CaptureObject)
+        self.capture_object.wait_for_service(timeout=rospy.Duration(5))
+
+    def execute(self, userdata):
+        capture_obj_req = CaptureObjectRequest(
+            bin_id=userdata['target_bin_id'],
+            object_id=userdata['target_object_id'],
+        )
+        rospy.loginfo("in STOWOBJECT" + userdata['target_bin_id'])
+        capture_response = self.capture_object(capture_obj_req)
+
+        if capture_response.success:
+            return "succeeded"
+        else:
+            return "aborted"
+
+class PickObject(State):
+    def __init__(self):
+        State.__init__(
+            self,
+            input_keys=['target_bin_id', 'target_object_id'],
+            outcomes=['succeeded', 'preempted', 'aborted']
+        )
+        self.capture_object = rospy.ServiceProxy('/aurmr_perception/pick_object', aurmr_perception.srv.CaptureObject)
+        self.capture_object.wait_for_service(timeout=rospy.Duration(5))
+
+    def execute(self, userdata):
+        capture_obj_req = CaptureObjectRequest(
+            bin_id=userdata['target_bin_id'],
+            object_id=userdata['target_object_id'],
+        )
+        rospy.loginfo("in CAPTUREOBJECT" + userdata['target_bin_id'])
+        capture_response = self.capture_object(capture_obj_req)
+
+        if capture_response.success:
+            return "succeeded"
+        else:
+            return "aborted"
 
 class GetGraspPose(State):
     def __init__(self, tf_buffer, frame_id='base_link', pre_grasp_offset=.12):

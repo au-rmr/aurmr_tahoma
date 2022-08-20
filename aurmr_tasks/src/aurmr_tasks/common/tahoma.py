@@ -335,7 +335,7 @@ class Tahoma:
             string describing the error if an error occurred, else None.
         """
         self.move_group.stop()
-        
+
         self.move_group.set_num_planning_attempts(num_planning_attempts)
         self.move_group.allow_replanning(replan)
         self.move_group.set_goal_joint_tolerance(tolerance)
@@ -429,7 +429,7 @@ class Tahoma:
     def straight_move_to_pose(self,
                               pose_stamped,
                               tolerance=0.01,
-                              ee_step=0.01,
+                              ee_step=0.001,
                               jump_threshold=6.0,
                               avoid_collisions=True,
                               use_force=False,

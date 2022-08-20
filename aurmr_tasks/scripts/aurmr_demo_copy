@@ -45,7 +45,6 @@ class WaitForPickStow(State):
         
 
     def stow_cb(self, request: StowRequest):
-        rospy.loginfo("STOW REQUEST: " + str(request))
         self.request = request
         self.do_stow = True
         self.execution_done = False
@@ -54,7 +53,6 @@ class WaitForPickStow(State):
         return {"success": self.success}
 
     def pick_cb(self, request: PickRequest):
-        rospy.loginfo("PICK REQUEST: " + str(request))
         self.request = request
         self.do_pick = True
         self.execution_done = False
@@ -104,23 +102,29 @@ def main():
 
 
     with demo_sm:
-
+        # StateMachine.add("CLEAR_SCENE_GRASP", motion.ClearCollisionGeometry(robot), {"succeeded": "MOVE_TO_GRASP"})
+        # StateMachine.add("SETUP_COLLISION_SCENE_PICK", motion.AddPodCollisionGeometry(robot), {"succeeded": "MOVE_TO_POSE_DROP"})
         with pick_sm:
+
             cf.splat_auto("SPLAT_PICK", "request", ["target_bin_id", "target_object_id"])
             StateMachine.add("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=.125),
                             {"succeeded": "REMAP_PRE_GRASP_POSE", "aborted": "PICK_FAILED", "preempted": "PICK_FAILED"})
             StateMachine.add("REMAP_PRE_GRASP_POSE", cf.input_to_output("pre_grasp_pose", "pose"),
                             {"succeeded": "MOVE_TO_PRE_GRASP"})
             StateMachine.add("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPose(robot),
-                            {"succeeded": "OPEN_BEFORE_GRASP", "aborted": "PICK_FAILED", "preempted": "PICK_FAILED"})
+                            {"succeeded": "CLEAR_SCENE_GRASP", "aborted": "PICK_FAILED", "preempted": "PICK_FAILED"})
+            # remove pod collision before doing cartesien move
+            StateMachine.add("CLEAR_SCENE_GRASP", motion.ClearCollisionGeometry(robot), {"succeeded": "OPEN_BEFORE_GRASP", "aborted": "PICK_FAILED"})
             StateMachine.add("OPEN_BEFORE_GRASP", motion.OpenGripper(robot),
                             {"succeeded": "MOVE_TO_GRASP", "aborted": "MOVE_TO_GRASP", "preempted": "PICK_FAILED"})
-            StateMachine.add("MOVE_TO_GRASP", grasp_move_to_offset(robot, (0, 0, 0.300)),
+            StateMachine.add("MOVE_TO_GRASP", grasp_move_to_offset(robot, (0, 0, 0.210)),
                             {"succeeded": "LIFT_OBJ", "aborted": "LIFT_OBJ", "preempted": "PICK_FAILED"})
-            StateMachine.add("LIFT_OBJ", robust_move_to_offset(robot, (0, 0, 0.035), 'base_link'),
-                            {"succeeded": "RETRACT_ARM", "aborted": "RETRACT_ARM", "preempted": "PICK_FAILED"})
+            StateMachine.add("LIFT_OBJ", robust_move_to_offset(robot, (0, 0, 0.056), 'base_link'),
+                            {"succeeded": "RETRACT_ARM", "aborted": "PICK_FAILED", "preempted": "PICK_FAILED"})
             StateMachine.add("RETRACT_ARM", robust_move_to_offset(robot, (0, 0, -0.25)),
-                            {"succeeded": "ADD_IN_HAND_COLLISION_BOX", "aborted": "ADD_IN_HAND_COLLISION_BOX", "preempted": "PICK_FAILED"})
+                            {"succeeded": "SETUP_COLLISION_SCENE_PICK", "aborted": "SETUP_COLLISION_SCENE_PICK", "preempted": "PICK_FAILED"})
+            # add back pod collision before after cartesien move
+            StateMachine.add("SETUP_COLLISION_SCENE_PICK", motion.AddPodCollisionGeometry(robot), {"succeeded": "ADD_IN_HAND_COLLISION_BOX", "aborted": "PICK_FAILED"})
             StateMachine.add("ADD_IN_HAND_COLLISION_BOX", motion.AddInHandCollisionGeometry(robot),
                             {"succeeded": "MOVE_TO_PRE_TOTE_POSE", "aborted": "PICK_FAILED"})
             StateMachine.add("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "drop_hide"),

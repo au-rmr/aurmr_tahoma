@@ -32,7 +32,7 @@ def load_sm(stows):
         StateMachine.add_auto("PRE_PERCEIVE", perception.CaptureEmptyBin(), ["succeeded"])
         formulate_ud_str_auto("MAKE_PROMPT_STRING", "Load bin {} with the {}", ["target_bin_id", "target_object_id"], "prompt")
         StateMachine.add_auto("ASK_FOR_BIN_LOAD", interaction.AskForHumanAction(), ["succeeded"])
-        StateMachine.add_auto("POST_PERCEIVE", perception.CaptureObject(), ["aborted"], {"succeeded": "ITERATE_STOWS"})
+        StateMachine.add_auto("POST_PERCEIVE", perception.StowObject(), ["aborted"], {"succeeded": "ITERATE_STOWS"})
 
     return sm
 
