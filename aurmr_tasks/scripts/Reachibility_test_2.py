@@ -42,57 +42,42 @@ def main():
                            input_keys=[],
                            output_keys=[])
     
-    
-    WAYPOINTS = []
-    # INIT_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.3, y=-0.5,z=1.4), orientation=quat_obj))
-    # WAYPOINTS.append(INIT_POSE)
-    # PRE_GRASP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.5, y=-0.2,z=1.25), orientation=Quaternion(x=0, y=0.707, z=0, w=0.707)))
-    # WAYPOINTS.append(PRE_GRASP_POSE)
-    # PRE_GRASP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.5, y=0.3,z=1.25), orientation=quat_obj))
-    # WAYPOINTS.append(PRE_GRASP_POSE)
-    # PRE_GRASP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.5, y=-0.2,z=1.45), orientation=quat_obj))
-    # WAYPOINTS.append(PRE_GRASP_POSE)
-    # print(REACHABLE_BIN_APPROACHES)
-    # for i in range(5):
-    RETAIN_SPACE = 0.1
-    for j in range(4):
-        
-        PRE_GRASP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.54-RETAIN_SPACE, y=-0.4+j*0.24,z=1.565), orientation=Quaternion(x=0, y=0.707, z=0, w=0.707)))
-        WAYPOINTS.append(PRE_GRASP_POSE)
-        PRE_GRASP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.54-RETAIN_SPACE, y=-0.4+j*0.24,z=1.445), orientation=Quaternion(x=0, y=0.707, z=0, w=0.707)))
-        WAYPOINTS.append(PRE_GRASP_POSE)
-        PRE_GRASP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.54-RETAIN_SPACE, y=-0.4+j*0.24,z=1.25), orientation=Quaternion(x=0, y=0.707, z=0, w=0.707)))
-        WAYPOINTS.append(PRE_GRASP_POSE)
-        PRE_GRASP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.54-RETAIN_SPACE, y=-0.4+j*0.24,z=1.1), orientation=Quaternion(x=0, y=0.707, z=0, w=0.707)))
-        WAYPOINTS.append(PRE_GRASP_POSE)
-        PRE_GRASP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.54-RETAIN_SPACE, y=-0.4+j*0.24,z=0.95), orientation=Quaternion(x=0, y=0.707, z=0, w=0.707)))
-        WAYPOINTS.append(PRE_GRASP_POSE)
-    
-    # DROP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.0, y=-0.45,z=1.1), orientation=Quaternion(x=0, y=0.707, z=0, w=0.707)))
     INIT_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.0, y=-0.5, z=1.5), orientation=Quaternion(x=0, y=0.707, z=0, w=0.707)))
-    
     align_to_tote_orientation = transformations.quaternion_from_euler(math.pi, 0, 0)
     align_to_bin_quat = vec_to_quat_msg(align_to_tote_orientation)
     DROP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.0, y=-0.45,z=1.1), orientation=align_to_bin_quat ))
+    
+    WAYPOINTS = []
+    RETAIN_SPACE = 0.1
+    for j in range(4):
+        
+        # PRE_GRASP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.54-RETAIN_SPACE, y=-0.4+j*0.24,z=1.565), orientation=Quaternion(x=0, y=0.707, z=0, w=0.707)))
+        # WAYPOINTS.append(PRE_GRASP_POSE)
+        # PRE_GRASP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.54-RETAIN_SPACE, y=-0.4+j*0.24,z=1.445), orientation=Quaternion(x=0, y=0.707, z=0, w=0.707)))
+        # WAYPOINTS.append(PRE_GRASP_POSE)
+        PRE_GRASP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.54-RETAIN_SPACE, y=-0.4+j*0.24,z=1.25), orientation=Quaternion(x=0, y=0.707, z=0, w=0.707)))
+        WAYPOINTS.append(PRE_GRASP_POSE)
+        PRE_GRASP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.54+0.05, y=-0.4+j*0.24,z=1.25), orientation=Quaternion(x=0, y=0.707, z=0, w=0.707)))
+        WAYPOINTS.append(PRE_GRASP_POSE)
+        PRE_GRASP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.54+0.05, y=-0.4+j*0.24,z=1.27), orientation=Quaternion(x=0, y=0.707, z=0, w=0.707)))
+        WAYPOINTS.append(PRE_GRASP_POSE)
+        PRE_GRASP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.54-RETAIN_SPACE, y=-0.4+j*0.24,z=1.27), orientation=Quaternion(x=0, y=0.707, z=0, w=0.707)))
+        WAYPOINTS.append(PRE_GRASP_POSE)
+        WAYPOINTS.append(DROP_POSE)
+        # PRE_GRASP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.54-RETAIN_SPACE, y=-0.4+j*0.24,z=1.1), orientation=Quaternion(x=0, y=0.707, z=0, w=0.707)))
+        # WAYPOINTS.append(PRE_GRASP_POSE)
+        # PRE_GRASP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.54-RETAIN_SPACE, y=-0.4+j*0.24,z=0.95), orientation=Quaternion(x=0, y=0.707, z=0, w=0.707)))
+        # WAYPOINTS.append(PRE_GRASP_POSE)
+    
+    # DROP_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=0.0, y=-0.45,z=1.1), orientation=Quaternion(x=0, y=0.707, z=0, w=0.707)))
     
     with pick_sm:
         StateMachine.add_auto("CLEAR_SCENE", motion.ClearCollisionGeometry(robot), ["succeeded"])
         StateMachine.add_auto("SETUP_COLLISION_SCENE", motion.AddPodCollisionGeometry(robot), ["succeeded"])
         cf.inject_userdata_auto("LOAD_POSES_PICK", "poses_pick", WAYPOINTS)
-        StateMachine.add('MOVE_TO_POSE_DROP', motion.MoveEndEffectorToPose(robot, DROP_POSE), {"succeeded": "PICK_POSE", "aborted": "PICK_POSE"})
         StateMachine.add("PICK_POSE", cf.IterateList("poses_pick", "pose"), {"repeat": "MOVE_TO_POSE_PICK", "done": "aborted"})
         StateMachine.add('MOVE_TO_POSE_PICK', motion.MoveEndEffectorToPose(robot), {"succeeded": "PAUSE_PICK", "aborted": "PAUSE_PICK"})
-        # Clear the pod object so the robot can reach into the bins
         StateMachine.add("PAUSE_PICK", states.Wait(0.1), {"succeeded": "CLEAR_SCENE_GRASP"})
-        StateMachine.add("CLEAR_SCENE_GRASP", motion.ClearCollisionGeometry(robot), {"succeeded": "MOVE_TO_GRASP"})
-        StateMachine.add("MOVE_TO_GRASP", motion.MoveEndEffectorToOffset(robot, (0, 0, RETAIN_SPACE+0.05)), {"succeeded": "PAUSE_GRASP", "aborted": "PAUSE_GRASP"})
-        StateMachine.add("PAUSE_GRASP", states.Wait(0.1), {'succeeded': "MOVE_UP"})
-        # StateMachine.add("GRASP", motion.CloseGripper(robot), {'succeeded': "PAUSE_GRASP_2"})
-        # StateMachine.add("PAUSE_GRASP_2", states.Wait(1), {'succeeded': "MOVE_UP"})
-        StateMachine.add("MOVE_UP", motion.MoveEndEffectorToOffset(robot, (-0.02, 0.0, 0.0)), {"succeeded": "PAUSE_UP", "aborted": "PAUSE_UP"})
-        StateMachine.add("PAUSE_UP", states.Wait(0.1), {"succeeded": "MOVE_BACK"})
-        StateMachine.add("MOVE_BACK", motion.MoveEndEffectorToOffset(robot, (0, 0, -(RETAIN_SPACE+0.05))), {"succeeded": "SETUP_COLLISION_SCENE_PICK", "aborted": "SETUP_COLLISION_SCENE_PICK"})
-        StateMachine.add("SETUP_COLLISION_SCENE_PICK", motion.AddPodCollisionGeometry(robot), {"succeeded": "MOVE_TO_POSE_DROP"})
         
 
         # StateMachine.add("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot), {'succeeded': "succeeded"})
