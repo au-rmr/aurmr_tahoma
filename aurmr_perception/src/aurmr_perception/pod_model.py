@@ -1,3 +1,4 @@
+import subprocess
 import encodings
 from fileinput import filename
 from unittest import result
@@ -43,6 +44,11 @@ class PodPerceptionROS:
         self.depth_image = None
         self.camera_info = None
 
+
+    def play_camera_shutter(self):
+        audio_file = '/usr/share/sounds/Yaru/stereo/battery-low.oga'
+        subprocess.call(['mplayer', audio_file])
+
     def capture_object_callback(self, request):
         if not request.bin_id or not request.object_id:
             return False, "bin_id and object_id are required"
@@ -58,6 +64,8 @@ class PodPerceptionROS:
             mask_im_viz = self.model.latest_masks[request.bin_id].astype(float)
             cv2.imshow('latest_mask', mask_im_viz)
             cv2.waitKey(1)
+
+        self.play_camera_shutter()
         return result, message, mask
 
     def get_object_callback(self, request):
