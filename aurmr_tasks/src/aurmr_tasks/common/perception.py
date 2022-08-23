@@ -144,7 +144,7 @@ class GetGraspPose(State):
         State.__init__(
             self,
             input_keys=['target_bin_id', 'target_object_id'],
-            output_keys=['grasp_pose', 'pre_grasp_pose'],
+            output_keys=['grasp_pose', 'pre_grasp_pose', 'status'],
             outcomes=['succeeded', 'preempted', 'aborted']
         )
         self.get_points = rospy.ServiceProxy('/aurmr_perception/get_object_points', GetObjectPoints)
@@ -171,6 +171,7 @@ class GetGraspPose(State):
         points_response = self.get_points(get_points_req)
 
         if not points_response.success:
+            userdata["status"] = "pass"
             return "aborted"
 
         grasp_response = self.get_grasp(points=points_response.points,
@@ -178,6 +179,7 @@ class GetGraspPose(State):
                                         dist_threshold=self.pre_grasp_offset)
 
         if not grasp_response.success:
+            userdata["status"] = "pass"
             return "aborted"
 
         # NOTE: No extra filtering or ranking on our part. Just take the first one
@@ -197,4 +199,5 @@ class GetGraspPose(State):
         self.pose_viz.publish(grasp_pose)
         self.pre_grasp_viz.publish(pregrasp_pose)
 
+        userdata["status"] = "picking"
         return "succeeded"

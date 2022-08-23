@@ -20,6 +20,7 @@ from aurmr_tasks.pod import load_sm
 
 from aurmr_tasks.srv import StowRequest, PickRequest
 from aurmr_tasks.srv import MultiplePickRequest
+from aurmr_tasks.msg import PickStatus
 from aurmr_tasks.common.motion import robust_move_to_offset, grasp_move_to_offset
 from aurmr_perception.util import vec_to_quat_msg, I_QUAT
 from aurmr_tasks.common.states import Wait
@@ -36,14 +37,33 @@ TOTE_APPROACH_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(
 
 class PublishStatus(State):
     def __init__(self, publisher, wait_time=0):
-        State.__init__(self, outcomes=['succeeded'], input_keys=["status"])
+        State.__init__(self, outcomes=['succeeded'], input_keys=["status", "start_time", "target_object_id"])
         self.publisher=publisher
         self.wait_time = wait_time
     def execute(self, userdata):
-        self.publisher.publish("test")
-        # self.publisher.publish(userdata["status"])
+        now = rospy.get_rostime()
+        now = now.secs + now.nsecs*10**(-9)
+        time_delta = now - userdata["start_time"] 
+
+
+        msg = PickStatus()
+        msg.status = userdata["status"]
+        msg.object_id = userdata["target_object_id"]
+        msg.time = time_delta
+        # self.publisher.publish("test")
+        self.publisher.publish(msg)
         rospy.sleep(self.wait_time)
         return "succeeded"
+
+class RecordTime(State):
+    def __init__(self):
+        State.__init__(self, outcomes=['succeeded'], output_keys=["start_time"])
+    
+    def execute(self, userdata):
+        now = rospy.get_rostime()
+        userdata["start_time"] = now.secs + now.nsecs*10**(-9)
+        return "succeeded"
+        
 class WaitForPickStow(State):
     def __init__(self):
         State.__init__(self, outcomes=['pick', 'stow', 'done'], output_keys=["request"])
@@ -56,9 +76,6 @@ class WaitForPickStow(State):
         self.first = True
         self.request = None
         self.success = False
-
-
-        
 
     def stow_cb(self, request: StowRequest):
         rospy.loginfo("STOW REQUEST: " + str(request))
@@ -101,7 +118,7 @@ class WaitForPickStow(State):
 
         while not self.do_stow and not self.do_pick and not rospy.is_shutdown():
             rospy.sleep(.1)
-        
+
         # userdata["request"] = ["3f", "can"]
         userdata["request"] = [self.request.bin_id, self.request.object_id]
         if self.do_stow:
@@ -115,7 +132,7 @@ class WaitForPickStow(State):
 def main():
     rospy.init_node("aurmr_demo")
     pose_pub_test = rospy.Publisher("/tote_drop", PoseStamped, queue_size=5, latch=True)
-    status_pub = rospy.Publisher("/demo_status", String, queue_size=5, latch=True)
+    status_pub = rospy.Publisher("/demo_status", PickStatus, queue_size=5, latch=True)
     TOTE_APPROACH_POSE.header.stamp = rospy.Time.now()
     pose_pub_test.publish(TOTE_APPROACH_POSE)
     simulation = rospy.get_param("/use_sim_time", False)
@@ -134,12 +151,14 @@ def main():
     with demo_sm:
 
         with pick_sm:
+            StateMachine.add_auto("RECORD_TIME", RecordTime(), ["succeeded"])
             cf.splat_auto("SPLAT_PICK", "request", ["target_bin_id", "target_object_id"])
             StateMachine.add_auto("CLEAR_SCENE_PREMOVE", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_PREMOVE", motion.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=.125),    
-                            {"succeeded": "REMAP_PRE_GRASP_POSE", "aborted":"PASS", "preempted":"PASS"})
-            StateMachine.add("PASS", PublishStatus(status_pub), {"succeeded": "done"})
+                            {"succeeded": "PUBLISH_CURRENTLY_PICKING", "aborted":"PASS", "preempted":"PASS"})
+            StateMachine.add("PASS", PublishStatus(status_pub, wait_time=3), {"succeeded": "done"})
+            StateMachine.add_auto("PUBLISH_CURRENTLY_PICKING", PublishStatus(status_pub), {"succeeded": "done"})
             StateMachine.add_auto("REMAP_PRE_GRASP_POSE", cf.input_to_output("pre_grasp_pose", "pose"), ["succeeded"])
             StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPose(robot), ["succeeded", "aborted", "preempted"])
             # StateMachine.add_auto("OPEN_BEFORE_GRASP", motion.OpenGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
@@ -156,9 +175,10 @@ def main():
             StateMachine.add("CHECK_FOR_GRIPPER_ITEM", motion.CheckGripperItem(robot), 
                             {"item_detected": "POST_PICK_UPDATE_MASKS", "no_item_detected": "UPDATE_BIN_MASKS"})
             StateMachine.add("POST_PICK_UPDATE_MASKS", perception.PickObject(),
-                            {"succeeded": "ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", "aborted": "ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", "preempted": "ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE"})
+                            {"succeeded": "PUBLISH_PICK_STATUS", "aborted": "PUBLISH_PICK_STATUS", "preempted": "PUBLISH_PICK_STATUS"})
             StateMachine.add("UPDATE_BIN_MASKS", perception.UpdateBin(),
-                            {"succeeded": "ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", "aborted": "ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", "preempted": "ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE"})
+                            {"succeeded": "PUBLISH_PICK_STATUS", "aborted": "PUBLISH_PICK_STATUS", "preempted": "PUBLISH_PICK_STATUS"})
+            StateMachine.add_auto("PUBLISH_PICK_STATUS", PublishStatus(status_pub), ["succeeded"])
             StateMachine.add("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot, return_before_done=True), {"succeeded": "done", "aborted": "done", "preempted": "done"})
 
 
