@@ -133,7 +133,10 @@ class Tahoma:
         self.commander = moveit_commander.RobotCommander()
         self.scene = moveit_commander.PlanningSceneInterface(synchronous=True)
         self.move_group = moveit_commander.MoveGroupCommander(ARM_GROUP_NAME)
-        self.move_group.set_max_velocity_scaling_factor(.15)
+        self.MAX_VEL_FACTOR = .3
+        self.MAX_ACC_FACTOR = .5
+        self.move_group.set_max_velocity_scaling_factor(self.MAX_VEL_FACTOR)
+        self.move_group.set_max_acceleration_scaling_factor(self.MAX_ACC_FACTOR)
         self.display_trajectory_publisher = rospy.Publisher(
             "/move_group/display_planned_path",
             DisplayTrajectory,
@@ -171,14 +174,15 @@ class Tahoma:
         self.torque_mag = math.sqrt(msg.wrench.torque.x**2 + msg.wrench.torque.y**2+ msg.wrench.torque.z**2)
 
     def gripper_status_cb(self, msg: VacuumGripperStatus):
-        self.object_detected = (msg.gOBJ == 1 or msg.gOBJ == 2)
+        self.object_detected = (msg.gPO < 95)
 
     def goal_status_cb(self, msg: GoalStatusArray):
         latest_time = 0
         latest_status = GoalStatus.SUCCEEDED
         for g in msg.status_list:
-            if g.goal_id.stamp.secs > latest_time:
-                latest_time = g.goal_id.stamp.secs + g.goal_id.stamp.secs*10**(-9)
+            new_stamp = g.goal_id.stamp.secs + g.goal_id.stamp.nsecs*10**(-9)
+            if new_stamp > latest_time:
+                latest_time = new_stamp
                 latest_status = g.status
         self.goal_finished = latest_status != GoalStatus.PENDING and latest_status != GoalStatus.ACTIVE
         self.goal_stamp = latest_time
@@ -245,6 +249,9 @@ class Tahoma:
         self._gripper_client.send_goal(goal)
         if not return_before_done:
             self._gripper_client.wait_for_result()
+
+    def check_gripper_item(self):
+        return self.object_detected 
 
     def close_gripper(self, return_before_done=False):
         goal = GripperCommandGoal()
@@ -414,7 +421,7 @@ class Tahoma:
         self.display_trajectory_publisher.publish(display_trajectory)
 
         # Now, we call the planner to compute the plan and execute it.
-        self.move_group.execute(plan, wait=True)
+        ret = self.move_group.execute(plan, wait=True)
         # Calling `stop()` ensures that there is no residual movement
         self.move_group.stop()
         # It is always good to clear your targets after planning with poses.
@@ -455,10 +462,10 @@ class Tahoma:
         self.grasp_pose_pub.publish(pose_stamped)
 
         waypoints = [goal_in_planning_frame.pose]
-
         (plan, fraction) = self.move_group.compute_cartesian_path(
             waypoints, ee_step, jump_threshold, avoid_collisions
         )
+        plan = self.move_group.retime_trajectory(self.move_group.get_current_state(), plan, velocity_scaling_factor=.05, acceleration_scaling_factor=.05)
         if fraction < .9:
             rospy.logwarn(f"Not moving in cartesian path. Only {fraction} waypoints reached")
             # return False
@@ -466,8 +473,9 @@ class Tahoma:
         wait = not (use_force or use_gripper)
         rospy.loginfo("Waiting?: " + str(wait))
         old_goal_stamp = self.goal_stamp
-        self.move_group.execute(plan, wait=wait)
 
+        ret = self.move_group.execute(plan, wait=wait)
+        rospy.logwarn("\n\n\n\n\n\nRETVAL:" + str(ret))
         if use_gripper:
             self.close_gripper(return_before_done=True)
 
@@ -499,7 +507,7 @@ class Tahoma:
                     break
                 rospy.sleep(.01)
                 steps = steps + .01
-        
+
  
         current_pose = self.move_group.get_current_pose()
         rospy.loginfo(f"Pose dist: {pose_dist(goal_in_planning_frame, current_pose)}")

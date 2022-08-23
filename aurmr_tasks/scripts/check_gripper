@@ -35,7 +35,7 @@ def main():
     robot = Tahoma(simulation)
     pick_sm = StateMachine(["succeeded", "preempted", "aborted"], input_keys=[], output_keys=[])
     with pick_sm:
-        StateMachine.add_auto("GRASP", motion.CloseGripper(robot), ["succeeded"])
+        StateMachine.add_auto("GRASP", motion.CloseGripper(robot, return_before_done=True), ["succeeded"])
         StateMachine.add_auto("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot), ["succeeded"])
     # stows = [["4f", "mouthwash"], ["4f", "soda"], ["4f", "syrup"]]
     

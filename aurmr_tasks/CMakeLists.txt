@@ -13,6 +13,7 @@ add_service_files(
   FILES
   PickRequest.srv
   StowRequest.srv
+  MultiplePickRequest.srv
 )
 
 generate_messages(

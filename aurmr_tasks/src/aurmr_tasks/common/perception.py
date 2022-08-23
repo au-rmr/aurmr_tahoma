@@ -115,6 +115,30 @@ class PickObject(State):
         else:
             return "aborted"
 
+class UpdateBin(State):
+    def __init__(self):
+        State.__init__(
+            self,
+            input_keys=['target_bin_id'],
+            outcomes=['succeeded', 'preempted', 'aborted']
+        )
+        self.capture_object = rospy.ServiceProxy('/aurmr_perception/update_bin', aurmr_perception.srv.CaptureObject)
+        self.capture_object.wait_for_service(timeout=rospy.Duration(5))
+
+    def execute(self, userdata):
+        capture_obj_req = CaptureObjectRequest(
+            bin_id=userdata['target_bin_id'],
+            object_id=None,
+        )
+        rospy.loginfo("in UPDATEBIN" + userdata['target_bin_id'])
+        capture_response = self.capture_object(capture_obj_req)
+
+        if capture_response.success:
+            return "succeeded"
+        else:
+            return "aborted"
+
+
 class GetGraspPose(State):
     def __init__(self, tf_buffer, frame_id='base_link', pre_grasp_offset=.12):
         State.__init__(
