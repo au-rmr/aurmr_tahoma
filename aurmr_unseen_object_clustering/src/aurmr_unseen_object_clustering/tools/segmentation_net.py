@@ -1,3 +1,4 @@
+from operator import truediv
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
@@ -13,7 +14,9 @@ from skimage.measure import label as lab
 from scipy.optimize import linear_sum_assignment
 
 UOC_PATH = '/home/aurmr/workspaces/thomas_ws/src/aurmr_tahoma/aurmr_unseen_object_clustering/src/aurmr_unseen_object_clustering/'
-MIN_MATCH_COUNT = 1
+
+NO_OBJ_STORED = 1
+UNDERSEGMENTATION = 2
 
 
 PIXEL_MEANS = np.array([[[102.9801, 115.9465, 122.7717]]])
@@ -54,29 +57,31 @@ bin_bounds = {
             }
 
 def_config = {
-   'camera':'azure',
-   'bounds':bin_bounds,
-   'model_init':UOC_PATH + 'data/checkpoints/std_200_24_checkpoint.pth',
+    # Model Parameters
+    'model_init':UOC_PATH + 'data/checkpoints/std_200_24_checkpoint.pth',
 #    'model_ref':UOC_PATH + 'data/checkpoints/seg_resnet34_8s_embedding_cosine_rgbd_add_sampling_epoch_186.checkpoint_crop.pth',
 #    'model_ref':UOC_PATH + 'data/checkpoints/crop_net_current.pth',
 #    'model_ref':UOC_PATH + 'data/checkpoints/seg_resnet34_8s_embedding_cosine_color_crop_sampling_epoch_16.checkpoint_justcolor.pth',
-   'model_ref': UOC_PATH + 'data/checkpoints/std_200_color_crop.pth',
+    'model_ref': UOC_PATH + 'data/checkpoints/std_200_color_crop.pth',
+    'gpu_id':0,
+    'cfg_init':UOC_PATH + 'experiments/cfgs/seg_resnet34_8s_embedding_cosine_rgbd_add_tabletop.yml',
+#    'cfg_ref':UOC_PATH + 'experiments/cfgs/seg_resnet34_8s_embedding_cosine_rgbd_add_tabletop.yml',
+    'cfg_ref':UOC_PATH + 'experiments/cfgs/seg_resnet34_8s_embedding_cosine_color_tabletop.yml',
+    'randomize':False,
+    'network_name':'seg_resnet34_8s_embedding',
 #    'model_ref':None,
-   'gpu_id':0,
-   'cfg_init':UOC_PATH + 'experiments/cfgs/seg_resnet34_8s_embedding_cosine_rgbd_add_tabletop.yml',
-   # 'cfg_ref':UOC_PATH + 'experiments/cfgs/seg_resnet34_8s_embedding_cosine_rgbd_add_tabletop.yml',
-   'cfg_ref':UOC_PATH + 'experiments/cfgs/seg_resnet34_8s_embedding_cosine_color_tabletop.yml',
-   'dataset_name':'shapenet_scene_train',
-   'depth_name':'*depth.png',
-   'color_name':'*color.png',
-   'imgdir':None,
-   'randomize':False,
-   'network_name':'seg_resnet34_8s_embedding',
+
+    # Bin / setup parameters
+   'bounds':bin_bounds,
    'image_path':None,
+   'min_pixel_threshhold':30,
+   'min_match_count':0,
+
+   # Segmentation / 
  
     # Erosion/Dilation and largest connected component
-   'refine_masks':False,
-   'refine_refined_masks':True,
+   'perform_cv_ops':False,
+   'perform_cv_ops_ref':True,
    # 'rm_back':True,
    'rm_back':True,
    'rm_back_old':False,
@@ -85,45 +90,11 @@ def_config = {
    'dilation_num':4,
    'rgb_is_standardized':True,
    'xyz_is_standardized':True,
-   'sd_loc':(50, 50),
    'min_bg_change':15,
    'resize':True,
    'print_preds':False
 }
 
-# If running the network on synthetic data
-# syn_config = {
-#    'camera':'azure',
-#    'bounds':bin_bounds,
-#    'model_init':UOC_PATH + 'data/checkpoints/std_200_24_checkpoint.pth',
-# #    'model_ref':UOC_PATH + 'seg_resnet34_8s_embedding_cosine_rgbd_add_sampling_epoch_186.checkpoint_crop.pth',
-# #    'model_ref':UOC_PATH + 'data/checkpoints/crop_net_current.pth',
-# #    'model_ref':UOC_PATH + 'data/checkpoints/seg_resnet34_8s_embedding_cosine_color_crop_sampling_epoch_16.checkpoint_justcolor.pth',
-#    'model_ref':None,
-#    'gpu_id':0,
-#    # 'cfg_file':UOC_PATH + 'experiments/cfgs/seg_resnet34_8s_embedding_cosine_rgbd_add_tabletop.yml',
-#    'cfg_file':UOC_PATH + 'experiments/cfgs/seg_resnet34_8s_embedding_cosine_color_tabletop.yml',
-#    'dataset_name':'shapenet_scene_train',
-#    'depth_name':'*depth.png',
-#    'color_name':'*color.png',
-#    'imgdir':None,
-#    'randomize':False,
-#    'network_name':'seg_resnet34_8s_embedding',
-#    'image_path':None,
-#
-#    'refine_masks':True,
-#    'refine_refined_masks':True,
-#    'rm_back':True,
-#    'rm_back_old':False,
-#    'kernel_size':5,
-#    'erosion_num':3,
-#    'dilation_num':4,
-#    'rgb_is_standardized':True,
-#    'xyz_is_standardized':True,
-#    'sd_loc':(50, 50),
-#    'min_bg_change':15,
-#    'resize':True
-# }
  
 class Bin:
     def __init__(self, bin_id, bounds=None, init_depth=None, config=def_config):
@@ -142,7 +113,7 @@ class Bin:
         self.config = config
   
         # Stores bin state
-        self.current = {'rgb':None, 'depth':None, 'mask':None}
+        self.current = {'rgb':np.zeros(shape=(self.bounds[1] - self.bounds[0], self.bounds[3] - self.bounds[2], 3), dtype=np.uint8), 'depth':None, 'mask':None}
         self.last = {'rgb':None, 'depth':None, 'mask':None}
         self.init_depth = init_depth[bounds[0]:bounds[1], bounds[2]:bounds[3]]
         self.bg_mask = np.ones(self.init_depth.shape, dtype=np.uint8)
@@ -154,15 +125,67 @@ class Bin:
         depth = current['depth']
         self.current['rgb'] = rgb[self.bounds[0]:self.bounds[1], self.bounds[2]:self.bounds[3], ...]
         self.current['depth'] = depth[self.bounds[0]:self.bounds[1], self.bounds[2]:self.bounds[3], ...]
-        self.bg_mask = np.abs(self.current['depth'][...,2] - self.init_depth) < self.config['min_bg_change']
+        self.bg_mask = np.abs(self.current['depth'][...,2] - self.init_depth[...,2]) < self.config['min_bg_change']
         # plt.imshow(self.bg_mask)
         # plt.title("Background Mask")
         # plt.show()
         self.current['mask'] = None
 
+    def new_object_detected(self, current):
+        # Crop the current depth down to bin size
+        r1,r2,c1,c2 = self.bounds
+        depth_now = current['depth'][r1:r2, c1:c2, 2]
+        
+        if self.current['depth'] is None:
+            depth_bin = self.init_depth[...,2]
+        else:
+            depth_bin = self.current['depth'][...,2]
+        
+        # print(depth_bin.dtype)
+        # print(depth_now.dtype)  
+        # print("previous depth")
+        # print(depth_bin)
+        # print("Current depth")
+        # print(depth_now)
+
+        # print(np.mean(np.abs(depth_bin - depth_now)))
+        # print(np.max(np.abs(depth_bin - depth_now)))
+        # print(np.min(np.abs(depth_bin - depth_now)))
+        
+
+        # plt.imshow(depth_bin)
+        # plt.title("Depth bin")
+        # plt.show()
+
+        # plt.imshow(depth_now)
+        # plt.title("Depth now")
+        # plt.show()
+
+        mask = (np.abs(depth_bin - depth_now) > self.config['min_pixel_threshhold'])
+        # plt.imshow(np.abs(depth_bin - depth_now))
+        # plt.title("Difference")
+        # plt.show()
+        # plt.imshow(mask)
+        # plt.title("This is the mask we see")
+        # plt.show()
+
+        kernel = np.ones(shape=(9,9), dtype=np.uint8)
+
+        mask_now = spy.binary_erosion(mask, structure=kernel, iterations=2)
+
+        # plt.imshow(mask_now)
+        # plt.title("This is the mask we see")
+        # plt.show()
+
+        if np.sum(mask_now) > 0:
+            return True
+        return False
+
 
 class SegNet:
-    def __init__(self, config=def_config, init_depth=None, mask=None):
+    def __init__(self, config=def_config, init_depth=None, init_info=None, mask=None):
+        # init_depth[:,:][np.isnan(init_depth)] = 0
+
         # Initialize the initial network (and refinement network if it exists)
         assert(config['cfg_init'] is not None and config['cfg_ref'] is not None)
         cfg_from_file(config['cfg_init'])
@@ -207,8 +230,10 @@ class SegNet:
         # Initializes the bins
         bin_names = config['bounds'].keys()
         self.bins = {}
+
+        init_xyz = self.compute_xyz(init_depth, init_info)
         for bin in bin_names:
-            self.bins[bin] = Bin(bin, bounds=config['bounds'][bin], init_depth=init_depth)
+            self.bins[bin] = Bin(bin, bounds=config['bounds'][bin], init_depth=init_xyz)
   
         self.H, self.W = None, None
   
@@ -221,6 +246,9 @@ class SegNet:
         # Stores scene state
         self.current = {'rgb':None, 'depth':None}
         self.last = {'rgb':None, 'depth':None}
+
+        # List of all bins to ignore
+        self.bad_bins = []
   
    # Computes the point cloud from a depth array and camera intrinsics
     def compute_xyz(self, depth_img, intrinsic):
@@ -245,15 +273,11 @@ class SegNet:
   
         # Get the image and point cloud
         if scene is None:
-            rgb = self.current['rgb']
-            xyz = self.current['depth']
+            rgb = self.current['rgb'].copy()
+            xyz = self.current['depth'].copy()
         else:
             rgb = scene['rgb']
             xyz = scene['depth']
-  
-        # Shift to BGR if using the realsense camera
-        if self.config['camera'] == 'realsense':
-            rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
 
         if bin_id == 'syn':
             rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
@@ -373,7 +397,7 @@ class SegNet:
         # plt.show()
   
         # Mask refinement step
-        if self.config['refine_masks']:
+        if self.config['perform_cv_ops']:
             kernel = np.ones(shape=(self.config['kernel_size'], self.config['kernel_size']), dtype=np.uint8)
             for i in range(np.max(out_label_new.astype(np.uint8))):
                 mask_now = (out_label_new == (i + 1))
@@ -412,7 +436,7 @@ class SegNet:
                 # plt.show()
                 # plt.close()
 
-                if self.config['refine_refined_masks']:
+                if self.config['perform_cv_ops_ref']:
                     kernel = np.ones(shape=(self.config['kernel_size'], self.config['kernel_size']), dtype=np.uint8)
                     out_label_new = out_label_refined.clone()[0].numpy()
                     for i in range(np.max(out_label_new.astype(np.uint8)) ):
@@ -431,34 +455,33 @@ class SegNet:
                 else:
                     out_label_ref = out_label_refined
   
-        # Place masks in original context
-        # mask_full = np.zeros(shape=(H,W), dtype=np.uint8)
-        if self.config['camera'] == 'azure':
-            mask_crop = out_label[0].cpu().numpy().astype(np.uint8)
-            if self.network_crop is not None:
-                mask_crop = out_label_ref[0].cpu().numpy().astype(np.uint8)
-
-            # plt.imshow(mask_crop)
-            # plt.title("Mask Crop")
-            # plt.show()
-
-            # plt.imshow(mask_crop_ref)
-            # plt.title("Mask Crop Ref")
-            # plt.show()
+        # Converts mask back to original size and format
+        if self.network_crop is not None:
+            mask_crop = out_label_ref[0].cpu().numpy().astype(np.uint8)
         else:
-            mask_crop = out_label[0].cpu().numpy()
-            mask_crop = np.rot90(mask_crop, k=1)
-  
-        mask_crop = cv2.resize(mask_crop, (bin.bounds[3] - bin.bounds[2], bin.bounds[1] - bin.bounds[0]), interpolation=cv2.INTER_AREA)
+            mask_crop = out_label[0].cpu().numpy().astype(np.uint8)
+
+        # Make sure that indices count up from 1
+        indices = np.unique(mask_crop)
+
+        mask_crop_f = np.zeros(shape=mask_crop.shape, dtype=np.uint8)
+        for i, index in enumerate(indices):
+            mask_crop_f[mask_crop == index] = i
+
+        # print(f"I find indices {indices}")
+
         
-        # mask_full[self.bounds[0]:self.bounds[1], self.bounds[2]:self.bounds[3]] = mask_crop
+        mask_crop = mask_crop_f
+
+        
+        mask_crop = cv2.resize(mask_crop, (bin.bounds[3] - bin.bounds[2], bin.bounds[1] - bin.bounds[0]), interpolation=cv2.INTER_AREA)
   
         return mask_crop
   
     # Returns a best-guess matching between masks in frame 0 and masks in frame 1
     #       Returns a list, where the j - 1th element stores the recommended frame 1 ID of the mask with frame 0 ID j
     def match_masks(self, im1, im2, mask1, mask2):
-        print("MATCHING_MASKS")
+        sift_failed = False
         # Convert the images to greyscale
         im1 = cv2.cvtColor(im1, cv2.COLOR_RGB2GRAY)
         im2 = cv2.cvtColor(im2, cv2.COLOR_RGB2GRAY)
@@ -488,17 +511,17 @@ class SegNet:
                 if m.distance < 0.7 * n.distance:
                     good.append(m)
 
-            matched_img = cv2.drawMatches(im1_now, k1, im2, k2, good, im2, flags=2, matchesThickness=1)
-
+            # Handle matching failures
+            if len(good) < self.config['min_match_count']:
+                sift_failed = True
+            
+            # Draws matches for visualization purposes
+            # matched_img = cv2.drawMatches(im1_now, k1, im2, k2, good, im2, flags=2, matchesThickness=1)
             # cv2.imshow('image', matched_img)
             # cv2.imwrite(f'matched_img_{self.const}{i}.png', matched_img)
            
-            # If there's any meaningful match
-            if len(good) > MIN_MATCH_COUNT:
-                dst_pts = np.float32([k2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
-                dst_pts = np.round(dst_pts).astype(int)
-            else:
-                dst_pts = None
+            dst_pts = np.float32([k2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
+            dst_pts = np.round(dst_pts).astype(int)
   
             # For each mask in frame 1, find out the number of matched keypoints and add it to n_hits
             for j in range(1, np.max(mask2) + 1):
@@ -512,7 +535,7 @@ class SegNet:
         row_ind, col_ind = linear_sum_assignment(-mask_recs)
         self.const += 1
   
-        return col_ind + 1
+        return col_ind + 1, sift_failed
   
     # Takes two masks and their recommended frame 0/1 relationship and returns the matched mask 2
     def update_masks(self, mask2, recs):
@@ -531,33 +554,77 @@ class SegNet:
     # Takes a mask and a number of categories and returns a mask that is guaranteed to have that many categories
     def refine_masks(self, mask, n):
         while np.max(mask) > n:
+            areas = np.array([np.sum(mask == i) for i in range(1, np.max(mask) + 1)])
+            # Finds the ID of the largest cluster
+            idx_max = np.argmax(areas) + 1
+
+            nonzero_idx = np.where(np.sum(mask == idx_max, axis=1) > 0)
+            c1 = nonzero_idx[0]
+            c2 = nonzero_idx[-1]
+
+            print(f"I think that the bounds for the largest mask are {c1} to {c2}")
+
+            plt.imshow(mask)
+            plt.title("Mask in refine_masks")
+            plt.show()
+
+            # Find the smallest area under the largest mask
+
+            idx_min = np.argmin(areas) + 1
+            nonzero_idx_under = np.where(np.sum(mask == idx_min, axis=1) > 0)
+            c1_under = nonzero_idx_under[0]
+            c2_under = nonzero_idx_under[-1]
+
+            # While the area found isn't beneath the largest mask
+            while c1_under < (c1 - 10) or c2_under > (c2 + 10):
+                # Remove it from areas
+                areas = np.delete(areas, idx_min - 1)
+
+                # If we've gone through all areas, break
+                if areas.shape[0] == 0:
+                    break
+
+                # Recalculate smallest component
+                idx_min = np.argmin(areas) + 1
+                nonzero_idx_under = np.where(np.sum(mask == idx_min, axis=1) > 0)
+                c1_under = nonzero_idx_under[0]
+                c2_under = nonzero_idx_under[-1]
+            
+            if areas.shape[0] == 0:
+                break
+
+            # Otherwise, a mask was found. Merge them.
+            mask[mask == idx_min] = idx_max
+            mask[mask > idx_min] -= 1
+
+        # If there are STILL too many masks
+        #       remove the smallest
+        while np.max(mask) > n:
+            print("Merge method failed. Removing excess")
             # Calculate areas for each mask
             areas = np.array([np.sum(mask == i) for i in range(1, np.max(mask) + 1)])
             idx_min = np.argmin(areas) + 1
             # Update masks
             mask[mask == idx_min] = 0
             mask[mask > idx_min] -= 1
+
+        
+        # If there are too few masks
+        #       split the largest in half along the vertical axis
         while np.max(mask) < n:
-            print(f"We want {n} masks but there are only {np.max(mask)}")
-            # Calculate areas for each mask
-            areas = np.array([np.sum(mask == i) for i in range(1, np.max(mask) + 1)])
-            idx_max = np.argmax(areas) + 1
-            # Cut the largest mask in half lengthwise
-  
-            # Finds the center of the largest object
-            line = np.sum((mask == idx_max), axis=1)
-            idx = 0
-            sum = 0
-            total = areas[idx_max - 1]
-            while sum < total / 2:
-                sum += line[idx]
-                idx += 1
+            print(f"We only see {np.max(mask)} of {n} masks")
+            print("We did not collect the relevant masks. Jiggle them?")
+            input("Have you jiggled?")
+            return None
            
-            # Split the largest area along idx into a new mask
-            mask[idx:][mask[idx:] == idx_max] = np.max(mask) + 1
+            # # Split the largest area along idx into a new mask
+            # mask[:, idx:][mask[:, idx:] == idx_max] = np.max(mask) + 1
+
+        print("We predicted exactly the right number of masks!")
   
         return mask
   
+    # Retrieves the mask with bin product id obj_id from the full camera reference frame
     def get_obj_mask(self, obj_id):
         bin_id, id = self.items[obj_id]
         bin = self.bins[bin_id]
@@ -569,21 +636,38 @@ class SegNet:
         # plt.imshow(mask_crop)
         # plt.title("mask_crop")
         # plt.show()
-        mask_full[r1:r2, c1:c2] = (mask_crop == id).astype(np.uint8)
+        mask_full[r1:r2, c1:c2] = np.array((mask_crop == id)).astype(np.uint8)
         return mask_full
   
-    def stow(self, bin_id, obj_id, rgb_raw, depth_raw, intrinsic):
+    # After object with product id obj_id is stowed in bin with id bin_id, 
+    #           updates perception using the current camera information (rgb_raw, depth_raw, intrinsic)
+    # FAILURES:
+    #       1. No object is stored. Covered using depth difference in bin.new_object_detected CODE NO_OBJ_STORED
+    #       2. Fewer than n objects are segmented (undersegmentation). Covered in refine_masks CODE UNDERSEGMENTATION
+    def stow(self, bin_id, obj_id, rgb_raw, depth_raw=None,info=None, points_raw=None):
         # Grabs the current bin
         bin = self.bins[bin_id]
 
 
         if self.H is None:
             self.H, self.W, _ = rgb_raw.shape
+
+        # check whether the stow is valid (there is a meaningful pixel difference)
+        if not bin.new_object_detected({'rgb':rgb_raw, 'depth':self.compute_xyz(depth_raw, info)}):
+            print(f"Error detected: Did you store an object in bin {bin_id}?\nPlease try again")
+            return NO_OBJ_STORED
+
+        # points_raw[:,:][np.isnan(points_raw)] = 0
+
+        # if not bin.new_object_detected({'rgb':rgb_raw, 'depth':points_raw}):
+        #     print(f"Error detected: Did you store an object in bin {bin_id}?\nPlease try again")
+        #     return 1
   
         # Update the current state of the bin and scene with the new images
         self.last = self.current.copy()
         self.current['rgb'] = rgb_raw.astype(np.uint8)
-        self.current['depth'] = self.compute_xyz(depth_raw, intrinsic)
+        # self.current['depth'] = 
+        self.current['depth'] = self.compute_xyz(depth_raw, info)
         self.current['mask'] = None
         bin.update_current(self.current)
         # plt.imshow(self.current['rgb'] )
@@ -591,56 +675,80 @@ class SegNet:
   
         # Current mask recommendations on the bin
         mask_crop = self.segment(bin_id)
+
+        # plt.imshow(mask_crop)
+        # plt.title("Predicted object mask before refinement")
+        # plt.show()
+
         # Keep track of the total number of objects in the bin
         bin.n += 1
         self.n += 1
   
         # Make sure that the bin only has segmentations for n objects
         mask_crop = self.refine_masks(mask_crop, bin.n)
+
+        if mask_crop is None:
+            return UNDERSEGMENTATION
+
+            
         assert(np.max(mask_crop) == bin.n)
   
         # Find the recommended matches between the two frames
         if bin.last['mask'] is not None:
-            recs = self.match_masks(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
+            recs, sift_failed = self.match_masks(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
+
+            if sift_failed:
+                print(f"WARNING: SIFT Matching Failure on bin {bin_id}. Appending to bad bins.")
+                self.bad_bins.append(bin_id)
   
             # Find the index of the new object (not matched)
             for i in range(1, bin.n + 1):
                 if i not in recs:
                     recs = np.append(recs, i)
                     break
+            
             # Update the new frame's masks
             bin.current['mask'] = self.update_masks(mask_crop, recs).copy()
        
         else:
             # This should only happen at the first insertion
             assert(bin.n == 1)
-  
+            # No matching is necessary because there is only one object in the scene
             bin.current['mask'] = mask_crop.copy()
-  
+
+        # Add the object-bin pair the list of stored items
         self.items[obj_id] = [bin_id, bin.n]
-       
-    def pick(self, obj_id, rgb_raw, depth_raw, intrinsic):
+        
+        return 0
+    
+
+    # After a successful pick of object with product id obj_id, updates perception
+    #           using camera information (rgb_raw, depth_raw, intrinsic)
+    def pick(self, obj_id, rgb_raw, depth_raw=None,info=None, points_raw=None):
         # Finds the bin and local ID for the object
-        bin_id, obj_n = self.items[obj_id]
+        try:
+            bin_id, obj_n = self.items[obj_id]
+        except:
+            print(f"Object with ID {obj_id} not found in our database. Please try another item.")
+            return 1
+
         # Grabs the current bin
         bin = self.bins[bin_id]
+
+        # points_raw[:,:][np.isnan(points_raw)] = 0
+
+        
   
         # Update the current state of the bin and scene with the new images
         self.last = self.current.copy()
         self.current['rgb'] = rgb_raw.astype(np.uint8)
-        self.current['depth'] = self.compute_xyz(depth_raw, intrinsic)
+        # self.current['depth'] = points_raw
+        self.current['depth'] = self.compute_xyz(depth_raw, info)
         self.current['mask'] = None
         bin.update_current(self.current)
   
-        # rgb_now = bin.current['rgb']
-  
         # Current mask recommendations on the bin
         mask_crop = self.segment(bin_id)
-
-        
-  
-        # maskx3 = np.repeat(np.reshape(mask_crop, (mask_crop.shape[0], mask_crop.shape[1], 1)), 3, axis=2)
-        # toshow = .3 * maskx3 + .7 * rgb_now
 
         # Keep track of the total number of objects in the bin
         bin.n -= 1
@@ -648,12 +756,16 @@ class SegNet:
   
         # Make sure that the bin only has segmentations for n objects
         mask_crop = self.refine_masks(mask_crop, bin.n)
+
+        if mask_crop is None:
+            return GO_TO_UPDATE
   
         assert(np.max(mask_crop) == bin.n)
 
+        # Optional visualization
         if self.config['print_preds']:
             plt.imshow(mask_crop)
-            plt.title("Cropped mask prediction (No refinement)")
+            plt.title("Cropped mask prediction after pick")
             plt.show()
   
         # You should only pick if there's an object in the bin
@@ -663,17 +775,102 @@ class SegNet:
         # Remove the object that is no longer in the scene
         old_mask[old_mask == obj_n] = 0
         old_mask[old_mask > obj_n] -= 1
+
+        # Find object correspondence between scenes
         recs = self.match_masks(bin.last['rgb'], bin.current['rgb'], old_mask, mask_crop)
+
+        # Checks that SIFT could accurately mask objects
+        if recs is None:
+            print(f"SIFT can not confidently determine matches for bin {bin_id}. Reset bin to continue.")
+            self.bad_bins.append(bin_id)
+            return 1
+
         bin.current['mask'] = self.update_masks(mask_crop, recs).copy()
-  
-  
+        
+        # Remove the picked object from the list of tracked items
         for loc_obj_id, (loc_bin, loc_id) in self.items.items():
             if loc_bin == bin_id:
                 if loc_id > obj_n:
                     self.items[loc_obj_id] = [loc_bin, loc_id - 1]
-  
         del self.items[obj_id]
+
+        return 0
   
+    # Update the bin state if there's no new object (grasping failure)
+    def update(self, bin_id, rgb_raw, depth_raw=None, info=None, points_raw=None):
+        # Grabs the current bin
+        bin = self.bins[bin_id]
+
+        if self.H is None:
+            self.H, self.W, _ = rgb_raw.shape
+
+        # Update the current state of the bin and scene with the new images
+        self.last = self.current.copy()
+        self.current['rgb'] = rgb_raw.astype(np.uint8)
+        # points_raw[:,:][np.isnan(points_raw)] = 0
+        # self.current['depth'] = points_raw
+        self.current['depth'] = self.compute_xyz(depth_raw, info)
+        self.current['mask'] = None
+        print(f"Current: {self.current}")
+        bin.update_current(self.current)
+
+        # Current mask recommendations on the bin
+        mask_crop = self.segment(bin_id)
+
+        plt.imshow(bin.current['rgb'])
+        plt.title("Before refinement in update")
+        plt.show()
+
+        plt.imshow(mask_crop)
+        plt.title("Before refinement in update")
+        plt.show()
+
+        # Make sure that the bin only has segmentations for n objects
+        mask_crop = self.refine_masks(mask_crop, bin.n)
+
+        if mask_crop is None:
+            self.current = self.last
+            return GO_TO_UPDATE
+
+        plt.imshow(mask_crop)
+        plt.title("After refinement in update")
+        plt.show()
+
+        # if mask_crop is None:
+        #     print(f"Segmentation could not find objects in bin {bin_id}")
+        #     input("Need to reset bin. Take out all items and reput them in.")
+        #     self.bad_bins.append(bin_id)
+        #     self.reset_bin(bin_id)
+        
+        assert(np.max(mask_crop) == bin.n)
+
+        # Find the recommended matches between the two frames
+        if bin.last['mask'] is not None:
+            recs = self.match_masks(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
+            
+            if recs is None:
+                print(f"SIFT could not confidently match bin {bin_id}")
+                figure, axis = plt.subplots(2,)
+                axis[0].imshow(bin.last['rgb'])
+                axis[1].imshow(bin.current['rgb'])
+                plt.title("Frames that sift failed on")
+                plt.show()
+                self.bad_bins.append(bin_id)
+            
+            # Update the new frame's masks
+            bin.current['mask'] = self.update_masks(mask_crop, recs).copy()
+
+            plt.imshow(bin.current['mask'])
+            plt.title("After update")
+            plt.show()
+        
+        else:
+            print(bin.last)
+            print("ERROR: THIS SHOULD NEVER HAPPEN!!!")
+            return 1
+
+        return 0
+
     def get_masks(self):
        mask = np.zeros((self.H, self.W))
        offset = 0
@@ -687,3 +884,21 @@ class SegNet:
                offset += np.max(mask_bin)
  
        return mask
+
+    def reset_bin(self, bin_id):
+        bin = self.bins[bin_id]
+        bin.n = 0
+        bin.current = {'rgb':None, 'depth':None, 'mask':None}
+        bin.last = {'rgb':None, 'depth':None, 'mask':None}
+
+        # Remove all objects in the bin from the database
+        for loc_obj_id, (loc_bin, loc_id) in self.items.copy().items():
+            if loc_bin == bin_id:
+                del self.items[loc_obj_id]
+        
+        # Remove bin from list of bad bins
+        self.bad_bins.remove(bin_id)
+
+        return 0
+
+        
