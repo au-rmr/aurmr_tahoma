@@ -46,8 +46,11 @@ class PodPerceptionROS:
 
 
     def play_camera_shutter(self):
-        audio_file = '/usr/share/sounds/Yaru/stereo/battery-low.oga'
-        subprocess.call(['mplayer', audio_file])
+        audio_file = '/usr/share/sounds/freedesktop/stereo/camera-shutter.oga'
+        try:
+            subprocess.call(['mplayer', audio_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except:
+            pass
 
     def capture_object_callback(self, request):
         if not request.bin_id or not request.object_id:
@@ -122,6 +125,8 @@ class PodPerceptionROS:
             row_step=(itemsize * 7 * num_points),
             data=data
         )
+
+        self.play_camera_shutter()
 
         return True,\
                f"Points and mask successfully retrieved for object {request.object_id} in bin {bin_id}",\
