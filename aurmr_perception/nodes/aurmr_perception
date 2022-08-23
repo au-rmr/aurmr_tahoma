@@ -12,13 +12,15 @@ if __name__ == '__main__':
     parser.add_argument('--diff_threshold', type=int, default=140)
     parser.add_argument('--camera_name', default='stand_camera')
     parser.add_argument('--segmentation_method', default='pixel_difference')
+    parser.add_argument('--camera', default='realsense')
     args, unknown = parser.parse_known_args()
     args.viz = rospy.get_param("~viz", args.viz)
     args.camera_name = rospy.get_param("~camera_name", args.camera_name)
+    args.camera_type = rospy.get_param("~camera_type", args.camera)
     args.segmentation_method = rospy.get_param("~segmentation_method", args.segmentation_method)
     model = DiffPodModel(args.diff_threshold, args.segmentation_method)
 
-    node = PodPerceptionROS(model, args.camera_name, args.viz)
+    node = PodPerceptionROS(model, args.camera_name, args.viz, args.camera_type)
     while not rospy.is_shutdown() and not node.received_images:
         rospy.logwarn_throttle(10, "Haven't received images yet")
         rospy.sleep(1)
