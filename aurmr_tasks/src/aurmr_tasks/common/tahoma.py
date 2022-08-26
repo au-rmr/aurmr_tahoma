@@ -5,7 +5,13 @@ from functools import wraps
 from actionlib import SimpleActionClient
 from control_msgs.msg import FollowJointTrajectoryAction, GripperCommandAction, GripperCommandGoal
 from control_msgs.msg import FollowJointTrajectoryGoal
+from matplotlib.pyplot import text
+from torch import lstsq
+
 from trajectory_msgs.msg import JointTrajectoryPoint
+from geometry_msgs.msg import Pose, PoseStamped, Point, Quaternion
+import std_msgs
+
 import tf2_ros
 import tf2_geometry_msgs
 
@@ -13,14 +19,18 @@ import actionlib
 import control_msgs.msg
 import trajectory_msgs.msg
 import rospy
+import numpy as np
+from .motion import CloseGripper
 
 from aurmr_tasks.util import all_close, pose_dist
 from moveit_msgs.msg import MoveItErrorCodes, MoveGroupAction, DisplayTrajectory
-from moveit_msgs.srv import GetPositionIK, GetPositionIKRequest
+from moveit_msgs.srv import GetPositionIK, GetPositionIKRequest, GetPositionFKRequest
 
 import moveit_commander
 from controller_manager_msgs.srv import ListControllers, SwitchController
 from tahoma_moveit_config.msg import ServoToPoseAction, ServoToPoseGoal
+
+import moveit_ros_planning_interface
 
 ARM_GROUP_NAME = 'manipulator'
 JOINT_ACTION_SERVER = '/pos_joint_traj_controller/follow_joint_trajectory'
@@ -143,6 +153,7 @@ class Tahoma:
         self.planning_frame = planning_frame
         self.eef_link = eef_link
         self.group_names = group_names
+        self.home_state = self.move_group.get_current_state()
 
         self.active_controllers = None
         self.update_running_controllers()
@@ -345,7 +356,7 @@ class Tahoma:
         """
 
         goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.move_group.get_planning_frame(),
-                                       rospy.Duration(1))
+                                       rospy.printDuration(1))
 
         self.move_group.set_end_effector_link("gripper_equilibrium_grasp")
         self.move_group.set_pose_target(pose_stamped)
@@ -422,7 +433,7 @@ class Tahoma:
                       timeout=10,
                       pos_tolerance=0.01,
                       angular_tolerance=0.2,
-                      avoid_collisions=True):
+                      avoid_collisions=True): 
         if not self.servo_to_pose_client.wait_for_server(rospy.Duration(1)):
             rospy.logerr("Servo action server couldn't be reached")
             return False
@@ -467,22 +478,228 @@ class Tahoma:
         Returns: A list of (name, value) for the arm joints if the IK solution
             was found, False otherwise.
         """
+        # set robot state to home state each time method is run 
+        self.move_group.set_start_state(self.get_home_state())
+
+        # compute the ik solution for the robot to move to the pre-grasp pose
         request = GetPositionIKRequest()
         request.ik_request.pose_stamped = pose_stamped
         request.ik_request.group_name = 'manipulator'
         request.ik_request.timeout = timeout
         response = self._compute_ik(request)
+
+        # if no ik solution calculated return error -> NOT REACHABLE 
         error_str = moveit_error_string(response.error_code.val)
         success = error_str == 'SUCCESS'
         if not success:
             return False
+      
+        # edit joints to only include DOF joints
         joint_state = response.solution.joint_state
+
         joints = []
         for name, position in zip(joint_state.name, joint_state.position):
             if name in self.commander.get_active_joint_names():
                 joints.append((name, position))
-        return joints
+            else :
+                joint_state.name.remove(name)
+        
+        joint_state.name = joint_state.name[0:-3]
+        joint_state.position = joint_state.position[0:-6]
+        
+        # manually clip joint states to fit joint_limits.yaml
+        joint_state.position = np.clip(joint_state.position, -3.141592653589793, 3.141592653589793)
+        print(joint_state.position)
+
+        path = self.move_group.plan(joint_state)
+        joint_traj = path[1]
+        waypoints = joint_traj.joint_trajectory.points
+
+        # if no waypoints -> NO REASONABLE PATH to pose 
+        if (len(waypoints) == 0):
+            print("no reasonable waypoints")
+            return False
+
+        return waypoints 
+
+    def compute_ik_cartesian(self, pose_stamped, cartPos, timeout=rospy.Duration(5)):
+
+        # set robot state to home state each time method is run 
+        self.move_group.set_start_state(self.get_home_state())
+
+        # compute the ik solution for the robot to move to the front of the bin
+        request = GetPositionIKRequest()
+        request.ik_request.pose_stamped = pose_stamped
+        request.ik_request.group_name = 'manipulator'
+        request.ik_request.timeout = timeout
+        response = self._compute_ik(request)
+
+        # if no ik solution calculated return error -> NOT REACHABLE 
+        error_str = moveit_error_string(response.error_code.val)
+
+        # jacobian matrix for cartesian and compute ik waypoints
+        jacobians = []
+        waypoints = []
+
+        success = error_str == 'SUCCESS'
+        if not success:
+            print("bin not reachable: no compute ik solution - ")
+            return waypoints
+
+        # previously used: get joint states for moving to the position in front of the bin 
+        joint_state = response.solution.joint_state
+        
+        # keep only dof joints
+        joints = []
+        for name, position in zip(joint_state.name, joint_state.position):
+            if name in self.commander.get_active_joint_names():
+                joints.append((name, position))
+            else :
+                joint_state.name.remove(name)
+        
+        joint_state.name = joint_state.name[0:-3]
+        joint_state.position = joint_state.position[0:-6]
+    
+        # manually clip joint states to fit joint_limits.yaml
+        joint_state.position = np.clip(joint_state.position, -3.141592653589793, 3.141592653589793)
+        print(joint_state.position)
+        joint_state_copy = copy.deepcopy(joint_state)
+
+        # get robot trajectory from path to ik solution based on joint states
+        path = self.move_group.plan(joint_state)
+        joint_traj = path[1]
+        waypoints = joint_traj.joint_trajectory.points
+
+        # if no waypoints -> NO REASONABLE PATH to pose 
+        if (len(waypoints) == 0):
+            print("no reasonable waypoints")
+            return waypoints
+
+        # calculate jacobian matrix for each cartesian point
+        self.jacobian_matrix_wpts(waypoints, jacobians)
+
+        # create and set new robot state to right in front of bin based on joint state solution from waypoints
+        new_state = self.move_group.get_current_state()
+
+        lst = list(joint_state_copy.position)
+        lst[0:6] = waypoints[-1].positions  
+        joint_state_copy.position = tuple(lst)
+
+        new_state.joint_state = joint_state_copy
+
+        self.move_group.set_start_state(new_state)
+
+        # setup waypoints for cartesian path plan
+        wpts = []
+        wpts.append(cartPos)
+        cartPos.position.x = cartPos.position.x + 0.25 # change x-offset to go all the way into the bin
+        wpts.append(cartPos)
+
+        path = self.move_group.compute_cartesian_path(waypoints = wpts, eef_step = 0.01, jump_threshold = 6, avoid_collisions=True)
+
+        # get waypoints from cartesian path plan
+        waypoints = path[0].joint_trajectory.points
+
+        # calculate jacobian matrix for each cartesian point
+        self.jacobian_matrix_wpts(waypoints, jacobians)
+
+        # get array of manipulability measures
+        condition_num = np.linalg.cond(jacobians) #using default norm value 
+
+        return list(condition_num)
+
+    def get_home_state(self):
+        return self.home_state
+
+     # calculate jacobian matrix for each cartesian point
+    def jacobian_matrix_wpts(self, waypoints, jacobians):
+        for pt in waypoints:
+            jnts = pt.positions 
+            matrix = np.array(self.move_group.get_jacobian_matrix(list(jnts)))
+            jacobians.append(matrix)
+
+        return jacobians
+
+    def get_jacobian_matrix(self):
+        current = self.move_group.get_joint_value_target()
+        matrix = np.array(self.move_group.get_jacobian_matrix(current))
+        return matrix
 
     def cancel_all_goals(self):
         self._move_group_client.cancel_all_goals()
         self._joint_traj_client.cancel_all_goals()
+
+    def clear_scene(self):
+        self.scene.clear()
+        print("cleared")
+
+    def add_pod_collision_geometry(self):
+        POD_SIZE = .9398
+        HALF_POD_SIZE = POD_SIZE / 2
+        WALL_WIDTH = 0.003
+        I_QUAT = Quaternion(x=0, y=0, z=0, w=1)
+
+        # reload collision boxes for testing puposes
+        print(self.scene.clear())
+
+        # setup collision boxes
+        self.scene.add_box("col_01", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=0.045, y=HALF_POD_SIZE, z=1.45),
+                                                                orientation=I_QUAT)), (WALL_WIDTH, POD_SIZE, 2.3))
+        self.scene.add_box("col_02", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=0.5*HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.45),
+                                                                orientation=I_QUAT)), (WALL_WIDTH, POD_SIZE, 2.3))                                                       
+        self.scene.add_box("col_03", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.45),
+                                                                orientation=I_QUAT)), (WALL_WIDTH, POD_SIZE, 2.3))
+        self.scene.add_box("col_04", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=1.5*HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.45),
+                                                                orientation=I_QUAT)), (WALL_WIDTH, POD_SIZE, 2.3))
+        self.scene.add_box("col_05", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=POD_SIZE-0.045, y=HALF_POD_SIZE, z=1.45),
+                                                                orientation=I_QUAT)), (WALL_WIDTH, POD_SIZE, 2.3))
+        self.scene.add_box("row_01", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=0.34),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
+        self.scene.add_box("row_02", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=0.56),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))                                           
+        self.scene.add_box("row_03", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=0.70),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
+        self.scene.add_box("row_04", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=0.89),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH)) 
+        self.scene.add_box("row_05", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.04),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
+        self.scene.add_box("row_06", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.16),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
+        self.scene.add_box("row_07", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.38),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
+        self.scene.add_box("row_08", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.51),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))                                                       
+        self.scene.add_box("row_09", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.66),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
+        self.scene.add_box("row_10", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.79),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
+        self.scene.add_box("row_11", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.01),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH)) 
+        self.scene.add_box("row_12", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.14),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
+        self.scene.add_box("row_13", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.29),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
+        self.scene.add_box("row_14", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.57),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
+        self.scene.add_box("back_frame", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_base_link"),
+                                                    pose=Pose(position=Point(x=0.415, y=-0.98, z=1.27),
+                                                              orientation=I_QUAT)), (1.45, .2, 1.5))

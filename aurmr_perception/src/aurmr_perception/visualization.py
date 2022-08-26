@@ -38,11 +38,12 @@ def create_gripper_pose_markers(poses, color, ns="gripper_poses", tf_buffer=None
         marker.scale.x = 1
         marker.scale.y = 1
         marker.scale.z = 1
-        marker.color.r = colors[i][0]
-        marker.color.g = colors[i][1]
-        marker.color.b = colors[i][2]
-        marker.color.a = colors[i][3]
+        marker.color.r = color[i][0]
+        marker.color.g = color[i][1]
+        marker.color.b = color[i][2]
+        marker.color.a = color[i][3]
         marker.mesh_resource = "package://robotiq_2f_85_gripper_visualization/meshes/visual/full_opened.stl"
+        #full_opened.stl"
 
         transformed_pose = deepcopy(pose.pose)
         rotated_quat = transformations.quaternion_multiply(quat_msg_to_vec(pose.pose.orientation), quat_msg_to_vec(transform.rotation))

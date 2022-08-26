@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import random
 import std_msgs
 import visualization_msgs.msg
@@ -14,8 +15,8 @@ from tf_conversions import transformations
 
 from aurmr_perception.visualization import create_gripper_pose_markers
 
+import copy
 from aurmr_tasks.pod import BIN_IDS
-
 
 def main():
     rospy.loginfo('Getting robot resources')
@@ -24,36 +25,107 @@ def main():
     State.simulation = simulation
     robot = Tahoma(simulation)
 
+    # add pod collision boxes to planning scene 
+    #robot.add_pod_collision_geometry()
+
+    # for creating histogram to manually set manipulability threshold 
+    file = open("manipData.txt", "w")
+
     align_to_bin_orientation = transformations.quaternion_from_euler(-1.57, 0, 0)
     align_to_bin_quat = Quaternion(x=align_to_bin_orientation[0], y=align_to_bin_orientation[1], z=align_to_bin_orientation[2], w=align_to_bin_orientation[3])
     BIN_APPROACH_POSES = []
     BIN_INNER_POSES = []
     for bin_id in BIN_IDS:
         frame_name = f"pod_bin_{bin_id}"
-        BIN_APPROACH_POSES.append(PoseStamped(header=std_msgs.msg.Header(frame_id=frame_name), pose=Pose(position=Point(x=.125, y=-.12,z=.07), orientation=align_to_bin_quat)))
+        # change y value in pose, position to alter pre-grasp pose distance -> if we change this value need to change xoffset of 2nd cartesian waypoint 
+        BIN_APPROACH_POSES.append(PoseStamped(header=std_msgs.msg.Header(frame_id=frame_name), pose=Pose(position=Point(x=.125, y=-0.10,z=.07), orientation=align_to_bin_quat)))
         for j in range(10):
             # Get some randomly offset poses in the bin to see if we'll be able to  reach the inside
             perturbed_quat = [align_to_bin_quat.x, align_to_bin_quat.y, align_to_bin_quat.z, align_to_bin_quat.w] + np.random.uniform(-.2, .2, 4)
             perturbed_quat /= np.linalg.norm(perturbed_quat)
             perturbed_quat_msg = Quaternion(x=perturbed_quat[0], y=perturbed_quat[1], z=perturbed_quat[2], w=perturbed_quat[3])
             BIN_INNER_POSES.append(PoseStamped(header=std_msgs.msg.Header(frame_id=frame_name), pose=Pose(position=Point(x=.125 + random.uniform(-.1, .1), y=random.uniform(-0,.1),z=.07 + random.uniform(0, .05)), orientation=perturbed_quat_msg)))
-    print("Determining approachable bins...")
+   
+    # storing info variables
+    reachability = True
     reachability_pub = rospy.Publisher("~/reachability", visualization_msgs.msg.MarkerArray, queue_size=1, latch=True)
-    REACHABLE_BIN_APPROACHES = []
+    REACHABLE_BIN_APPROACHES = [] # total poses = 572
     marker_colors = []
-    all_poses = BIN_APPROACH_POSES + BIN_INNER_POSES
-    for i, pose in enumerate(all_poses):
-        solution = robot.compute_ik(pose, rospy.Duration(0))
-        if solution:
-            REACHABLE_BIN_APPROACHES.append(pose)
-            marker_colors.append((0, 1, 0, 1))
-        else:
-            marker_colors.append((1, 0, 0, 1))
 
-    reachability_pub.publish(create_gripper_pose_markers(all_poses, marker_colors))
+    #reachability test for bin inner poses
+    if (reachability):
+        print("Determining reachable bins...")
+
+        for i, pose in enumerate(BIN_INNER_POSES):
+            solution = robot.compute_ik(pose, rospy.Duration(0))
+            if solution:
+                print("pose " + str(i) +  " has solution")
+                REACHABLE_BIN_APPROACHES.append(pose)
+                marker_colors.append((0, 1, 0, 1))
+            else:
+                print("pose " + str(i) +  " : not reachable")
+                marker_colors.append((1, 0, 0, 1))
+
+        print(len(REACHABLE_BIN_APPROACHES))
+        print(len(BIN_INNER_POSES))
+
+        ratio = len(REACHABLE_BIN_APPROACHES)/len(BIN_INNER_POSES)
+        print("Reachability Score : " + str(ratio * 100))
+
+        reachability_pub.publish(create_gripper_pose_markers(BIN_INNER_POSES, marker_colors))
+
+    # manipulability test for bin approach poses
+    else :
+        print("Determining manipulable bins...")
+        MANIPULABLE_APPROACHES = []
+
+        # cartesian manipulability test for bin approach poses 
+        counter = 0
+        for approach in enumerate(BIN_APPROACH_POSES):
+
+            pose = copy.deepcopy(approach[1])
+            manip = robot.compute_ik_cartesian(pose, pose.pose, rospy.Duration(0))
+
+            # not reachable or no viable path to bin pose
+            if (len(manip) == 0): 
+                print(str(counter))
+                marker_colors.append((1, 0, 0, 1)) #red
+
+            else: 
+                print("cond num " + str(counter) +  " has a solution.") 
+                REACHABLE_BIN_APPROACHES.append(approach)
+                for i in manip:
+                    file.write(str(i) + ", ")
+
+                sorted = copy.deepcopy(manip)
+                sorted.sort()
+                
+                # how skewed is the data towards infinitiy (singularity)? how safely manipulatable is the object? 
+                manipThreshold = 400
+
+                if (sorted[len(sorted)-1] >= manipThreshold): 
+                    print("solution but above manipulability threshold")
+                    marker_colors.append((1, 1, 1, 1)) #white
+                else :
+                    marker_colors.append((0, 1, 0, 1))  #green
+                    MANIPULABLE_APPROACHES.append(approach)
+
+            counter = counter + 1
+
+        file.close()
+
+        ratio = len(MANIPULABLE_APPROACHES)/len(REACHABLE_BIN_APPROACHES)
+        print("Manipulability Score : " + str(ratio * 100))
+
+        print("Manipulatable Points (Green) : " + str(len(MANIPULABLE_APPROACHES)))
+        print("Reachable but not Manipulatable Points (White) : " + str(len(REACHABLE_BIN_APPROACHES) - len(MANIPULABLE_APPROACHES)))
+
+        reachability_pub.publish(create_gripper_pose_markers(BIN_APPROACH_POSES, marker_colors))
+
+
     print("Published visualization data. Spinning to keep topic open.")
-    rospy.spin()
+    rospy.spin() 
 
-
+# robot position relative to bin gets hardcoded in fc.launch file
 if __name__ == '__main__':
     main()
