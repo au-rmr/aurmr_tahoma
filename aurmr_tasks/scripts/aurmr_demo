@@ -21,7 +21,6 @@ from aurmr_tasks.pod import load_sm
 from aurmr_tasks.srv import StowRequest, PickRequest
 from aurmr_tasks.srv import MultiplePickRequest
 from aurmr_tasks.msg import PickStatus
-from aurmr_tasks.common.motion import robust_move_to_offset, grasp_move_to_offset
 from aurmr_perception.util import vec_to_quat_msg, I_QUAT
 from aurmr_tasks.common.states import Wait
 TARGET_BIN_ID = "001"
@@ -95,7 +94,6 @@ class WaitForPickStow(State):
                 # ..todo report success
                 pass
         return True
-        
 
     def pick_cb(self, request: PickRequest):
         rospy.loginfo("PICK REQUEST: " + str(request))
@@ -109,6 +107,7 @@ class WaitForPickStow(State):
     def execute(self, userdata):
         print(self.first)
         print("WAITFORPICKANDSTOW")
+        #TODO: Check if the self.first variable is necessary
         if not self.first:
             self.execution_done = True
             self.do_stow = False
@@ -158,15 +157,15 @@ def main():
             StateMachine.add("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=.125),    
                             {"succeeded": "PUBLISH_CURRENTLY_PICKING", "aborted":"PASS", "preempted":"PASS"})
             StateMachine.add("PASS", PublishStatus(status_pub, wait_time=3), {"succeeded": "done"})
-            StateMachine.add_auto("PUBLISH_CURRENTLY_PICKING", PublishStatus(status_pub), {"succeeded": "done"})
+            StateMachine.add_auto("PUBLISH_CURRENTLY_PICKING", PublishStatus(status_pub), ["succeeded"])
             StateMachine.add_auto("REMAP_PRE_GRASP_POSE", cf.input_to_output("pre_grasp_pose", "pose"), ["succeeded"])
             StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPose(robot), ["succeeded", "aborted", "preempted"])
             # StateMachine.add_auto("OPEN_BEFORE_GRASP", motion.OpenGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
             StateMachine.add_auto("CLEAR_SCENE_PREGRASP", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_PREGRASP", motion.AddPartialPodCollisionGeometry(robot), ["succeeded", "aborted"])
-            StateMachine.add_auto("MOVE_TO_GRASP", grasp_move_to_offset(robot, (0, 0, 0.300)), ["succeeded", "aborted", "preempted"])
-            StateMachine.add_auto("LIFT_OBJ", robust_move_to_offset(robot, (0, 0, 0.035), 'base_link'), ["succeeded", "aborted", "preempted"])
-            StateMachine.add_auto("RETRACT_ARM", robust_move_to_offset(robot, (0, 0, -0.35)), ["succeeded", "aborted", "preempted"])
+            StateMachine.add_auto("MOVE_TO_GRASP", motion.grasp_move_to_offset(robot, (0, 0, 0.300)), ["succeeded", "aborted", "preempted"])
+            StateMachine.add_auto("LIFT_OBJ", motion.robust_move_to_offset(robot, (0, 0, 0.035), 'base_link'), ["succeeded", "aborted", "preempted"])
+            StateMachine.add_auto("RETRACT_ARM", motion.robust_move_to_offset(robot, (0, 0, -0.35)), ["succeeded", "aborted", "preempted"])
             StateMachine.add_auto("CLEAR_SCENE_POSTGRASP", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_POSTGRASP", motion.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX", motion.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
@@ -186,6 +185,7 @@ def main():
             cf.splat_auto("SPLAT_STOW", "request", ["target_bin_id", "target_object_id"])
             StateMachine.add("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "drop_hide"),
                             {"succeeded": "PRE_PERCEIVE", "aborted": "PICK_FAILED"})
+            #TODO: Check that this state actually does anything
             StateMachine.add("PRE_PERCEIVE", perception.CaptureEmptyBin(),
                             {"succeeded": "POST_PERCEIVE", "aborted": "PICK_FAILED", "preempted": "PICK_FAILED"})
             # StateMachine.add("ASK_FOR_BIN_LOAD", interaction.AskForHumanAction(),

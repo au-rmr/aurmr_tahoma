@@ -133,7 +133,7 @@ class Tahoma:
         self.commander = moveit_commander.RobotCommander()
         self.scene = moveit_commander.PlanningSceneInterface(synchronous=True)
         self.move_group = moveit_commander.MoveGroupCommander(ARM_GROUP_NAME)
-        self.MAX_VEL_FACTOR = .3
+        self.MAX_VEL_FACTOR = .2
         self.MAX_ACC_FACTOR = .5
         self.move_group.set_max_velocity_scaling_factor(self.MAX_VEL_FACTOR)
         self.move_group.set_max_acceleration_scaling_factor(self.MAX_ACC_FACTOR)
@@ -186,14 +186,13 @@ class Tahoma:
                 latest_status = g.status
         self.goal_finished = latest_status != GoalStatus.PENDING and latest_status != GoalStatus.ACTIVE
         self.goal_stamp = latest_time
+
     def update_running_controllers(self):
         controllers_status = self._controller_lister().controller
         self.active_controllers = []
         for controller in controllers_status:
             if controller.state == "running":
                 self.active_controllers.append(controller.name)
-
-
 
     def wait_for_controllers(self, timeout):
         rate = rospy.Rate(1)
@@ -475,7 +474,6 @@ class Tahoma:
         old_goal_stamp = self.goal_stamp
 
         ret = self.move_group.execute(plan, wait=wait)
-        rospy.logwarn("\n\n\n\n\n\nRETVAL:" + str(ret))
         if use_gripper:
             self.close_gripper(return_before_done=True)
 
