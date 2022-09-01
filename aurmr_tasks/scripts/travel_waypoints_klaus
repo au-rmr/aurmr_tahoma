@@ -1,0 +1,161 @@
+#!/usr/bin/env python
+
+import smach_ros
+import std_msgs
+from smach import State, StateMachine
+import rospy
+from aurmr_tasks.common import states
+import aurmr_tasks.common.control_flow as cf
+from aurmr_tasks.common import motion
+import numpy as np
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
+from tf_conversions import transformations
+
+# BIN_APPROACH_POSES = []
+# align_to_bin_orientation = transformations.quaternion_from_euler(0, -1.57, -1.57)
+# align_to_bin_quat = Quaternion(x=align_to_bin_orientation[0], y=align_to_bin_orientation[1], z=align_to_bin_orientation[2], w=align_to_bin_orientation[3])
+# for i in range(4):
+#     for letter in "abcdefghijklm":
+#         frame_name = f"pod_bin_{i+1}{letter}"
+#         BIN_APPROACH_POSES.append(PoseStamped(header=std_msgs.msg.Header(frame_id=frame_name), pose=Pose(position=Point(x=.125, y=-.25,z=.05), orientation=align_to_bin_quat)))
+
+def read_waypoints_from_file(filename):
+
+    lines = []
+    waypoints = []
+
+    with open(filename) as file:
+        for line in file:
+            lines.append(line.rstrip())
+
+        for i in range(len(lines) // 4):
+            str0 = lines[i * 4].split(' ')
+            str1 = lines[i * 4 + 1].split(' ')
+            str2 = lines[i * 4 + 2].split(' ')
+
+            pose_stamped = PoseStamped()
+            pose_stamped.header=std_msgs.msg.Header(frame_id=str2[1])
+
+            pose = Pose()
+
+            quat_arr = transformations.quaternion_from_euler(float(str1[1]), float(str1[2]), float(str1[3]))
+            quat_obj = Quaternion(x=quat_arr[0], y=quat_arr[1], z=quat_arr[2], w=quat_arr[3])
+            pose.orientation = quat_obj
+
+            point = Point(x=float(str0[1]), y=float(str0[2]),z=float(str0[3]))
+            pose.position = point
+
+            pose_stamped.pose = pose
+
+            waypoints.append(pose_stamped)
+    
+    return waypoints
+
+def main():
+
+    # init node and robot
+    rospy.loginfo('Getting robot resources')
+    rospy.init_node("travel_waypoints")
+    #robot = Tahoma()
+
+    # read waypoints from text file
+    #WAYPOINTS = read_waypoints_from_file('waypoints.txt')   
+    WAYPOINTS = [] 
+
+    # for i in range (3):
+    #     # for j in range(3):
+    #     pose_stamped = PoseStamped()
+    #     pose_stamped.header=std_msgs.msg.Header(frame_id='pod_base_link')
+    #     pose = Pose()
+    #     quat_obj = Quaternion(x=0, y=1, z=0, w=0)
+    #     pose.orientation = quat_obj
+    #     point = Point(x=-0.1, y=1.1+0.05*i, z=-0.1)
+    #     pose.position = point
+    #     pose_stamped.pose = pose
+    #     WAYPOINTS.append(pose_stamped) 
+
+    WAYPOINTS_2 = [] 
+    for i in range (5):
+        pose_stamped = PoseStamped()
+        pose_stamped.header=std_msgs.msg.Header(frame_id='pod_base_link')
+        pose = Pose()
+        quat_obj = Quaternion(x=0, y=1, z=0, w=0)
+        pose.orientation = quat_obj
+        point = Point(x=-0.1, y=1.13, z=-0.3-0.05*i)
+        pose.position = point
+        pose_stamped.pose = pose
+        WAYPOINTS_2.append(pose_stamped) 
+    
+    pose_drop = PoseStamped()
+    pose_stamped.header=std_msgs.msg.Header(frame_id='pod_base_link')
+    pose = Pose()
+    quat_obj = Quaternion(x=0, y=0, z=0.7071, w=-0.7071)
+    pose.orientation = quat_obj
+    point = Point(x=0.6, y=0.8, z=0.0)
+    pose.position = point
+    pose_drop.pose = pose
+
+    # print(f"{len(WAYPOINTS)} of {len(WAYPOINTS)} waypoints are approachable")
+    simulation = rospy.get_param("~simulation", False)
+
+    State.simulation = simulation
+
+    pick_sm = StateMachine(["succeeded", "preempted", "aborted"],
+                           input_keys=[],
+                           output_keys=[])
+
+    with pick_sm:
+        cf.inject_userdata_auto("LOAD_POSES_PICK", "poses_pick", WAYPOINTS_2)
+        cf.inject_userdata_auto("LOAD_POSES_DROP", "poses_drop", WAYPOINTS_2[::-1])
+        # Control the robot to pick pose
+        StateMachine.add("PICK_POSE", cf.IterateList("poses_pick", "pose"),
+                         {"repeat": "MOVE_TO_POSE_PICK", "done": "MOVE_TO_POSE_Line"})
+        StateMachine.add('MOVE_TO_POSE_PICK',
+                              motion.MoveEndEffectorToPose_Storm(WAYPOINTS_2[0]),
+                              {"succeeded": "PAUSE_PICK", "aborted": "PAUSE_PICK"})
+        StateMachine.add("PAUSE_PICK", states.Wait(1), {"succeeded": "PICK_POSE"})
+
+        # Control the robot to drop pose
+        # StateMachine.add("PICK_POSE_2", cf.IterateList("poses_drop", "pose"),
+        #                  {"repeat": "MOVE_TO_POSE_PICK_2", "done": "MOVE_TO_POSE_Line"})
+        # StateMachine.add('MOVE_TO_POSE_PICK_2',
+        #                       motion.MoveEndEffectorToPose_Storm(),
+        #                       {"succeeded": "PAUSE_DROP", "aborted": "PAUSE_DROP"})
+        # StateMachine.add("PAUSE_DROP", states.Wait(1), {"succeeded": "PICK_POSE_2"})
+
+        # Testing linear movement fuction
+        StateMachine.add('MOVE_TO_POSE_Line',
+                              motion.MoveEndEffectorInLine_Storm(WAYPOINTS_2[0],WAYPOINTS_2[-1], use_force=True, use_gripper=True),
+                              {"succeeded": "PAUSE_LINE", "aborted": "PAUSE_LINE"})
+        StateMachine.add("PAUSE_LINE", states.Wait(5), {"succeeded": "MOVE_TO_POSE_Line_2"})
+        StateMachine.add('MOVE_TO_POSE_Line_2',
+                              motion.MoveEndEffectorInLine_Storm(WAYPOINTS_2[-1],WAYPOINTS_2[0], use_force=False, use_gripper=False),
+                              {"succeeded": "DROP_POSE", "aborted": "DROP_POSE"})
+        
+        StateMachine.add('DROP_POSE',
+                              motion.MoveEndEffectorToPose_Storm(pose_drop),
+                              {"succeeded": "OPEN_GRIPPER", "aborted": "OPEN_GRIPPER"})
+        StateMachine.add('OPEN_GRIPPER',
+                              motion.OpenGripperStorm(),
+                              {"succeeded": "succeeded", "aborted": "aborted"})                      
+        # StateMachine.add_auto("POKE_BIN", motion.MoveEndEffectorInLineInOut(robot), ['succeeded', 'preempted', 'aborted'])
+
+
+    # Create top state machine
+    sm = StateMachine(outcomes=['succeeded', "preempted", 'aborted'])
+
+    with sm:
+        StateMachine.add('STORM_POSE_SEQUENCE', pick_sm, {"succeeded": "succeeded", "aborted": "aborted"})
+
+    rospy.loginfo('Beginning storm SM')
+
+    sis = smach_ros.IntrospectionServer('pick_sm', sm, '/pick')
+    sis.start()
+    outcome = sm.execute()
+    rospy.loginfo('Stop state machine')
+    # rospy.spin()
+    sis.stop()
+
+
+if __name__ == '__main__':
+    main()
