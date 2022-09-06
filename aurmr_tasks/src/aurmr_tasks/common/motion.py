@@ -76,14 +76,20 @@ class MoveEndEffectorInLine_Storm(State):
         self.STROM_RESULT = '/storm_info/result'
         self.ACTIVATE_CONTROL = '/activate_control'
         self.GRIPPER_ACTION_SERVER = '/gripper_controller/gripper_cmd'
+        self.CURRENT_POSE = '/goal_pose/storm'
 
         self._gripper_client = actionlib.SimpleActionClient(self.GRIPPER_ACTION_SERVER, GripperCommandAction)
-        self.goal_pub = rospy.Publisher(self.GOAL_POSE, geometry_msgs.msg.PoseStamped, queue_size=1)
+        self.goal_pub = rospy.Publisher(self.GOAL_POSE, PoseStamped, queue_size=1)
         self.AC_pub = rospy.Publisher(self.ACTIVATE_CONTROL, Bool, queue_size=1)
         self.goal_listener = rospy.Subscriber(self.STROM_RESULT, Bool, self.goal_finish_cb)
         self.wrench_listener = rospy.Subscriber("/wrench", WrenchStamped, self.wrench_cb)
         self.gripper_status_listener = rospy.Subscriber("/gripper_control/status", VacuumGripperStatus, self.gripper_status_cb)
+        self.curr_pose_listener = rospy.Subscriber(self.CURRENT_POSE, PoseStamped, self.curr_pose_cb)
         
+    def curr_pose_cb(self, msg: PoseStamped):
+        if self.start_pose is None:
+            self.start_pose = msg
+
     def close_gripper(self, return_before_done=False):
         goal = GripperCommandGoal()
         goal.command.position = 0.83
@@ -114,6 +120,9 @@ class MoveEndEffectorInLine_Storm(State):
         #print("Get STROM_RESULT msg", self.goal_finished )
 
     def execute(self, userdata):
+        if self.start_pose is None:
+            print('Waiting for start_pose')
+            rospy.sleep(0.5)
         poses = []
         diff_x = self.goal_pose.pose.position.x - self.start_pose.pose.position.x
         diff_y = self.goal_pose.pose.position.y - self.start_pose.pose.position.y
