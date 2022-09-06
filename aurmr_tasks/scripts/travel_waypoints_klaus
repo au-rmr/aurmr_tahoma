@@ -6,7 +6,7 @@ from smach import State, StateMachine
 import rospy
 from aurmr_tasks.common import states
 import aurmr_tasks.common.control_flow as cf
-from aurmr_tasks.common import motion
+from aurmr_tasks.common import motion_storm as motion
 import numpy as np
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from tf_conversions import transformations
@@ -112,7 +112,7 @@ def main():
         StateMachine.add("PICK_POSE", cf.IterateList("poses_pick", "pose"),
                          {"repeat": "MOVE_TO_POSE_PICK", "done": "MOVE_TO_POSE_Line"})
         StateMachine.add('MOVE_TO_POSE_PICK',
-                              motion.MoveEndEffectorToPose_Storm(),
+                              motion.MoveEndEffectorToPoseStorm(),
                               {"succeeded": "PAUSE_PICK", "aborted": "PAUSE_PICK"})
         StateMachine.add("PAUSE_PICK", states.Wait(1), {"succeeded": "PICK_POSE"})
 
@@ -126,15 +126,15 @@ def main():
 
         # Testing linear movement fuction
         StateMachine.add('MOVE_TO_POSE_Line',
-                              motion.MoveEndEffectorInLine_Storm(WAYPOINTS_2[0], WAYPOINTS_2[-1], use_force=True, use_gripper=True),
+                              motion.MoveEndEffectorInLineStorm(WAYPOINTS_2[0], WAYPOINTS_2[-1], use_force=True, use_gripper=True),
                               {"succeeded": "PAUSE_LINE", "aborted": "PAUSE_LINE"})
         StateMachine.add("PAUSE_LINE", states.Wait(5), {"succeeded": "MOVE_TO_POSE_Line_2"})
         StateMachine.add('MOVE_TO_POSE_Line_2',
-                              motion.MoveEndEffectorInLine_Storm(WAYPOINTS_2[-1], WAYPOINTS_2[0], use_force=False, use_gripper=False),
+                              motion.MoveEndEffectorInLineStorm(WAYPOINTS_2[-1], WAYPOINTS_2[0], use_force=False, use_gripper=False, use_curr_pose=False),
                               {"succeeded": "DROP_POSE", "aborted": "DROP_POSE"})
         
         StateMachine.add('DROP_POSE',
-                              motion.MoveEndEffectorToPose_Storm(pose_drop),
+                              motion.MoveEndEffectorToPoseStorm(pose_drop),
                               {"succeeded": "OPEN_GRIPPER", "aborted": "OPEN_GRIPPER"})
         StateMachine.add('OPEN_GRIPPER',
                               motion.OpenGripperStorm(),

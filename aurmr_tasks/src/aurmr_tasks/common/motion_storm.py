@@ -61,9 +61,13 @@ class MoveEndEffectorToPoseStorm(State):
             return "aborted"
 
 class MoveEndEffectorInLineStorm(State):
-    def __init__(self, start_pose=None, goal_pose=None, use_force=False, use_gripper=False):
+    def __init__(self, start_pose=None, goal_pose=None, use_force=False, use_gripper=False, use_curr_pose=False):
         State.__init__(self,outcomes=['succeeded', 'preempted', 'aborted'])
-        self.start_pose = start_pose
+        self.use_curr_pose = use_curr_pose
+        if self.use_curr_pose:
+            self.start_pose = None
+        else:
+            self.start_pose = start_pose
         self.goal_pose = goal_pose
         self.use_force = use_force
         self.use_gripper = use_gripper
@@ -87,7 +91,7 @@ class MoveEndEffectorInLineStorm(State):
         self.curr_pose_listener = rospy.Subscriber(self.CURRENT_POSE, PoseStamped, self.curr_pose_cb)
         
     def curr_pose_cb(self, msg: PoseStamped):
-        if self.start_pose is None:
+        if self.use_curr_pose:
             self.start_pose = msg
 
     def close_gripper(self, return_before_done=False):
