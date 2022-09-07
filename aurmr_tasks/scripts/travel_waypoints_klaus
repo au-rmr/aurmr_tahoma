@@ -60,19 +60,6 @@ def main():
 
     # read waypoints from text file
     #WAYPOINTS = read_waypoints_from_file('waypoints.txt')   
-    WAYPOINTS = [] 
-
-    # for i in range (3):
-    #     # for j in range(3):
-    #     pose_stamped = PoseStamped()
-    #     pose_stamped.header=std_msgs.msg.Header(frame_id='pod_base_link')
-    #     pose = Pose()
-    #     quat_obj = Quaternion(x=0, y=1, z=0, w=0)
-    #     pose.orientation = quat_obj
-    #     point = Point(x=-0.1, y=1.1+0.05*i, z=-0.1)
-    #     pose.position = point
-    #     pose_stamped.pose = pose
-    #     WAYPOINTS.append(pose_stamped) 
 
     WAYPOINTS_2 = [] 
     for i in range (5):
@@ -81,7 +68,7 @@ def main():
         pose = Pose()
         quat_obj = Quaternion(x=0, y=1, z=0, w=0)
         pose.orientation = quat_obj
-        point = Point(x=-0.1, y=1.13, z=-0.3-0.05*i)
+        point = Point(x=-0.1, y=1.23, z=-0.4-0.05*i)
         pose.position = point
         pose_stamped.pose = pose
         WAYPOINTS_2.append(pose_stamped) 
@@ -89,10 +76,11 @@ def main():
     pose_drop = PoseStamped()
     pose_stamped.header=std_msgs.msg.Header(frame_id='pod_base_link')
     pose = Pose()
-    # quat_obj = Quaternion(x=0, y=0, z=0.7071, w=-0.7071)
-    quat_obj = Quaternion(x=0, y=0, z=0, w=0)
+
+    quat_obj = Quaternion(x=0.7512804, y=0, z=0, w=0.6599831)
+    # quat_obj = Quaternion(x=0, y=0, z=0, w=0)
     pose.orientation = quat_obj
-    point = Point(x=0.6, y=0.8, z=0.0)
+    point = Point(x=0.6, y=0.95, z=0.1)
     pose.position = point
     pose_drop.pose = pose
 
@@ -109,6 +97,9 @@ def main():
         cf.inject_userdata_auto("LOAD_POSES_PICK", "poses_pick", WAYPOINTS_2[0:1])
         cf.inject_userdata_auto("LOAD_POSES_DROP", "poses_drop", WAYPOINTS_2[::-1])
         # Control the robot to pick pose
+        StateMachine.add('INIT_POSE',
+                              motion.MoveEndEffectorToPoseStorm(pose_drop),
+                              {"succeeded": "PICK_POSE", "aborted": "PICK_POSE"})
         StateMachine.add("PICK_POSE", cf.IterateList("poses_pick", "pose"),
                          {"repeat": "MOVE_TO_POSE_PICK", "done": "MOVE_TO_POSE_Line"})
         StateMachine.add('MOVE_TO_POSE_PICK',
@@ -128,9 +119,9 @@ def main():
         StateMachine.add('MOVE_TO_POSE_Line',
                               motion.MoveEndEffectorInLineStorm(WAYPOINTS_2[0], WAYPOINTS_2[-1], use_force=True, use_gripper=True),
                               {"succeeded": "PAUSE_LINE", "aborted": "PAUSE_LINE"})
-        StateMachine.add("PAUSE_LINE", states.Wait(5), {"succeeded": "MOVE_TO_POSE_Line_2"})
+        StateMachine.add("PAUSE_LINE", states.Wait(2), {"succeeded": "MOVE_TO_POSE_Line_2"})
         StateMachine.add('MOVE_TO_POSE_Line_2',
-                              motion.MoveEndEffectorInLineStorm(WAYPOINTS_2[-1], WAYPOINTS_2[0], use_force=False, use_gripper=False, use_curr_pose=False),
+                              motion.MoveEndEffectorInLineStorm(WAYPOINTS_2[-1], WAYPOINTS_2[0], use_force=False, use_gripper=False, use_curr_pose=True),
                               {"succeeded": "DROP_POSE", "aborted": "DROP_POSE"})
         
         StateMachine.add('DROP_POSE',
