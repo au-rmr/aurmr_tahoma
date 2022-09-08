@@ -44,17 +44,25 @@ class MoveEndEffectorToPoseStorm(State):
         # print("Start executing storm")
         # self.target_pose_visualizer.publish(pose)
         self.goal_finished = False
-
+        
+        time_out, steps = 25, 0.0
         while not(self.goal_finished):
             # print("The robot is still moving to: ", pose)
             self.goal_pub.publish(pose)
             self.AC_pub.publish(Bool(data=True))
             # print("Goal has not reached yet")
-            rospy.sleep(1)
+            rospy.sleep(0.1)
+            steps = steps + 0.1
+            if steps>time_out:
+                # self.AC_pub.publish(Bool(data=False))
+                rospy.loginfo("Time_out in normal movement")
+                # early_stop = True
+                break
         
         self.AC_pub.publish(Bool(data=False))
         # rospy.loginfo("Finish a waypoint", pose)
         success = self.goal_finished
+               
         if success:
             return "succeeded"
         else:
@@ -157,7 +165,7 @@ class MoveEndEffectorInLineStorm(State):
                     return "succeeded"
                 elif self.use_gripper and self.object_detected:
                     self.AC_pub.publish(Bool(data=False))
-                    rospy.loginfo("Stopping movement due to object detection")
+                    rospy.loginfo("Object detected")
                     return "succeeded"
                 rospy.sleep(0.05)
                 steps = steps + 0.05

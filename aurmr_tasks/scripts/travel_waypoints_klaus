@@ -68,7 +68,7 @@ def main():
         pose = Pose()
         quat_obj = Quaternion(x=0, y=1, z=0, w=0)
         pose.orientation = quat_obj
-        point = Point(x=-0.1, y=1.23, z=-0.4-0.05*i)
+        point = Point(x=-0.1, y=1.23, z=-0.4-0.06*i)
         pose.position = point
         pose_stamped.pose = pose
         WAYPOINTS_2.append(pose_stamped) 
