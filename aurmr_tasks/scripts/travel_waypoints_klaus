@@ -61,28 +61,44 @@ def main():
     # read waypoints from text file
     #WAYPOINTS = read_waypoints_from_file('waypoints.txt')   
 
-    WAYPOINTS_2 = [] 
-    for i in range (5):
-        pose_stamped = PoseStamped()
-        pose_stamped.header=std_msgs.msg.Header(frame_id='pod_base_link')
-        pose = Pose()
-        quat_obj = Quaternion(x=0, y=1, z=0, w=0)
-        pose.orientation = quat_obj
-        point = Point(x=-0.1, y=1.23, z=-0.4-0.06*i)
-        pose.position = point
-        pose_stamped.pose = pose
-        WAYPOINTS_2.append(pose_stamped) 
+    # WAYPOINTS_2 = [] 
+    # for i in range (5):
+    #     pose_stamped = PoseStamped()
+    #     pose_stamped.header=std_msgs.msg.Header(frame_id='pod_base_link')
+    #     pose = Pose()
+    #     quat_obj = Quaternion(x=0, y=1, z=0, w=0)
+    #     pose.orientation = quat_obj
+    #     point = Point(x=0.33, y=1.23, z=-0.4-0.06*i)
+    #     pose.position = point
+    #     pose_stamped.pose = pose
+    #     WAYPOINTS_2.append(pose_stamped) 
     
     pose_drop = PoseStamped()
-    pose_stamped.header=std_msgs.msg.Header(frame_id='pod_base_link')
-    pose = Pose()
+    pose_drop.header=std_msgs.msg.Header(frame_id='pod_base_link')
+    pose_drop.pose.orientation = Quaternion(x=0.7512804, y=0, z=0, w=0.6599831)
+    pose_drop.pose.position = Point(x=0.6, y=0.95, z=0.1)
 
-    quat_obj = Quaternion(x=0.7512804, y=0, z=0, w=0.6599831)
-    # quat_obj = Quaternion(x=0, y=0, z=0, w=0)
-    pose.orientation = quat_obj
-    point = Point(x=0.6, y=0.95, z=0.1)
-    pose.position = point
-    pose_drop.pose = pose
+    pose_pre_grasp = PoseStamped()
+    pose_pre_grasp.header=std_msgs.msg.Header(frame_id='pod_base_link')
+    pose_pre_grasp.pose.orientation = Quaternion(x=0, y=1, z=0, w=0)
+    pose_pre_grasp.pose.position = Point(x=0.33, y=1.23, z=-0.4)
+
+    pose_in_pod = PoseStamped()
+    pose_in_pod.header=std_msgs.msg.Header(frame_id='pod_base_link')
+    pose_in_pod.pose.orientation = Quaternion(x=0, y=1, z=0, w=0)
+    pose_in_pod.pose.position = Point(x=0.33, y=1.23, z=-0.64)
+
+
+    pose_pre_grasp_up = PoseStamped()
+    pose_pre_grasp_up.header=std_msgs.msg.Header(frame_id='pod_base_link')
+    pose_pre_grasp_up.pose.orientation = Quaternion(x=0, y=1, z=0, w=0)
+    pose_pre_grasp_up.pose.position = Point(x=0.33, y=1.26, z=-0.4)
+
+    pose_in_pod_up = PoseStamped()
+    pose_in_pod_up.header=std_msgs.msg.Header(frame_id='pod_base_link')
+    pose_in_pod_up.pose.orientation = Quaternion(x=0, y=1, z=0, w=0)
+    pose_in_pod_up.pose.position = Point(x=0.33, y=1.26, z=-0.64)
+
 
     # print(f"{len(WAYPOINTS)} of {len(WAYPOINTS)} waypoints are approachable")
     simulation = rospy.get_param("~simulation", False)
@@ -94,43 +110,35 @@ def main():
                            output_keys=[])
 
     with pick_sm:
-        cf.inject_userdata_auto("LOAD_POSES_PICK", "poses_pick", WAYPOINTS_2[0:1])
-        cf.inject_userdata_auto("LOAD_POSES_DROP", "poses_drop", WAYPOINTS_2[::-1])
+        # cf.inject_userdata_auto("LOAD_POSES_PICK", "poses_pick", WAYPOINTS_2[0:1])
+        # cf.inject_userdata_auto("LOAD_POSES_DROP", "poses_drop", WAYPOINTS_2[::-1])
         # Control the robot to pick pose
         StateMachine.add('INIT_POSE',
                               motion.MoveEndEffectorToPoseStorm(pose_drop),
-                              {"succeeded": "PICK_POSE", "aborted": "PICK_POSE"})
-        StateMachine.add("PICK_POSE", cf.IterateList("poses_pick", "pose"),
-                         {"repeat": "MOVE_TO_POSE_PICK", "done": "MOVE_TO_POSE_Line"})
-        StateMachine.add('MOVE_TO_POSE_PICK',
-                              motion.MoveEndEffectorToPoseStorm(),
-                              {"succeeded": "PAUSE_PICK", "aborted": "PAUSE_PICK"})
-        StateMachine.add("PAUSE_PICK", states.Wait(1), {"succeeded": "PICK_POSE"})
-
-        # Control the robot to drop pose
-        # StateMachine.add("PICK_POSE_2", cf.IterateList("poses_drop", "pose"),
-        #                  {"repeat": "MOVE_TO_POSE_PICK_2", "done": "MOVE_TO_POSE_Line"})
-        # StateMachine.add('MOVE_TO_POSE_PICK_2',
-        #                       motion.MoveEndEffectorToPose_Storm(),
-        #                       {"succeeded": "PAUSE_DROP", "aborted": "PAUSE_DROP"})
-        # StateMachine.add("PAUSE_DROP", states.Wait(1), {"succeeded": "PICK_POSE_2"})
-
-        # Testing linear movement fuction
-        StateMachine.add('MOVE_TO_POSE_Line',
-                              motion.MoveEndEffectorInLineStorm(WAYPOINTS_2[0], WAYPOINTS_2[-1], use_force=True, use_gripper=True),
-                              {"succeeded": "PAUSE_LINE", "aborted": "PAUSE_LINE"})
-        StateMachine.add("PAUSE_LINE", states.Wait(2), {"succeeded": "MOVE_TO_POSE_Line_2"})
-        StateMachine.add('MOVE_TO_POSE_Line_2',
-                              motion.MoveEndEffectorInLineStorm(WAYPOINTS_2[-1], WAYPOINTS_2[0], use_force=False, use_gripper=False, use_curr_pose=True),
+                              {"succeeded": "MOVE_TO_PRE_GRASP", "aborted": "MOVE_TO_PRE_GRASP"})
+        # StateMachine.add("PICK_POSE", cf.IterateList("poses_pick", "pose"),
+        #                  {"repeat": "MOVE_TO_POSE_PICK", "done": "MOVE_TO_POSE_Line"})
+        StateMachine.add('MOVE_TO_PRE_GRASP',
+                              motion.MoveEndEffectorToPoseStorm(pose_pre_grasp),
+                              {"succeeded": "PAUSE_00", "aborted": "PAUSE_00"})
+        StateMachine.add("PAUSE_00", states.Wait(1), {"succeeded": "MOVE_INTO_POD"})
+        StateMachine.add('MOVE_INTO_POD',
+                              motion.MoveEndEffectorInLineStorm(pose_pre_grasp, pose_in_pod, use_force=True, use_gripper=True),
+                              {"succeeded": "PAUSE_01", "aborted": "PAUSE_01"})
+        StateMachine.add("PAUSE_01", states.Wait(1), {"succeeded": "MOVE_UP_POD"})
+        StateMachine.add('MOVE_UP_POD',
+                              motion.MoveEndEffectorInLineStorm(pose_in_pod, pose_in_pod_up, use_force=False, use_gripper=False, use_curr_pose=True),
+                              {"succeeded": "PAUSE_02", "aborted": "PAUSE_02"})
+        StateMachine.add("PAUSE_02", states.Wait(1), {"succeeded": "MOVE_OUT_POD"})
+        StateMachine.add('MOVE_OUT_POD',
+                              motion.MoveEndEffectorInLineStorm(pose_in_pod_up, pose_pre_grasp_up, use_force=False, use_gripper=False, use_curr_pose=True),
                               {"succeeded": "DROP_POSE", "aborted": "DROP_POSE"})
-        
         StateMachine.add('DROP_POSE',
                               motion.MoveEndEffectorToPoseStorm(pose_drop),
                               {"succeeded": "OPEN_GRIPPER", "aborted": "OPEN_GRIPPER"})
         StateMachine.add('OPEN_GRIPPER',
                               motion.OpenGripperStorm(),
                               {"succeeded": "succeeded", "aborted": "aborted"})                      
-        # StateMachine.add_auto("POKE_BIN", motion.MoveEndEffectorInLineInOut(robot), ['succeeded', 'preempted', 'aborted'])
 
 
     # Create top state machine
