@@ -1,5 +1,5 @@
 import cv2
-from aurmr_perception.srv import CaptureObject, RemoveObject, GetObjectPoints, ResetBin
+from aurmr_perception.srv import CaptureObject, RemoveObject, GetObjectPoints, ResetBin, LoadDataset
 import numpy as np
 import ros_numpy
 import rospy
@@ -24,6 +24,8 @@ class PodPerceptionROS:
         self.trigger_remove = rospy.Service('~remove_object', RemoveObject, self.remove_object_callback)
         self.trigger_retrieve = rospy.Service('~get_object_points', GetObjectPoints, self.get_object_callback)
         self.trigger_reset = rospy.Service('~reset_bin', ResetBin, self.reset_callback)
+	self.trigger_load = rospy.Service('~load_dataset', LoadDataset, self.load_dataset)
+
 
         self.camera_depth_subscriber = message_filters.Subscriber(f'/{self.camera_name}/aligned_depth_to_color/image_raw', Image)
         self.camera_rgb_subscriber = message_filters.Subscriber(f'/{self.camera_name}/color/image_raw', Image)
@@ -37,6 +39,26 @@ class PodPerceptionROS:
         self.rgb_image = None
         self.depth_image = None
         self.camera_info = None
+
+    def load_dataset(self, request):
+        from aurmr_dataset.io import DatasetReader
+        dataset = DatasetReader.load()
+
+        K  = np.asarray(dataset.camera_info['depth_to_rgb']['K'] ).reshape((3, 3))
+
+        first_entry = dataset.entries[0]
+
+        self.net = SegNet(init_depth=first_entry.depth_image, init_info=intrinsics_3x3)
+        self.model.net = self.net
+
+        for entry in dataset.entries[1:]:
+            rgb_image = entry.rgb_image 
+            depth_image = entry.depth_image
+            for i in entry.inventory()
+                pass
+
+        return {"success": True, "message": f"load dataset {dataset.path}"}
+
 
     def capture_object_callback(self, request):
         if not request.bin_id or not request.object_id:
