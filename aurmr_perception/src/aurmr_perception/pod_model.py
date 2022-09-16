@@ -69,6 +69,54 @@ class PodPerceptionROS:
             subprocess.call(['mplayer', audio_file], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except:
             pass
+    
+    def load_dataset(request):
+        from aurmr_dataset.io import DatasetReader
+        ds_reader = DatasetReader(request.path)
+        dataset = ds_reader.load()
+        K = np.asarray(dataset.camera_info['depth_to_rgb']['K']).reshape(3,3)
+        first_entry = dataset.entries[0]
+
+        net = SegNet(init_depth=first_entry.depth_image)
+
+        init_depth = first_entry.depth_image
+        normalized_initdepth = init_depth/np.max(init_depth)
+
+        bin_id_mapping = {"P-9-H051H030" : "1H",
+            "P-6-H835J238" : "1G",
+            'P-8-H758H650' : '1F',
+            'P-8-H588H170' : '1E',
+            'P-9-H051H031' : '2H',
+            'P-6-H835J239' : '2G',
+            'P-8-H758H651' : '2F',
+            'P-8-H588H171' : '2E',
+            'P-9-H051H032' : '3H',
+            'P-6-H835J240' : '3G',
+            'P-8-H758H652' : '3F',
+            'P-8-H588H172' : '3E',
+            'P-9-H051H033' : '4H',
+            'P-6-H835J241' : '4G',
+            'P-8-H758H653' : '4F',
+            'P-8-H588H173' : '4E',}
+        
+        pass 
+        for idx, entry in enumerate(dataset.entries[1:]):
+            rgb = entry.rgb_image
+            depth = entry.depth_image
+            pcd = entry.np_xyz_points
+            pcd = np.nan_to_num(pcd)
+            for k, v in entry.inventory.items():
+                bin_id = bin_id_mapping[v['bin_id']]
+                for bin_id in ['3F', '3D']:
+                    cur_bound = bin_bounds[bin_id]
+                    cur_rgb = rgb[cur_bound[0]:cur_bound[1], cur_bound[2]:cur_bound[3]]
+                    cur_depth = depth[cur_bound[0]:cur_bound[1], cur_bound[2]:cur_bound[3]]
+                    normalized_curdepth = cur_depth/np.max(cur_depth)
+                    cur_pcd = pcd[cur_bound[0]:cur_bound[1], cur_bound[2]:cur_bound[3]]
+                    cur_init_depth = init_depth[cur_bound[0]:cur_bound[1], cur_bound[2]:cur_bound[3]]
+                    scene = {"rgb" : rgb, 'depth' : pcd}
+                    net.bins[bin_id].bg_mask = np.abs(cur_depth - cur_init_depth) < net.bins[bin_id].config['min_bg_change']
+                    preds = net.segment(bin_id, scene=scene)
 
     def capture_object_callback(self, request):
         if not request.bin_id or not request.object_id:
