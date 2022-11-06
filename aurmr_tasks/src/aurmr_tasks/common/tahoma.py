@@ -123,6 +123,7 @@ class Tahoma:
         self._gripper_client = actionlib.SimpleActionClient(GRIPPER_ACTION_SERVER, GripperCommandAction)
         server_reached = self._joint_traj_client.wait_for_server(rospy.Duration(10))
         if not server_reached:
+            print('Unable to connect to arm action server. Timeout exceeded. Exiting...')
             rospy.signal_shutdown('Unable to connect to arm action server. Timeout exceeded.')
             sys.exit()
         self._move_group_client = actionlib.SimpleActionClient(
