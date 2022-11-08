@@ -213,6 +213,8 @@ def main():
     sis = smach_ros.IntrospectionServer('demo_sm', demo_sm, '/pick')
     sis.start()
 
+    print("State machine introspection server started...")
+
     outcome = demo_sm.execute()
 
     rospy.spin()
