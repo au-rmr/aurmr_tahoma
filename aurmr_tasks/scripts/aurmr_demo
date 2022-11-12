@@ -55,6 +55,19 @@ class PublishStatus(State):
         rospy.sleep(self.wait_time)
         return "succeeded"
 
+# retries up to three times upon pick failure
+class TryAgain(State):
+  def __init__(self):
+    State.__init__(self, outcomes=['succeeded', 'aborted'])
+    self.retries = 0
+
+  def execute(self, userdata):
+    if self.retries < 3:
+      self.retries += 1
+      return 'succeeded'
+
+    return 'aborted'
+
 class RecordTime(State):
     def __init__(self):
         State.__init__(self, outcomes=['succeeded'], output_keys=["start_time"])
@@ -173,11 +186,12 @@ def main():
             StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "drop_hide"), ["succeeded", "aborted"])
             StateMachine.add_auto("PICTURE_WAIT", Wait(2), ["succeeded"])
             StateMachine.add("CHECK_FOR_GRIPPER_ITEM", motion.CheckGripperItem(robot), 
-                            {"item_detected": "POST_PICK_UPDATE_MASKS", "no_item_detected": "UPDATE_BIN_MASKS"})
+                            {"item_detected": "POST_PICK_UPDATE_MASKS", "no_item_detected": "UPDATE_BIN_MASKS_ON_FAILURE"})
             StateMachine.add("POST_PICK_UPDATE_MASKS", perception.PickObject(),
                             {"succeeded": "PUBLISH_PICK_STATUS", "aborted": "PUBLISH_PICK_STATUS", "preempted": "PUBLISH_PICK_STATUS"})
-            StateMachine.add("UPDATE_BIN_MASKS", perception.UpdateBin(),
+            StateMachine.add("UPDATE_BIN_MASKS_ON_FAILURE", perception.UpdateBin(),
                             {"succeeded": "PUBLISH_PICK_STATUS", "aborted": "PUBLISH_PICK_STATUS", "preempted": "PUBLISH_PICK_STATUS"})
+            StateMachine.add('TRY_AGAIN', TryAgain(), {'succeeded': 'CLEAR_SCENE_PREMOVE', 'aborted': 'PUBLISH_PICK_STATUS'})
             StateMachine.add_auto("PUBLISH_PICK_STATUS", PublishStatus(status_pub), ["succeeded"])
             StateMachine.add("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot, return_before_done=True), {"succeeded": "done", "aborted": "done", "preempted": "done"})
 
