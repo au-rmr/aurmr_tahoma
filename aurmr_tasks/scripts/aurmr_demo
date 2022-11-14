@@ -63,13 +63,23 @@ class InitializeRetryCount(State):
         userdata['retries'] = 0
         return 'succeeded'
 
-# retries up to three times upon pick failure
+class Debug(State):
+    def __init__(self):
+        State.__init__(self, outcomes=['succeeded'], input_keys=['retries', 'status', 'target_bin_id', 'target_object_id'])
+
+    def execute(self, userdata):
+        print('userdata: ')
+        print(userdata)
+        input('press any key to continue...')
+        return 'succeeded'
+
+# retries up to two times upon pick failure
 class TryAgain(State):
   def __init__(self):
     State.__init__(self, outcomes=['succeeded', 'aborted'], input_keys=['retries'], output_keys=['retries'])
 
   def execute(self, userdata):
-    if userdata['retries'] < 3:
+    if userdata['retries'] < 2:
       userdata['retries'] += 1
       return 'succeeded'
 
@@ -202,7 +212,7 @@ def main():
             StateMachine.add('TRY_AGAIN', TryAgain(), {'succeeded': 'CLEAR_SCENE_PREMOVE', 'aborted': 'PUBLISH_PICK_STATUS'})
             StateMachine.add_auto("PUBLISH_PICK_STATUS", PublishStatus(status_pub), ["succeeded"])
             StateMachine.add("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot, return_before_done=True), {"succeeded": "done", "aborted": "done", "preempted": "done"})
-            StateMachine.add('DEBUG', Wait(500), {'succeeded': 'done'})
+            StateMachine.add('DEBUG', Debug(), {'succeeded': 'done'})
 
 
         with stow_sm:   
