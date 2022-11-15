@@ -70,6 +70,10 @@ class Debug(State):
     def execute(self, userdata):
         print('userdata: ')
         print(userdata)
+        print(f'retries: {userdata["retries"]}')
+        print(f'status: { userdata["status"] }')
+        print(f'target_bin_id: { userdata["target_bin_id"] }')
+        print(f'target_object_id: { userdata["target_object_id"] }')
         input('press any key to continue...')
         return 'succeeded'
 
@@ -201,7 +205,7 @@ def main():
             StateMachine.add_auto("CLEAR_SCENE_POSTGRASP", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_POSTGRASP", motion.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX", motion.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
-            StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "drop_hide"), {'succeeded': 'CHECK_FOR_GRIPPER_ITEM', 'aborted': 'DEBUG', 'preempted': 'DEBUG'})
+            StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "drop_hide"), {'succeeded': 'CHECK_FOR_GRIPPER_ITEM', 'aborted': 'DEBUG'})
             # StateMachine.add_auto("PICTURE_WAIT", Wait(2), ["succeeded"])
             StateMachine.add("CHECK_FOR_GRIPPER_ITEM", motion.CheckGripperItem(robot), 
                             {"item_detected": "POST_PICK_UPDATE_MASKS", "no_item_detected": "UPDATE_BIN_MASKS_ON_FAILURE"})
@@ -213,6 +217,7 @@ def main():
             StateMachine.add_auto("PUBLISH_PICK_STATUS", PublishStatus(status_pub), ["succeeded"])
             StateMachine.add("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot, return_before_done=True), {"succeeded": "done", "aborted": "DEBUG", "preempted": "DEBUG"})
             StateMachine.add('DEBUG', Debug(), {'succeeded': 'done'})
+            StateMachine.add("MOVE_TO_NEUTRAL", motion.MoveToJointAngles(robot, "neutral"),  {'succeeded': 'done', 'aborted': 'done'})
 
 
         with stow_sm:   
@@ -232,7 +237,7 @@ def main():
 
 
         StateMachine.add_auto("CLEAR_SCENE", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
-        StateMachine.add_auto("SETUP_COLLISION_SCENE", motion.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
+        # StateMachine.add_auto("SETUP_COLLISION_SCENE", motion.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
         StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "drop_hide"),  ["succeeded", "aborted"])
         StateMachine.add_auto("CHECK_GRIPPER_CLOSE", motion.CloseGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
         StateMachine.add_auto("CHECK_GRIPPER_OPEN", motion.OpenGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])

@@ -25,6 +25,14 @@
         <joint name="arm_wrist_2_joint" value="-5.264"/>
         <joint name="arm_wrist_3_joint" value="3.14"/>
     </group_state>
+    <group_state name="neutral" group="manipulator">
+        <joint name="arm_elbow_joint" value="-2.15600522"/>
+        <joint name="arm_shoulder_lift_joint" value="-1.0023426"/>
+        <joint name="arm_shoulder_pan_joint" value="-1.701347"/>
+        <joint name="arm_wrist_1_joint" value="0.03473205"/>
+        <joint name="arm_wrist_2_joint" value="-4.50347307"/>
+        <joint name="arm_wrist_3_joint" value="4.80942929"/>
+    </group_state>
     <!-- Note that this is a singularity. Use this if you need to 0 joints only -->
     <group_state name="straight" group="manipulator">
         <joint name="arm_elbow_joint" value="0"/>
