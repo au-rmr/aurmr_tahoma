@@ -216,7 +216,7 @@ def main():
             StateMachine.add('TRY_AGAIN', TryAgain(), {'succeeded': 'CLEAR_SCENE_PREMOVE', 'aborted': 'PUBLISH_PICK_STATUS'})
             StateMachine.add_auto("PUBLISH_PICK_STATUS", PublishStatus(status_pub), ["succeeded"])
             StateMachine.add("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot, return_before_done=True), {"succeeded": "done", "aborted": "DEBUG", "preempted": "DEBUG"})
-            StateMachine.add('DEBUG', Debug(), {'succeeded': 'done'})
+            StateMachine.add('DEBUG', Debug(), {'succeeded': 'MOVE_TO_NEUTRAL'})
             StateMachine.add("MOVE_TO_NEUTRAL", motion.MoveToJointAngles(robot, "neutral"),  {'succeeded': 'done', 'aborted': 'done'})
 
 
