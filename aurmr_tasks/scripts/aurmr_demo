@@ -68,6 +68,7 @@ class Debug(State):
         State.__init__(self, outcomes=['succeeded'], input_keys=['retries', 'status', 'target_bin_id', 'target_object_id'])
 
     def execute(self, userdata):
+        print('DEBUGGING...SOME STATE MUST HAVE FAILED')
         print('userdata: ')
         print(userdata)
         print(f'retries: {userdata["retries"]}')
@@ -111,6 +112,9 @@ class WaitForPickStow(State):
         self.request = None
         self.success = False
 
+        self.retries = 3
+        self.item_statuses = {}
+
     def stow_cb(self, request: StowRequest):
         rospy.loginfo("STOW REQUEST: " + str(request))
         self.request = request
@@ -121,13 +125,17 @@ class WaitForPickStow(State):
         return {"success": self.success}
 
     def multiple_pick_cb(self, requests: MultiplePickRequest):
-        for i in range(len(requests.bin_ids)):
-            r = PickRequest()
-            r.object_id = requests.object_ids[i]
-            r.bin_id = requests.bin_ids[i]
-            if self.pick_cb(r).get('success', None):
-                # ..todo report success
-                pass
+        for i in range(self.retries):
+            for i in range(len(requests.bin_ids)):
+                r = PickRequest()
+                r.object_id = requests.object_ids[i]
+                r.bin_id = requests.bin_ids[i]
+                if (r.object_id not in self.item_statuses or self.item_statuses[r.object_id] == 'failure') and self.pick_cb(r).get('success', None):
+                    # ..todo report success
+                    self.item_statuses[r.object_id] = 'success'
+                    pass
+                else:
+                    self.item_statuses[r.object_id] = 'failure'
         return True
 
     def pick_cb(self, request: PickRequest):
@@ -183,7 +191,6 @@ def main():
 
 
     with demo_sm:
-
         with pick_sm:
             StateMachine.add_auto("RECORD_TIME", RecordTime(), ["succeeded"])
             cf.splat_auto("SPLAT_PICK", "request", ["target_bin_id", "target_object_id"])
@@ -216,9 +223,9 @@ def main():
             StateMachine.add('TRY_AGAIN', TryAgain(), {'succeeded': 'CLEAR_SCENE_PREMOVE', 'aborted': 'PUBLISH_PICK_STATUS'})
             StateMachine.add_auto("PUBLISH_PICK_STATUS", PublishStatus(status_pub), ["succeeded"])
             StateMachine.add("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot, return_before_done=True), {"succeeded": "done", "aborted": "DEBUG", "preempted": "DEBUG"})
-            StateMachine.add('DEBUG', Debug(), {'succeeded': 'MOVE_TO_NEUTRAL'})
-            StateMachine.add("MOVE_TO_NEUTRAL", motion.MoveToJointAngles(robot, "neutral"),  {'succeeded': 'done', 'aborted': 'done'})
-
+            StateMachine.add('DEBUG', Debug(), {'succeeded': 'MOVE_BACKWARDS'})
+            # StateMachine.add("MOVE_TO_NEUTRAL", motion.MoveToJointAngles(robot, "neutral"),  {'succeeded': 'done', 'aborted': 'done'})
+            StateMachine.add('MOVE_BACKWARDS', motion.robust_move_to_offset(robot, (0, 0, -0.4)), {'succeeded': 'done', 'aborted': 'done', 'preempted': 'done'})
 
         with stow_sm:   
             cf.splat_auto("SPLAT_STOW", "request", ["target_bin_id", "target_object_id"])
