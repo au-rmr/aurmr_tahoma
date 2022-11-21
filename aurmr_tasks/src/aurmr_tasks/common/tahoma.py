@@ -581,3 +581,6 @@ class Tahoma:
     def cancel_all_goals(self):
         self._move_group_client.cancel_all_goals()
         self._joint_traj_client.cancel_all_goals()
+
+    def get_joint_angles(self):
+        return self.move_group.get_current_joint_values()

@@ -251,6 +251,8 @@ class MoveEndEffectorToPose(State):
             pose = self.default_pose
         else:
             pose = userdata["pose"]
+            rospy.logfatal('logging pregrasp pose')
+            rospy.logfatal(pose)
 
         self.target_pose_visualizer.publish(pose)
         success = self.robot.move_to_pose(
@@ -262,6 +264,9 @@ class MoveEndEffectorToPose(State):
                           replan=True,
                           replan_attempts=8,
                           tolerance=0.01)
+        # print the joint angles of the robot
+        rospy.logfatal('getting joint angles')
+        rospy.logfatal(self.robot.get_joint_angles())
         if success:
             return "succeeded"
         else:

@@ -172,6 +172,7 @@ class GetGraspPose(State):
 
         if not points_response.success:
             userdata["status"] = "pass"
+            rospy.logerr('points response failed')
             return "aborted"
 
         grasp_response = self.get_grasp(points=points_response.points,
@@ -180,6 +181,7 @@ class GetGraspPose(State):
 
         if not grasp_response.success:
             userdata["status"] = "pass"
+            rospy.logerr('grasp response failed')
             return "aborted"
 
         # NOTE: No extra filtering or ranking on our part. Just take the first one
