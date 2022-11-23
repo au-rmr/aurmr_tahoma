@@ -50,6 +50,14 @@
         <joint name="arm_wrist_2_joint" value="-1.56556"/>
         <joint name="arm_wrist_3_joint" value="0"/>
     </group_state>
+    <group_state name="pre_bin_1f" group="manipulator">
+        <joint name="arm_elbow_joint" value="-1.91986"/>
+        <joint name="arm_shoulder_lift_joint" value="-1.71042"/>
+        <joint name="arm_shoulder_pan_joint" value="-1.13446"/>
+        <joint name="arm_wrist_1_joint" value="-0.261799"/>
+        <joint name="arm_wrist_2_joint" value="1.95477"/>
+        <joint name="arm_wrist_3_joint" value="-1.51844"/>
+    </group_state>
     <group_state name="hide_left" group="manipulator">
         <joint name="arm_elbow_joint" value="1.47"/>
         <joint name="arm_shoulder_lift_joint" value="-3.16"/>
