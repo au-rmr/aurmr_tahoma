@@ -452,7 +452,7 @@ class ReleaseGripperIfNoItem(State):
         self.robot = robot
 
     def execute(self, ud):
-        if self.robot.check_gripper_item():
+        if not self.robot.check_gripper_item():
             self.robot.open_gripper(return_before_done=True)
         return 'succeeded'
 
