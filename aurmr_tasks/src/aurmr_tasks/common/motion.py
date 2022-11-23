@@ -225,6 +225,7 @@ class AdjustJointPositionsIfBin1F(State):
     def execute(self, ud):
         if ud['target_bin_id'] == '1F':
             success = self.robot.move_to_joint_angles(self.target_position)
+            input('waiting for input!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             return 'succeeded' if success else 'aborted'
         else:
             return 'pass'
@@ -275,6 +276,8 @@ class MoveEndEffectorToPose(State):
                           replan=True,
                           replan_attempts=8,
                           tolerance=0.01)
+
+        input('waiting for input!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
         if success:
             return "succeeded"
         else:
