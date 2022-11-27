@@ -51,12 +51,12 @@
         <joint name="arm_wrist_3_joint" value="0"/>
     </group_state>
     <!--group_state name="pre_bin_1f" group="manipulator">
-        <joint name="arm_shoulder_pan_joint" value="-2.40855"/>
-        <joint name="arm_shoulder_lift_joint" value="-1.41372"/>
-        <joint name="arm_elbow_joint" value="-1.44862"/>
-        <joint name="arm_wrist_1_joint" value="-0.226893"/>
-        <joint name="arm_wrist_2_joint" value="2.44346"/>
-        <joint name="arm_wrist_3_joint" value="-1.48353"/>
+        <joint name="arm_shoulder_pan_joint" value="-2.14675"/>
+        <joint name="arm_shoulder_lift_joint" value="-1.64061"/>
+        <joint name="arm_elbow_joint" value="-0.890118"/>
+        <joint name="arm_wrist_1_joint" value="2.58309"/>
+        <joint name="arm_wrist_2_joint" value="-2.18166"/>
+        <joint name="arm_wrist_3_joint" value="-1.62316"/>
     </group_state-->
     <!--group_state name="pre_bin_1f" group="manipulator">
         <joint name="arm_shoulder_pan_joint" value="-2.3911"/>
@@ -66,13 +66,32 @@
         <joint name="arm_wrist_2_joint" value="2.42601"/>
         <joint name="arm_wrist_3_joint" value="-1.51844"/>
     </group_state-->
+    <!--This pose goes inside 1F bin, but it's not a good init planning pose for planner-->
+    <!--group_state name="pre_bin_1f" group="manipulator">
+        <joint name="arm_shoulder_pan_joint" value="0.3228859"/>
+        <joint name="arm_shoulder_lift_joint" value="-1.59174"/>
+        <joint name="arm_elbow_joint" value="1.56207"/>
+        <joint name="arm_wrist_1_joint" value="-3.10669"/>
+        <joint name="arm_wrist_2_joint" value="-0.3228859"/>
+        <joint name="arm_wrist_3_joint" value="1.596976"/>
+    </group_state-->
+    <!--ok pose-->
+    <!--group_state name="pre_bin_1f" group="manipulator">
+        <joint name="arm_shoulder_pan_joint" value="0.3071779"/>
+        <joint name="arm_shoulder_lift_joint" value="-0.314159"/>
+        <joint name="arm_elbow_joint" value="-1.55334"/>
+        <joint name="arm_wrist_1_joint" value="-1.27409"/>
+        <joint name="arm_wrist_2_joint" value="-0.296706"/>
+        <joint name="arm_wrist_3_joint" value="1.5708"/>
+    </group_state-->
+    <!--back up pose-->
     <group_state name="pre_bin_1f" group="manipulator">
-        <joint name="arm_shoulder_pan_joint" value="-2.3911"/>
-        <joint name="arm_shoulder_lift_joint" value="-1.37881"/>
-        <joint name="arm_elbow_joint" value="-1.76278"/>
-        <joint name="arm_wrist_1_joint" value="-0.0174533"/>
-        <joint name="arm_wrist_2_joint" value="2.42601"/>
-        <joint name="arm_wrist_3_joint" value="-1.51844"/>
+        <joint name="arm_shoulder_pan_joint" value="0.15708"/>
+        <joint name="arm_shoulder_lift_joint" value="-0.349066"/>
+        <joint name="arm_elbow_joint" value="-1.62316"/>
+        <joint name="arm_wrist_1_joint" value="-1.15192"/>
+        <joint name="arm_wrist_2_joint" value="-0.15708"/>
+        <joint name="arm_wrist_3_joint" value="1.5708"/>
     </group_state>
     <group_state name="hide_left" group="manipulator">
         <joint name="arm_elbow_joint" value="1.47"/>
