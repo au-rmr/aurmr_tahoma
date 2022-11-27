@@ -23,6 +23,9 @@ from aurmr_tasks.srv import MultiplePickRequest
 from aurmr_tasks.msg import PickStatus
 from aurmr_perception.util import vec_to_quat_msg, I_QUAT
 from aurmr_tasks.common.states import Wait
+
+from pytimedinput import timedKey
+
 TARGET_BIN_ID = "001"
 TARGET_OBJECT_ID = "XYZ"
 
@@ -129,6 +132,17 @@ class WaitForPickStow(State):
         else:
             return "done"
 
+class UserPromptForRetry(State):
+    def __init__(self):
+        State.__init__(self, outcomes=['retry', 'continue'])
+    
+    def execute(self, userdata):
+        user_text, timed_out = timedKey('[Timing out in 10 seconds...] Grasp failed. Retry? (y/n) ', allowCharacters='yn', timeout=10)
+        if not timed_out and user_text == 'y':
+            return 'retry'
+        else:
+            return 'continue'
+
 def main():
     rospy.init_node("aurmr_demo")
     pose_pub_test = rospy.Publisher("/tote_drop", PoseStamped, queue_size=5, latch=True)
@@ -179,7 +193,8 @@ def main():
             StateMachine.add("POST_PICK_UPDATE_MASKS", perception.PickObject(),
                             {"succeeded": "PUBLISH_PICK_STATUS", "aborted": "PUBLISH_PICK_STATUS", "preempted": "PUBLISH_PICK_STATUS"})
             StateMachine.add("UPDATE_BIN_MASKS", perception.UpdateBin(),
-                            {"succeeded": "PUBLISH_PICK_STATUS", "aborted": "PUBLISH_PICK_STATUS", "preempted": "PUBLISH_PICK_STATUS"})
+                            {"succeeded": "USER_PROMPT_FOR_RETRY", "aborted": "USER_PROMPT_FOR_RETRY", "preempted": "USER_PROMPT_FOR_RETRY"})
+            StateMachine.add('USER_PROMPT_FOR_RETRY', UserPromptForRetry(), {'retry': 'CLEAR_SCENE_PREMOVE', 'continue': 'PUBLISH_PICK_STATUS'})
             StateMachine.add_auto("PUBLISH_PICK_STATUS", PublishStatus(status_pub), ["succeeded"])
             StateMachine.add("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot, return_before_done=True), {"succeeded": "done", "aborted": "done", "preempted": "done"})
 
