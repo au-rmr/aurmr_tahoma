@@ -143,6 +143,8 @@ class UserPromptForRetry(State):
         else:
             return 'continue'
 
+
+
 def main():
     rospy.init_node("aurmr_demo")
     pose_pub_test = rospy.Publisher("/tote_drop", PoseStamped, queue_size=5, latch=True)
