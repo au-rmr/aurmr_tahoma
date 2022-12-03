@@ -14,6 +14,10 @@ from skimage.measure import label as lab
 from scipy.optimize import linear_sum_assignment
 
 from matplotlib.widgets import RectangleSelector
+import sys
+
+
+
 rectangle = None
 
 UOC_PATH = '/home/aurmr/workspaces/thomas_ws/src/aurmr_tahoma/aurmr_unseen_object_clustering/src/aurmr_unseen_object_clustering/'
@@ -204,7 +208,7 @@ class Bin:
 class SegNet:
     def __init__(self, config=def_config, init_depth=None, init_info=None, mask=None):
         # init_depth[:,:][np.isnan(init_depth)] = 0
-
+        
         # Initialize the initial network (and refinement network if it exists)
         assert(config['cfg_init'] is not None and config['cfg_ref'] is not None)
         cfg_from_file(config['cfg_init'])
@@ -215,7 +219,7 @@ class SegNet:
         cfg.gpu_id = 0
         cfg.device = torch.device('cuda:{:d}'.format(cfg['gpu_id']))
         cfg.instance_id = 0
-        num_classes = 2
+        num_classes = 2 
         cfg.MODE = 'TEST'
   
         self.config = config
@@ -223,21 +227,22 @@ class SegNet:
         self.const = 0
   
         # Loads the network for the initial embedding
-        network_data = torch.load(config['model_init'])
-        self.network = networks.__dict__[config['network_name']](num_classes, cfg.TRAIN.NUM_UNITS, network_data).cuda(device=cfg.device)
-        self.network = torch.nn.DataParallel(self.network, device_ids=[cfg.gpu_id]).cuda(device=cfg.device)
+        # network_data = torch.load(config['model_init'])
+        # self.network = networks.__dict__[config['network_name']](num_classes, cfg.TRAIN.NUM_UNITS, network_data).cuda(device=cfg.device)
+        # self.network = torch.nn.DataParallel(self.network, device_ids=[cfg.gpu_id]).cuda(device=cfg.device)
         cudnn.benchmark = True
-        self.network.eval()
+        # self.network.eval()
 
         # Loads the refinement network
         cfg_from_file(config['cfg_ref'])
         if len(cfg.TEST.CLASSES) == 0:
             cfg.TEST.CLASSES = cfg.TRAIN.CLASSES
         if config['model_ref'] is not None:
-            network_data_crop = torch.load(config['model_ref'])
-            self.network_crop = networks.__dict__[config['network_name']](num_classes, cfg.TRAIN.NUM_UNITS, network_data_crop).cuda(device=cfg.device)
-            self.network_crop = torch.nn.DataParallel(self.network_crop, device_ids=[cfg.gpu_id]).cuda(device=cfg.device)
-            self.network_crop.eval()
+            # network_data_crop = torch.load(config['model_ref'])
+            # self.network_crop = networks.__dict__[config['network_name']](num_classes, cfg.TRAIN.NUM_UNITS, network_data_crop).cuda(device=cfg.device)
+            # self.network_crop = torch.nn.DataParallel(self.network_crop, device_ids=[cfg.gpu_id]).cuda(device=cfg.device)
+            # self.network_crop.eval()
+            pass
         else:
             self.network_crop = None
  
@@ -268,6 +273,15 @@ class SegNet:
 
         # List of all bins to ignore
         self.bad_bins = []
+
+        ######################################################################################################
+        print("init pre")
+        sys.path.append("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/UIE_main/mask2former_frame")
+        print("post sys")
+        from demo.segnetv2_demo import SegnetV2
+        print("post import")
+        self.object = SegnetV2()
+        print("post object call")
   
    # Computes the point cloud from a depth array and camera intrinsics
     def compute_xyz(self, depth_img, intrinsic):
@@ -300,32 +314,22 @@ class SegNet:
 
         if bin_id == 'syn':
             rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-
-        # plt.imshow(rgb)
-        # plt.title("RGB")
-        # plt.show()
   
         H, W, _ = rgb.shape
   
         # Crops the image to the current bin
         xyz = xyz[bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], :]
         rgb = rgb[bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3]
-
-
-        
-        # plt.imshow(rgb)
-        # plt.title("RGB Crop")
-        # plt.show()
        
-        rgb = rgb.astype(np.float32)
+        # rgb = rgb.astype(np.float32)
 
-        rgb_n = rgb.copy()
+        # rgb_n = rgb.copy()
   
         # Standardize image and point cloud
-        if self.config['rgb_is_standardized']:
-            rgb[..., 0] = (rgb[..., 0] - np.mean(rgb[...,0])) / np.std(rgb[...,0])
-            rgb[..., 1] = (rgb[..., 1] - np.mean(rgb[...,1])) / np.std(rgb[...,1])
-            rgb[..., 2] = (rgb[..., 2] - np.mean(rgb[...,2])) / np.std(rgb[...,2])
+        # if self.config['rgb_is_standardized']:
+        #     rgb[..., 0] = (rgb[..., 0] - np.mean(rgb[...,0])) / np.std(rgb[...,0])
+        #     rgb[..., 1] = (rgb[..., 1] - np.mean(rgb[...,1])) / np.std(rgb[...,1])
+        #     rgb[..., 2] = (rgb[..., 2] - np.mean(rgb[...,2])) / np.std(rgb[...,2])
         if self.config['xyz_is_standardized']:
             if bin_id == 'syn':
                 mask = xyz[...,2] > .05
@@ -341,81 +345,21 @@ class SegNet:
             sd_x, sd_y = self.config['sd_loc']
             sd = xyz[sd_x, sd_y, 2]
        
-        if self.config['resize']:
-            rgb = cv2.resize(rgb, (256, 256), interpolation=cv2.INTER_AREA)
-            xyz = cv2.resize(xyz, (256, 256), interpolation=cv2.INTER_AREA)
-            bg_mask_now = cv2.resize(bin.bg_mask.astype(np.uint8), (256, 256), interpolation=cv2.INTER_AREA)
-  
-        # Turn everything into tensors and reshape as needed
-        im_tensor = torch.from_numpy(rgb) / 255.0
-        image_blob = im_tensor.permute(2, 0, 1)
-        sample = {'image_color': image_blob.unsqueeze(0)}
-  
-        depth_blob = torch.from_numpy(xyz).permute(2, 0, 1)
-        sample['depth'] = depth_blob.unsqueeze(0)
-  
-        #Inputs: HxWx3 RGB numpy array, HxWx1 depth numpy array, network
-        if self.config['rm_back_old']:
-            sample['sd_min'] = sd
+        # if self.config['resize']:
+        #     rgb = cv2.resize(rgb, (256, 256), interpolation=cv2.INTER_AREA)
+        #     xyz = cv2.resize(xyz, (256, 256), interpolation=cv2.INTER_AREA) 
+        #     bg_mask_now = cv2.resize(bin.bg_mask.astype(np.uint8), (256, 256), interpolation=cv2.INTER_AREA)
        
-        # Turns inputs into pytorch tensors
-        im_tensor = torch.from_numpy(rgb.copy()) / 255.0
-        image_blob = im_tensor.permute(2, 0, 1)
-        image = image_blob.unsqueeze(0).cuda()
+        rgb_segment = rgb.astype(np.uint8)
+        # xyz = xyz.astype(np.uint8)
 
-        # Normalizes unnormalized image
-        im_tensor_n = torch.from_numpy(rgb_n) / 255.0
-        pixel_mean = torch.tensor(PIXEL_MEANS / 255.0).float()
-        im_tensor_n -= pixel_mean
-        image_blob_n = im_tensor_n.permute(2, 0, 1)
-        image_n = image_blob_n.unsqueeze(0).cuda()
+        masks, out_label = self.object.mask_generator(rgb_segment)
+        
+        out_label_new = out_label.astype(np.uint8)
+        # out_label_new = out_label
+        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/mask.png", out_label_new.astype(np.uint8))
+        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/rgb.png", rgb_segment.astype(np.uint8))
 
-        if self.config['resize']:
-            # trans = torchvision.transforms.Compose([
-            #     torchvision.transforms.ToPILImage(),
-            #     torchvision.transforms.Resize((256, 256)), 
-            #     torchvision.transforms.ToTensor()])
-            image_n = image_n.cpu()[0].permute(1,2,0).numpy()
-            image_n = cv2.resize(image_n, (256, 256), interpolation=cv2.INTER_AREA)
-            image_n = torch.from_numpy(image_n).permute(2,0,1).unsqueeze(0).cuda()
-            
-            # print(image_n.shape)
-            # image_n = trans(image_n[0].cpu()).unsqueeze(0).cuda()
-  
-        depth_blob = torch.from_numpy(xyz.copy().astype(np.float32)).permute(2, 0, 1)
-        depth = depth_blob.unsqueeze(0).cuda()
-  
-        label = None
-  
-        # run network
-        features = self.network(image, label, depth).detach()
-  
-        # Ignore embeddings corresponding to background pixels
-        if self.config['rm_back_old']:
-            mask_bool = sample['depth'].squeeze(0).permute(1,2,0)[...,2] > (sample['sd_min'] * 0.8)
-            features_now = features.squeeze(0).permute(1,2,0)
-            features_base = features_now[0,0]
-  
-            features_now[mask_bool == 1] = features_base
-
-        if self.config['rm_back']:
-            features_now = features.squeeze(0).permute(1,2,0)
-            features_base = features_now[0,0]
-  
-            features_now[bg_mask_now == 1] = features_base
-            # plt.imshow(bg_mask_now)
-            # plt.title("BG Mask")
-            # plt.show()
-  
-        out_label, _ = clustering_features(features, num_seeds=100)
-
-        out_label_new = out_label.clone()[0].numpy()
-        # print(np.unique(out_label_new))
-        # plt.imshow(out_label_new.astype(np.uint8))
-        # plt.title("Segmentation")
-        # plt.show()
-  
-        # Mask refinement step
         if self.config['perform_cv_ops']:
             kernel = np.ones(shape=(self.config['kernel_size'], self.config['kernel_size']), dtype=np.uint8)
             for i in range(np.max(out_label_new.astype(np.uint8))):
@@ -425,6 +369,8 @@ class SegNet:
                 mask_now = spy.binary_dilation(mask_now, structure=kernel, iterations=self.config['dilation_num'])
   
                 labels = lab(mask_now)
+
+                print("labels in perform cv ops", labels)
                 if len(np.bincount(labels.flat)[1:]) > 0:
                     mask_now = (labels == (np.argmax(np.bincount(labels.flat)[1:]) + 1))
                
@@ -432,53 +378,7 @@ class SegNet:
                 out_label_new[mask_now] = i + 1
             out_label = torch.reshape(torch.from_numpy(out_label_new).float(), shape=(1, out_label_new.shape[0], out_label_new.shape[1]))
 
-        # Runs refinement network
-        if self.network_crop:
-            # zoom in refinement
-            out_label_refined = None
-            if self.network_crop is not None:
-                # unique_labels = torch.unique(out_label)
-                # initial_masks = torch.zeros((len(unique_labels), out_label.shape[1], out_label.shape[2]), dtype=bool)
-                # for unique_label in unique_labels:
-                #     initial_masks[out_label == unique_label] = 1
-                rgb_crop, out_label_crop, rois, depth_crop = crop_rois(image_n, out_label, depth)
-                if rgb_crop.shape[0] > 0:
-                    features_crop = self.network_crop(rgb_crop, out_label_crop, depth_crop)
-                    labels_crop, selected_pixels_crop = clustering_features(features_crop)
-                    out_label_refined, labels_crop = match_label_crop(out_label, labels_crop.cuda(), out_label_crop, rois, depth_crop)
-                    # for rgb_crop_i in range(len(rgb_crop)):
-                    #     image_n[0, :, int(rois[rgb_crop_i, 1].item()):int(rois[rgb_crop_i, 3].item()), int(rois[rgb_crop_i, 0].item()):int(rois[rgb_crop_i, 2].item())] = 0
-                else:
-                    out_label_refined = out_label
-                # trans = torchvision.transforms.ToPILImage()
-                # plt.imshow(trans(image_n[0].cpu()))
-                # plt.show()
-                # plt.close()
-
-                if self.config['perform_cv_ops_ref']:
-                    kernel = np.ones(shape=(self.config['kernel_size'], self.config['kernel_size']), dtype=np.uint8)
-                    out_label_new = out_label_refined.clone()[0].numpy()
-                    for i in range(np.max(out_label_new.astype(np.uint8)) ):
-                        mask_now = out_label_new == (i + 1)
-                        
-                        mask_now = spy.binary_erosion(mask_now, structure=kernel, iterations=3)
-                        mask_now = spy.binary_dilation(mask_now, structure=kernel, iterations=4)
-
-                        labels = lab(mask_now)
-                        if len(np.bincount(labels.flat)[1:]) > 0:
-                            mask_now = (labels == (np.argmax(np.bincount(labels.flat)[1:]) + 1))
-                        
-                        out_label_new[out_label_new == (i + 1)] = 0
-                        out_label_new[mask_now] = i + 1 
-                    out_label_ref = torch.reshape(torch.from_numpy(out_label_new).float(), shape=(1, out_label_new.shape[0], out_label_new.shape[1]))
-                else:
-                    out_label_ref = out_label_refined
-  
-        # Converts mask back to original size and format
-        if self.network_crop is not None:
-            mask_crop = out_label_ref[0].cpu().numpy().astype(np.uint8)
-        else:
-            mask_crop = out_label[0].cpu().numpy().astype(np.uint8)
+        mask_crop = out_label.astype(np.uint8)
 
         # Make sure that indices count up from 1
         indices = np.unique(mask_crop)
@@ -487,14 +387,12 @@ class SegNet:
         for i, index in enumerate(indices):
             mask_crop_f[mask_crop == index] = i
 
-        # print(f"I find indices {indices}")
-
-        
         mask_crop = mask_crop_f
-
         
         mask_crop = cv2.resize(mask_crop, (bin.bounds[3] - bin.bounds[2], bin.bounds[1] - bin.bounds[0]), interpolation=cv2.INTER_AREA)
-  
+        
+        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/soofiyan_mask.png", mask_crop)
+
         return mask_crop
   
     # Returns a best-guess matching between masks in frame 0 and masks in frame 1
@@ -504,7 +402,8 @@ class SegNet:
         # Convert the images to greyscale
         im1 = cv2.cvtColor(im1, cv2.COLOR_RGB2GRAY)
         im2 = cv2.cvtColor(im2, cv2.COLOR_RGB2GRAY)
-  
+        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/match_mask1.png", mask1)
+        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/match_mask2.png", mask2)
         mask_recs = np.zeros(shape=(np.max(mask1), np.max(mask2)))
   
         # Calculate keypoints for the frame 1 image
@@ -535,9 +434,9 @@ class SegNet:
                 sift_failed = True
             
             # Draws matches for visualization purposes
-            # matched_img = cv2.drawMatches(im1_now, k1, im2, k2, good, im2, flags=2, matchesThickness=1)
+            matched_img = cv2.drawMatches(im1_now, k1, im2, k2, good, im2, flags=2, matchesThickness=1)
             # cv2.imshow('image', matched_img)
-            # cv2.imwrite(f'matched_img_{self.const}{i}.png', matched_img)
+            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/matched_mask.png", matched_img)
            
             dst_pts = np.float32([k2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
             dst_pts = np.round(dst_pts).astype(int)
@@ -575,8 +474,9 @@ class SegNet:
             areas = np.array([np.sum(mask == i) for i in range(1, np.max(mask) + 1)])
             # Finds the ID of the largest cluster
             idx_max = np.argmax(areas) + 1
-
+            print("Unique mask and areas ",np.unique(mask), areas)
             nonzero_idx = np.where(np.sum(mask == idx_max, axis=1) > 0)
+            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/mask1.png", mask*30)
             c1 = nonzero_idx[0][0]
             c2 = nonzero_idx[-1][0]
 
