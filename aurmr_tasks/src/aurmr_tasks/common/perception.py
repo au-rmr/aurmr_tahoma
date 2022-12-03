@@ -198,14 +198,6 @@ class GetGraspPose(State):
 
         userdata['grasp_pose'] = grasp_pose
 
-        # Apply additional offset for pregrasp distance
-        '''v = qv_mult(
-            quat_msg_to_vec(grasp_pose.pose.orientation), (0, 0, -self.pre_grasp_offset))
-        pregrasp_pose = deepcopy(grasp_pose)
-        pregrasp_pose.pose.position.x += v[0]
-        pregrasp_pose.pose.position.y += v[1]
-        pregrasp_pose.pose.position.z += v[2]'''
-
         # adding 0.12m offset for pre grasp pose to prepare it for grasp pose which is use to pick the object
         pregrasp_pose = self.add_offset(-self.pre_grasp_offset, grasp_pose)
 
