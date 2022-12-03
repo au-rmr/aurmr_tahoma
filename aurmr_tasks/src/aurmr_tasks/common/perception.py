@@ -161,6 +161,15 @@ class GetGraspPose(State):
         self.grasp_to_arm_tool0 = tf_buffer.lookup_transform("arm_tool0", "gripper_equilibrium_grasp", rospy.Time(0),
                                                rospy.Duration(1)).transform
 
+    def add_offset(self, offset, grasp_pose):
+        v = qv_mult(
+            quat_msg_to_vec(grasp_pose.pose.orientation), (0, 0, offset))
+        offset_pose = deepcopy(grasp_pose)
+        offset_pose.pose.position.x += v[0]
+        offset_pose.pose.position.y += v[1]
+        offset_pose.pose.position.z += v[2]
+        return offset_pose
+
     def execute(self, userdata):
         get_points_req = GetObjectPointsRequest(
             bin_id=userdata['target_bin_id'],
@@ -183,16 +192,22 @@ class GetGraspPose(State):
             return "aborted"
 
         # NOTE: No extra filtering or ranking on our part. Just take the first one
+        # As the arm_tool0 is 20cm in length w.r.t tip of suction cup thus adding 0.2m offset
         grasp_pose = grasp_response.poses[0]
+        grasp_pose = self.add_offset(-0.2, grasp_pose)
+
         userdata['grasp_pose'] = grasp_pose
 
         # Apply additional offset for pregrasp distance
-        v = qv_mult(
+        '''v = qv_mult(
             quat_msg_to_vec(grasp_pose.pose.orientation), (0, 0, -self.pre_grasp_offset))
         pregrasp_pose = deepcopy(grasp_pose)
         pregrasp_pose.pose.position.x += v[0]
         pregrasp_pose.pose.position.y += v[1]
-        pregrasp_pose.pose.position.z += v[2]
+        pregrasp_pose.pose.position.z += v[2]'''
+
+        # adding 0.12m offset for pre grasp pose to prepare it for grasp pose which is use to pick the object
+        pregrasp_pose = self.add_offset(-self.pre_grasp_offset, grasp_pose)
 
         userdata['pre_grasp_pose'] = pregrasp_pose
 
