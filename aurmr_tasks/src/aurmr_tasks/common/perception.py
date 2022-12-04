@@ -194,7 +194,7 @@ class GetGraspPose(State):
         # NOTE: No extra filtering or ranking on our part. Just take the first one
         # As the arm_tool0 is 20cm in length w.r.t tip of suction cup thus adding 0.2m offset
         grasp_pose = grasp_response.poses[0]
-        grasp_pose = self.add_offset(-0.2, grasp_pose)
+        grasp_pose = self.add_offset(-0.22, grasp_pose)
 
         userdata['grasp_pose'] = grasp_pose
 
