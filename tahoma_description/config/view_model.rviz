@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /PointCloud21
         - /TF1
+        - /Pose1
       Splitter Ratio: 0.3637469708919525
     Tree Height: 871
   - Class: rviz/Selection
@@ -3850,6 +3851,22 @@ Visualization Manager:
                 {}
       Update Interval: 0
       Value: true
+    - Alpha: 1
+      Axes Length: 0.10000000149011612
+      Axes Radius: 0.009999999776482582
+      Class: rviz/Pose
+      Color: 255; 25; 0
+      Enabled: true
+      Head Length: 0.30000001192092896
+      Head Radius: 0.10000000149011612
+      Name: Pose
+      Queue Size: 10
+      Shaft Length: 1
+      Shaft Radius: 0.05000000074505806
+      Shape: Axes
+      Topic: /selected_grasp_pose_perception
+      Unreliable: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -3871,7 +3888,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.5371897220611572
+      Distance: 1.0442335605621338
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -3879,17 +3896,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -0.25517937541007996
-        Y: 0.16041989624500275
-        Z: 1.3676624298095703
+        X: 0.8890526294708252
+        Y: 0.0960090160369873
+        Z: 1.5095667839050293
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.1347970962524414
+      Pitch: 0.1609034538269043
       Target Frame: <Fixed Frame>
-      Yaw: 2.381650447845459
+      Yaw: 2.5994739532470703
     Saved: ~
 Window Geometry:
   Displays:
