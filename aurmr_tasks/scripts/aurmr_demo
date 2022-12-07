@@ -169,6 +169,7 @@ def main():
             cf.splat_auto("SPLAT_PICK", "request", ["target_bin_id", "target_object_id"])
             StateMachine.add_auto("CLEAR_SCENE_PREMOVE", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_PREMOVE", motion.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
+            StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX_PRE_GRASP", motion.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=.015),    
                             {"succeeded": "PUBLISH_CURRENTLY_PICKING", "aborted":"PASS", "preempted":"PASS"})
             StateMachine.add("PASS", PublishStatus(status_pub, wait_time=3), {"succeeded": "done"})
