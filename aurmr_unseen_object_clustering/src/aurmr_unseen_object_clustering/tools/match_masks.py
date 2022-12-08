@@ -44,7 +44,7 @@ def match_masks(im1, im2, mask1, mask2):
             dst_pts = np.round(dst_pts).astype(int)
         
         else:
-            # print("Not enough matches are found - {}/{}".format(len(good), MIN_MATCH_COUNT))
+            print("Not enough matches are found - {}/{}".format(len(good), MIN_MATCH_COUNT))
             dst_pts = None
 
         for j in range(1, np.max(mask2) + 1):
@@ -59,7 +59,7 @@ def match_masks(im1, im2, mask1, mask2):
         # img3 = cv2.drawMatches(im1_now,k1,im2_now,k2,good,None)
         # plt.imshow(img3, 'gray'), plt.show()
 
-    # print(mask_recs)
+    print("mask_recs", mask_recs)
     # Find the mask in the destination image that best matches the soruce mask
     row_ind, col_ind = linear_sum_assignment(-mask_recs)
 

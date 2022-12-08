@@ -27,8 +27,8 @@ import geometry_msgs
 
 class HeuristicGraspDetector:
     def __init__(self, grasp_offset, bin_normal):
-        print("grasp offset", grasp_offset)
-        print("bin normal", bin_normal)
+        # print("grasp offset", grasp_offset)
+        # print("bin normal", bin_normal)
         self.grasp_offset = grasp_offset
         self.bin_normal = np.array(bin_normal)
         self.tf_buffer = tf2_ros.Buffer()
@@ -74,9 +74,13 @@ class HeuristicGraspDetector:
 
 
 class GraspDetectionROS:
-    def __init__(self, detector):
+    def __init__(self, detector, grasp_method):
         self.detector = detector
-        self.detect_grasps = rospy.Service('~detect_grasps', DetectGraspPoses, self.detect_grasps_cb)
+        if(grasp_method == "normal"):
+            self.detect_grasps_normal = rospy.Service('~detect_grasps', DetectGraspPoses, self.detect_grasps__normal_cb)
+        elif(grasp_method == "centroid"):
+            self.detect_grasps = rospy.Service('~detect_grasps', DetectGraspPoses, self.detect_grasps_cb)
+        
         self.dections_viz_pub = rospy.Publisher("~detected_grasps", MarkerArray, latch=True, queue_size=1)
         self.points_viz_pub = rospy.Publisher("~detected_pts", PointCloud2, latch=True, queue_size=5)
         self.camera_depth_subscriber = rospy.Subscriber('/camera_lower_right/depth_to_rgb/image_raw', Image, self.depth_callback)
@@ -140,12 +144,42 @@ class GraspDetectionROS:
             raise
         
     def clamp(self, num, min_value, max_value):
-        clamp_value = max(min(num, max_value), min_value)
-        if(clamp_value == min_value):
-            clamp_value = 0
+        clamp_value = num
+        if(num < 0):
+            if(num <= min_value):
+                clamp_value = min_value
+            elif(num >= max_value):
+                clamp_value = 0.
+        else:
+            if(num <= min_value):
+                clamp_value = 0.
+            elif(num >= max_value):
+                clamp_value = max_value
+        # clamp_value = max(min(num, max_value), min_value)
+        # if(clamp_value <= min_value):
+        #     clamp_value = 0
         return clamp_value
 
     def detect_grasps_cb(self, request):
+        cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
+        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
+        pts = ros_numpy.numpify(request.points)
+        self.points_viz_pub.publish(request.points)
+        pts = np.stack([pts['x'],
+                        pts['y'],
+                        pts['z']], axis=1)
+        detections = self.detector.detect(pts)
+        stamped_detections = []
+        for position, orientation in detections:
+            as_quat = Quaternion(x=orientation[0], y=orientation[1],
+                                            z=orientation[2], w=orientation[3])
+            as_pose = Pose(position=Point(x=position[0], y=position[1], z=position[2]), orientation=as_quat)
+            stamped_detections.append(PoseStamped(header=request.points.header, pose=as_pose))
+        print(request.points.header)
+        self.visualize_grasps(stamped_detections)
+        return True, "", stamped_detections
+
+    def detect_grasps__normal_cb(self, request):
         cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
         cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
         
@@ -206,8 +240,6 @@ class GraspDetectionROS:
         # cv2.imshow("mask", cv_image1)
         # cv2.waitkey(0)
 
-        # clamp euler englaes within 15 and 45 but if less than 15 it will be 0
-        euler_angles[0] = self.clamp(euler_angles[0], 15, 45)
         
 
         # transform from base link to rgb camera link
@@ -242,12 +274,25 @@ class GraspDetectionROS:
         # orientation = transformations.quaternion_from_euler(math.pi/2., -math.pi/2., math.pi/2.)
 
 
+        # clamp euler englaes within 15 and 45 but if less than 15 it will be 0
+        clamped_euler_angles = [0., 0., 0.]
+        if(euler_angles[0] < 0):
+            clamped_euler_angles[0] = self.clamp(euler_angles[0], -45.*math.pi/180., -12.*math.pi/180.)
+        else:
+            clamped_euler_angles[0] = self.clamp(euler_angles[0], 12.*math.pi/180., 45.*math.pi/180.)
+        # if(euler_angles[1] < 0):
+        #     clamped_euler_angles[1] = self.clamp(euler_angles[1], -45.*math.pi/180., -12.*math.pi/180.)
+        # else:
+        #     clamped_euler_angles[1] = 0.0
+        
+        clamped_euler_angles[1] = 0.0
+        print("post euler angles", clamped_euler_angles[0]*180/math.pi, clamped_euler_angles[1]*180/math.pi)
         # transform from the 3d pose to rgb_camera_link
-        r_cam = R.from_euler('xyz', [euler_angles[0], euler_angles[1], 0.], degrees=False)
-        orientation = r_cam.as_quat()
+        r_cam = R.from_euler('xyz', [clamped_euler_angles[0], clamped_euler_angles[1], 0.], degrees=False)
+        orientation_viz = r_cam.as_quat()
 
-        as_quat_pose = Quaternion(x=orientation[0], y=orientation[1],
-                                        z=orientation[2], w=orientation[3])
+        as_quat_pose = Quaternion(x=orientation_viz[0], y=orientation_viz[1],
+                                        z=orientation_viz[2], w=orientation_viz[3])
         as_pose_pose = Pose(position=Point(x=point[0], y=point[1], z=point[2]), orientation=as_quat_pose)
         t_header= deepcopy(request.points.header)
         t_header.frame_id = 'rgb_camera_link_offset'

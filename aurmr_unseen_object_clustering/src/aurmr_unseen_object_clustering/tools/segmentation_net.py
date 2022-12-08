@@ -98,7 +98,7 @@ def_config = {
    'bounds':bin_bounds,
    'image_path':None,
    'min_pixel_threshhold':30,
-   'min_match_count':5,
+   'min_match_count':2,
 
    # Segmentation / 
  
@@ -426,7 +426,7 @@ class SegNet:
             matches = flann.knnMatch(d1, d2, 2)
             good = []
             for m, n in matches:
-                if m.distance < 0.7 * n.distance:
+                if m.distance < 0.6 * n.distance:
                     good.append(m)
 
             # Handle matching failures
@@ -470,10 +470,16 @@ class SegNet:
   
     # Takes a mask and a number of categories and returns a mask that is guaranteed to have that many categories
     def refine_masks(self, mask, n):
+        if(n == 0):
+            return np.zeros(mask.shape, dtype=np.uint8)
+        
         while np.max(mask) > n:
             areas = np.array([np.sum(mask == i) for i in range(1, np.max(mask) + 1)])
             # Finds the ID of the largest cluster
             idx_max = np.argmax(areas) + 1
+            if(n == 0):
+                mask[mask == idx_max] = 0
+                continue
             print("Unique mask and areas ",np.unique(mask), areas)
             nonzero_idx = np.where(np.sum(mask == idx_max, axis=1) > 0)
             cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/mask1.png", mask*30)
@@ -482,9 +488,9 @@ class SegNet:
 
             print(f"I think that the bounds for the largest mask are {c1} to {c2}")
 
-            # plt.imshow(mask)
-            # plt.title("Mask in refine_masks")
-            # plt.show()
+            plt.imshow(mask)
+            plt.title("Mask in refine_masks")
+            plt.show()
 
             # Find the smallest area under the largest mask
 
@@ -514,7 +520,7 @@ class SegNet:
             # Otherwise, a mask was found. Merge them.
             mask[mask == idx_min] = idx_max
             mask[mask > idx_min] -= 1
-
+            # n += 1
         # If there are STILL too many masks
         #       remove the smallest
         while np.max(mask) > n:
@@ -604,6 +610,10 @@ class SegNet:
             self.items[obj_id] = [bin_id, bin.n]
             return IN_BAD_BINS
   
+        # Keep track of the total number of objects in the bin
+        bin.n += 1
+        self.n += 1
+
         # Current mask recommendations on the bin
         mask_crop = self.segment(bin_id)
 
@@ -611,12 +621,12 @@ class SegNet:
         # plt.title("Predicted object mask before refinement")
         # plt.show()
 
-        # Keep track of the total number of objects in the bin
-        bin.n += 1
-        self.n += 1
+        
   
         # Make sure that the bin only has segmentations for n objects
         mask_crop = self.refine_masks(mask_crop, bin.n)
+
+        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/refined_mask.png", mask_crop)
 
         # mask2vis = self.vis_masks(bin.current['rgb'], mask_crop)
         # plt.imshow(mask2vis)
@@ -639,7 +649,9 @@ class SegNet:
         if bin.last['mask'] is not None:
             recs, sift_failed = self.match_masks(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
 
+
             if sift_failed:
+                
                 print(f"WARNING: SIFT Matching Failure on bin {bin_id}. Appending to bad bins.")
                 self.bad_bins.append(bin_id)
   
