@@ -453,7 +453,61 @@ class SegNet:
         row_ind, col_ind = linear_sum_assignment(-mask_recs)
         self.const += 1
   
-        return col_ind + 1, sift_failed
+        return col_ind + 1, sift_failed, row_ind + 1
+    
+    def match_masks_using_color(self, im1, im2, mask1, mask2, row_ind, col_ind):
+        row_ind -= 1
+        col_ind -= 1
+        try:
+            color_failed = False
+            threshold = 5
+            
+            im1_hsv = (cv2.cvtColor(im1, cv2.COLOR_RGB2HSV))
+            im2_hsv = (cv2.cvtColor(im2, cv2.COLOR_RGB2HSV))
+
+            im1 = cv2.cvtColor(im1, cv2.COLOR_RGB2GRAY)
+            im2 = cv2.cvtColor(im2, cv2.COLOR_RGB2GRAY)
+
+            mask_recs = np.zeros(shape=(np.max(mask1), np.max(mask2)))
+            remain_row = []
+            remain_col = []
+            for row_idx, col_idx in zip(row_ind, col_ind):
+                if mask_recs[row_idx, col_idx] < threshold:
+                    remain_row.append(row_idx)
+                    remain_col.append(col_idx)
+            for j in range(0, np.max(mask2)):
+                if j not in col_ind:
+                    remain_col.append(j)
+                
+            score = np.zeros((len(remain_row), len(remain_col)))
+            ref_score = np.zeros((len(remain_row), len(remain_col)))
+            for i in range(len(remain_row)):
+                im1_now = im1_hsv * np.expand_dims((mask1 == remain_row[i]+1), axis=2)
+                if np.sum(mask1 == remain_row[i]+1) == 0:
+                    print(f"Dividing by 0 encountered for object {remain_row[i]+1}")
+                    continue
+                avg_im1 = np.sum(im1_now) / np.sum(mask1 == remain_row[i]+1) if np.sum(mask1 == remain_row[i]+1) else 0
+                for j in range(len(remain_col)):
+                    im2_now = im2_hsv * np.expand_dims((mask2 == remain_col[j]+1), axis=2)
+                    if np.sum(mask2 == remain_col[j]+1) == 0:
+                        print(f"Dividing by 0 encountered for object {remain_col[j]+1}")
+                        continue
+                    avg_im2 = np.sum(im2_now) / np.sum((mask2 == remain_col[j]+1)) if np.sum(mask2 == remain_col[j]+1) else 0
+                    diff = abs(avg_im1 - avg_im2)
+                    score[i][j] = diff
+            comaprison = ref_score == score
+            if(comaprison.all()):
+                color_failed = True
+            row_ind_remain, col_ind_remain = linear_sum_assignment(score)
+            for i in range(len(row_ind_remain)):
+                col_ind[remain_row[i]] = remain_col[col_ind_remain[i]]
+
+            # mask_recs = np.argmax(mask_recs, axis=1) + 1
+            print(row_ind)
+            print(col_ind)
+        except:
+            color_failed = True
+        return col_ind + 1, color_failed
   
     # Takes two masks and their recommended frame 0/1 relationship and returns the matched mask 2
     def update_masks(self, mask2, recs):
@@ -647,13 +701,16 @@ class SegNet:
   
         # Find the recommended matches between the two frames
         if bin.last['mask'] is not None:
-            recs, sift_failed = self.match_masks(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
+            recs, sift_failed, row_recs = self.match_masks(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
 
+            if(sift_failed):
+                print(f"WARNING: SIFT Matching Failure on bin {bin_id}. But not Appending to bad bins yet.")
+                recs, color_failed = self.match_masks_using_color(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop, recs, row_recs)
+                sift_failed = False
 
-            if sift_failed:
-                
-                print(f"WARNING: SIFT Matching Failure on bin {bin_id}. Appending to bad bins.")
-                self.bad_bins.append(bin_id)
+                if color_failed:
+                    print(f"WARNING: SIFT Matching Failure on bin {bin_id}. Appending to bad bins.")
+                    self.bad_bins.append(bin_id)
   
             # Find the index of the new object (not matched)
             for i in range(1, bin.n + 1):
@@ -743,13 +800,18 @@ class SegNet:
         old_mask[old_mask > obj_n] -= 1
 
         # Find object correspondence between scenes
-        recs, sift_failed = self.match_masks(bin.last['rgb'], bin.current['rgb'], old_mask, mask_crop)
+        recs, sift_failed, row_recs = self.match_masks(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
 
-        if sift_failed:
-            del self.items[obj_id]
-            print(f"Adding {bin_id} to bad bins. CAUSE: Unconfident matching")
-            self.bad_bins.append(bin_id)
-            return SIFT_FAILED
+        if(sift_failed):
+            print(f"WARNING: SIFT Matching Failure on bin {bin_id}. But not Appending to bad bins yet.")
+            recs, color_failed = self.match_masks_using_color(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop, recs, row_recs)
+            sift_failed = False
+
+            if color_failed:
+                del self.items[obj_id]
+                print(f"Adding {bin_id} to bad bins. CAUSE: Unconfident matching")
+                self.bad_bins.append(bin_id)
+                return SIFT_FAILED
 
         # Checks that SIFT could accurately mask objects
         # if recs is None:
@@ -826,11 +888,16 @@ class SegNet:
 
         # Find the recommended matches between the two frames
         if bin.last['mask'] is not None:
-            recs, sift_failed = self.match_masks(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
+            recs, sift_failed, row_recs = self.match_masks(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
 
-            if sift_failed:
-                print(f"Adding {bin_id} to bad bins. CAUSE: Unconfident matching")
-                self.bad_bins.append(bin_id)
+            if(sift_failed):
+                print(f"WARNING: SIFT Matching Failure on bin {bin_id}. But not Appending to bad bins yet.")
+                recs, color_failed = self.match_masks_using_color(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop, recs, row_recs)
+                sift_failed = False
+
+                if color_failed:
+                    print(f"WARNING: SIFT Matching Failure on bin {bin_id}. Appending to bad bins.")
+                    self.bad_bins.append(bin_id)
             
             # if recs is None:
             #     print(f"SIFT could not confidently match bin {bin_id}")
