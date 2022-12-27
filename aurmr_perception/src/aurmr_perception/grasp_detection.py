@@ -277,15 +277,15 @@ class GraspDetectionROS:
         # clamp euler englaes within 15 and 45 but if less than 15 it will be 0
         clamped_euler_angles = [0., 0., 0.]
         if(euler_angles[0] < 0):
-            clamped_euler_angles[0] = self.clamp(euler_angles[0], -45.*math.pi/180., -12.*math.pi/180.)
+            clamped_euler_angles[0] = self.clamp(euler_angles[0], -30.*math.pi/180., -12.*math.pi/180.)
         else:
-            clamped_euler_angles[0] = self.clamp(euler_angles[0], 12.*math.pi/180., 45.*math.pi/180.)
-        # if(euler_angles[1] < 0):
-        #     clamped_euler_angles[1] = self.clamp(euler_angles[1], -45.*math.pi/180., -12.*math.pi/180.)
-        # else:
-        #     clamped_euler_angles[1] = 0.0
+            clamped_euler_angles[0] = self.clamp(euler_angles[0], 12.*math.pi/180., 30.*math.pi/180.)
+        if(euler_angles[1] < 0):
+            clamped_euler_angles[1] = self.clamp(euler_angles[1], -30.*math.pi/180., -12.*math.pi/180.)
+        else:
+            clamped_euler_angles[1] = 0.0
         
-        clamped_euler_angles[1] = 0.0
+        # clamped_euler_angles[1] = 0.0
         print("post euler angles", clamped_euler_angles[0]*180/math.pi, clamped_euler_angles[1]*180/math.pi)
         # transform from the 3d pose to rgb_camera_link
         r_cam = R.from_euler('xyz', [clamped_euler_angles[0], clamped_euler_angles[1], 0.], degrees=False)

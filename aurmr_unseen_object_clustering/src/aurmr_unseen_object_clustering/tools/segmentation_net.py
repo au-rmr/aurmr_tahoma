@@ -357,9 +357,11 @@ class SegNet:
         
         out_label_new = out_label.astype(np.uint8)
         # out_label_new = out_label
-        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/mask.png", out_label_new.astype(np.uint8))
-        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/rgb.png", rgb_segment.astype(np.uint8))
-
+        try:
+            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/mask.png", out_label_new.astype(np.uint8))
+            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/rgb.png", rgb_segment.astype(np.uint8))
+        except:
+            pass
         if self.config['perform_cv_ops']:
             kernel = np.ones(shape=(self.config['kernel_size'], self.config['kernel_size']), dtype=np.uint8)
             for i in range(np.max(out_label_new.astype(np.uint8))):
@@ -390,9 +392,10 @@ class SegNet:
         mask_crop = mask_crop_f
         
         mask_crop = cv2.resize(mask_crop, (bin.bounds[3] - bin.bounds[2], bin.bounds[1] - bin.bounds[0]), interpolation=cv2.INTER_AREA)
-        
-        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/soofiyan_mask.png", mask_crop)
-
+        try:
+            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/soofiyan_mask.png", mask_crop)
+        except:
+            pass
         return mask_crop
   
     # Returns a best-guess matching between masks in frame 0 and masks in frame 1
@@ -536,7 +539,10 @@ class SegNet:
                 continue
             print("Unique mask and areas ",np.unique(mask), areas)
             nonzero_idx = np.where(np.sum(mask == idx_max, axis=1) > 0)
-            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/mask1.png", mask*30)
+            try:
+                cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/mask1.png", mask*30)
+            except:
+                pass
             c1 = nonzero_idx[0][0]
             c2 = nonzero_idx[-1][0]
 
@@ -679,8 +685,7 @@ class SegNet:
   
         # Make sure that the bin only has segmentations for n objects
         mask_crop = self.refine_masks(mask_crop, bin.n)
-
-        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/refined_mask.png", mask_crop)
+            
 
         # mask2vis = self.vis_masks(bin.current['rgb'], mask_crop)
         # plt.imshow(mask2vis)
@@ -692,6 +697,8 @@ class SegNet:
             self.items[obj_id] = [bin_id, bin.n]
             self.bad_bins.append(bin_id)
             return UNDERSEGMENTATION
+        else:
+            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/refined_mask.png", mask_crop)
 
         mask2vis = self.vis_masks(bin.current['rgb'], mask_crop)
         # plt.imshow(mask2vis)
