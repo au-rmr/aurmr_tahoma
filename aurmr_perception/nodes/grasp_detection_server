@@ -4,10 +4,17 @@ from aurmr_perception.grasp_detection import GraspDetectionROS
 
 if __name__ == '__main__':
     rospy.init_node('grasp_detection')
-    detector_name = rospy.get_param("detector", "heuristic")
+    detector_name = rospy.get_param("grasp_detector")
+    # normal or centroid
+    grasp_method = rospy.get_param("grasp_detection_method")
     if detector_name == "heuristic":
         from aurmr_perception.grasp_detection import HeuristicGraspDetector
-        detector = HeuristicGraspDetector(0, [-1,0,0])
+        detector = HeuristicGraspDetector(.125, [-1,0,0])
+    elif detector_name == "vacuum_heuristic":
+        from aurmr_perception.grasp_detection import HeuristicGraspDetector
+        detector = HeuristicGraspDetector(.125, [-1,0,0])
+        # detector = HeuristicGraspDetector(0, [-1,0,0])
+        # detector = VacuumHeuristicGraspDetector()
     elif detector_name == "graspnet":
         # FIXME: Graspnet doesn't yet work on just any machine. These imports will raise exceptions until the code is rewritten to be more portable.
         from aurmr_perception import graspnet
@@ -22,5 +29,5 @@ if __name__ == '__main__':
     else:
         raise RuntimeError(f"Unknown grasp detector requested: {detector_name}")
 
-    grasp_detection_server = GraspDetectionROS(detector)
+    grasp_detection_server = GraspDetectionROS(detector, grasp_method)
     rospy.spin()
