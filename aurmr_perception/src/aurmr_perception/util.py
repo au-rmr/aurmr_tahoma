@@ -2,7 +2,7 @@ from geometry_msgs.msg import Quaternion
 from tf import transformations
 
 I_QUAT = Quaternion(x=0, y=0, z=0, w=1)
-
+ROT_90_Z_QUAT = Quaternion(x=0, y=0, z=.707, w=.707)
 
 def qv_mult(q1, v1):
     assert len(q1) == 4

@@ -1,8 +1,10 @@
 string bin_id
 string object_id
 string frame_id
+bool mask_only
 ---
 bool success
 string message
 string bin_id
 sensor_msgs/PointCloud2 points
+sensor_msgs/Image mask

@@ -1,15 +1,20 @@
+import encodings
+from fileinput import filename
+from unittest import result
 import cv2
-from aurmr_perception.srv import CaptureObject, RemoveObject, GetObjectPoints, ResetBin, LoadDataset
+import matplotlib
+from aurmr_perception.srv import CaptureObject, RemoveObject, GetObjectPoints, ResetBin
 import numpy as np
 import ros_numpy
 import rospy
 import message_filters
 import tf2_ros
-
+import matplotlib.pyplot as plt
 from collections import defaultdict
 from sensor_msgs.msg import Image, CameraInfo, PointField, PointCloud2
 from std_msgs.msg import Header
 
+from aurmr_unseen_object_clustering.tools.run_network import clustering_network
 
 class PodPerceptionROS:
     def __init__(self, model, camera_name, visualize):
@@ -64,7 +69,7 @@ class PodPerceptionROS:
         if not request.bin_id or not request.object_id:
             return False, "bin_id and object_id are required"
 
-        result, message = self.model.capture_object(request.bin_id, request.object_id, self.rgb_image, self.depth_image, self.camera_info.K)
+        result, message, mask = self.model.capture_object(request.bin_id, request.object_id, self.rgb_image, self.depth_image, self.camera_info.K)
 
         if result and self.visualize:
             bin_im_viz = self.model.latest_captures[request.bin_id]
@@ -75,7 +80,7 @@ class PodPerceptionROS:
             mask_im_viz = self.model.latest_masks[request.bin_id].astype(float)
             cv2.imshow('latest_mask', mask_im_viz)
             cv2.waitKey(1)
-        return result, message
+        return result, message, mask
 
     def get_object_callback(self, request):
         if not request.object_id or not request.frame_id:
@@ -86,7 +91,17 @@ class PodPerceptionROS:
         if not result:
             return result, message, None, None
 
-        bin_id, points = result
+        bin_id, points, mask = result
+
+        mask = ros_numpy.msgify(Image, mask.astype(np.uint8), encoding="mono8")
+
+        if request.mask_only:
+            return True,\
+               f"Mask successfully retrieved for object {request.object_id} in bin {bin_id}",\
+               bin_id,\
+               None,\
+               mask
+
         if request.frame_id != self.camera_frame:
             # Transform points to requested frame_id
 
@@ -123,9 +138,10 @@ class PodPerceptionROS:
         )
 
         return True,\
-               f"Points successfully retrieved for object {request.object_id} in bin {bin_id}",\
+               f"Points and mask successfully retrieved for object {request.object_id} in bin {bin_id}",\
                bin_id,\
-               pointcloud
+               pointcloud,\
+               mask
 
     def remove_object_callback(self, request):
         if not request.bin_id or not request.object_id:
@@ -138,6 +154,19 @@ class PodPerceptionROS:
     def reset_callback(self, request):
         if not request.bin_id:
             return False, "bin_id is required"
+    
+        import os
+        filename = '/tmp/empty_bin.png'
+        if os.path.exists(filename):
+            img = cv2.imread(filename)
+            self.rgb_image = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            rospy.loginfo(f"Using cached empty pod image. Delete {filename} to regenerate the image.")
+        elif self.rgb_image is not None:
+            img = cv2.cvtColor(self.rgb_image, cv2.COLOR_BGR2RGB)
+            cv2.imwrite(filename, img)
+            
+            rospy.loginfo("Caching Empty Pod Image for Later use")
+            
         if self.rgb_image is None:
             return False, "No images have been streamed"
 
@@ -150,21 +179,23 @@ class PodPerceptionROS:
         self.rgb_image = ros_numpy.numpify(ros_rgb_image)
         self.depth_image = ros_numpy.numpify(ros_depth_image)
         self.camera_info = ros_camera_info
-
-        if self.visualize:
-            rgb_im_viz = cv2.cvtColor(self.rgb_image, cv2.COLOR_RGB2BGR)
-            cv2.imshow('rgb_image', rgb_im_viz)
-            cv2.waitKey(1)
+        # rospy.loginfo("GOT IMAGES")
+        # if self.visualize:
+        #     rgb_im_viz = cv2.cvtColor(self.rgb_image, cv2.COLOR_RGB2BGR)
+        #     cv2.imshow('rgb_image', rgb_im_viz)
+        #     cv2.waitKey(1)
 
 
 class DiffPodModel:
-    def __init__(self, diff_threshold):
+    def __init__(self, diff_threshold, segmentation_method):
         self.diff_threshold = diff_threshold
         self.latest_captures = {}
         self.latest_masks = {}
         self.points_table = {}
+        self.masks_table = {}
         self.object_bin_queues = defaultdict(ObjectBinQueue)
         self.bin_normals = {}
+        self.segmentation_method = segmentation_method
 
     def capture_object(self, bin_id, object_id, rgb_image, depth_image, camera_intrinsics):
         if not bin_id or not object_id:
@@ -176,19 +207,30 @@ class DiffPodModel:
         last_rgb = self.latest_captures[bin_id]
         current_rgb = rgb_image
 
-        # Get the difference of the two captured RGB images
-        difference = cv2.absdiff(last_rgb, current_rgb)
+        if(self.segmentation_method == "clustering"):
+            net = clustering_network()
+            camera_intrinsics_3x3 = np.reshape(camera_intrinsics, (3,3))
+            mask = net.run_net(current_rgb, depth_image, camera_intrinsics_3x3)
+            mask = mask*(255//np.max(mask))
+            rospy.loginfo(np.unique(mask, return_counts=True))
+            cv2.imwrite("/tmp/mask.bmp", mask)
+            # plt.imshow(mask)
+            # plt.show()
+        elif(self.segmentation_method == "pixel_difference"):
+            # Get the difference of the two captured RGB images
+            difference = cv2.absdiff(last_rgb, current_rgb)
 
-        # Threshold the difference image to get the initial mask
-        mask = difference.sum(axis=2) >= self.diff_threshold
+            # Threshold the difference image to get the initial mask
+            mask = difference.sum(axis=2) >= self.diff_threshold
 
-        # Group the masked pixels and leave only the group with the largest area
-        (numLabels, labels, stats, centroids) = cv2.connectedComponentsWithStats(mask.astype(np.uint8), 8, cv2.CV_32S)
-        areas = np.array([stats[i, cv2.CC_STAT_AREA] for i in range(len(stats))])
-        max_area = np.max(areas[1:])
-        max_area_idx = np.where(areas == max_area)[0][0]
-        mask[np.where(labels != max_area_idx)] = 0.0
-
+            # Group the masked pixels and leave only the group with the largest area
+            (numLabels, labels, stats, centroids) = cv2.connectedComponentsWithStats(mask.astype(np.uint8), 8, cv2.CV_32S)
+            areas = np.array([stats[i, cv2.CC_STAT_AREA] for i in range(len(stats))])
+            max_area = np.max(areas[1:])
+            max_area_idx = np.where(areas == max_area)[0][0]
+            mask[np.where(labels != max_area_idx)] = 0.0    
+        else:
+            raise RuntimeError(f"Unknown segmentation method requested: {self.segmentation_method}")
         # Apply mask to the depth image
         masked_depth = depth_image * mask
 
@@ -222,14 +264,16 @@ class DiffPodModel:
 
         if bin_id not in self.points_table:
             self.points_table[bin_id] = {}
+            self.masks_table[bin_id] = {}
 
         self.points_table[bin_id][object_id] = np.vstack((x_ros,y_ros,z_ros))
+        self.masks_table[bin_id][object_id] = mask
         self.object_bin_queues[object_id].put(bin_id)
 
         self.latest_captures[bin_id] = current_rgb
         self.latest_masks[bin_id] = mask
 
-        return True, f"Object {object_id} in bin {bin_id} has been captured with {x.shape[0]} points."
+        return True, f"Object {object_id} in bin {bin_id} has been captured with {x.shape[0]} points.", ros_numpy.msgify(Image, mask.astype(np.uint8), encoding="mono8")
 
     def get_object(self, bin_id, object_id):
         if not object_id:
@@ -248,7 +292,8 @@ class DiffPodModel:
             return False, f"Object {object_id} was not found in bin {bin_id}"
 
         points = self.points_table[bin_id][object_id]
-        return (bin_id, points), None
+        mask = self.masks_table[bin_id][object_id]
+        return (bin_id, points, mask), None
 
     def remove_object(self, bin_id, object_id, rgb_image):
         if not bin_id or not object_id:

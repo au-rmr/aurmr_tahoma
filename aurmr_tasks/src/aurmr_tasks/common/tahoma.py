@@ -1,19 +1,26 @@
 import copy
+import math
 import sys
 from functools import wraps
+from turtle import pos
 
 from actionlib import SimpleActionClient
+from actionlib_msgs.msg import GoalStatusArray, GoalStatus
 from control_msgs.msg import FollowJointTrajectoryAction, GripperCommandAction, GripperCommandGoal
 from control_msgs.msg import FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectoryPoint
 import tf2_ros
-import tf2_geometry_msgs
+
+#import tf2_geometry_msgs
 
 import actionlib
 import control_msgs.msg
 import trajectory_msgs.msg
 import rospy
 
+from tf2_geometry_msgs import from_msg_msg
+from geometry_msgs.msg import PoseStamped, WrenchStamped
+from robotiq_2f_gripper_control.msg import vacuum_gripper_input as VacuumGripperStatus
 from aurmr_tasks.util import all_close, pose_dist
 from moveit_msgs.msg import MoveItErrorCodes, MoveGroupAction, DisplayTrajectory
 from moveit_msgs.srv import GetPositionIK, GetPositionIKRequest
@@ -21,6 +28,8 @@ from moveit_msgs.srv import GetPositionIK, GetPositionIKRequest
 import moveit_commander
 from controller_manager_msgs.srv import ListControllers, SwitchController
 from tahoma_moveit_config.msg import ServoToPoseAction, ServoToPoseGoal
+
+
 
 ARM_GROUP_NAME = 'manipulator'
 JOINT_ACTION_SERVER = '/pos_joint_traj_controller/follow_joint_trajectory'
@@ -114,6 +123,7 @@ class Tahoma:
         self._gripper_client = actionlib.SimpleActionClient(GRIPPER_ACTION_SERVER, GripperCommandAction)
         server_reached = self._joint_traj_client.wait_for_server(rospy.Duration(10))
         if not server_reached:
+            print('Unable to connect to arm action server. Timeout exceeded. Exiting...')
             rospy.signal_shutdown('Unable to connect to arm action server. Timeout exceeded.')
             sys.exit()
         self._move_group_client = actionlib.SimpleActionClient(
@@ -124,7 +134,10 @@ class Tahoma:
         self.commander = moveit_commander.RobotCommander()
         self.scene = moveit_commander.PlanningSceneInterface(synchronous=True)
         self.move_group = moveit_commander.MoveGroupCommander(ARM_GROUP_NAME)
-        self.move_group.set_max_velocity_scaling_factor(.15)
+        self.MAX_VEL_FACTOR = .2
+        self.MAX_ACC_FACTOR = .5
+        self.move_group.set_max_velocity_scaling_factor(self.MAX_VEL_FACTOR)
+        self.move_group.set_max_acceleration_scaling_factor(self.MAX_ACC_FACTOR)
         self.display_trajectory_publisher = rospy.Publisher(
             "/move_group/display_planned_path",
             DisplayTrajectory,
@@ -135,10 +148,20 @@ class Tahoma:
         self._controller_switcher = rospy.ServiceProxy("/controller_manager/switch_controller", SwitchController)
         self.servo_to_pose_client = SimpleActionClient("/servo_server/servo_to_pose", ServoToPoseAction)
 
+        self.grasp_pose_pub = rospy.Publisher("~grasp_pose", PoseStamped)
+
         planning_frame = self.move_group.get_planning_frame()
         eef_link = self.move_group.get_end_effector_link()
         group_names = self.commander.get_group_names()
 
+        self.wrench_listener = rospy.Subscriber("/wrench", WrenchStamped, self.wrench_cb)
+        self.gripper_status_listener = rospy.Subscriber("/gripper_control/status", VacuumGripperStatus, self.gripper_status_cb)
+        self.traj_status_listener = rospy.Subscriber("/scaled_pos_joint_traj_controller/follow_joint_trajectory/status", GoalStatusArray, self.goal_status_cb)
+        self.force_mag = 0
+        self.torque_mag = 0
+        self.object_detected = False
+        self.goal_finished = True
+        self.goal_stamp = 0
         # Misc variables
         self.planning_frame = planning_frame
         self.eef_link = eef_link
@@ -146,6 +169,24 @@ class Tahoma:
 
         self.active_controllers = None
         self.update_running_controllers()
+
+    def wrench_cb(self, msg: WrenchStamped):
+        self.force_mag = math.sqrt(msg.wrench.force.x**2 + msg.wrench.force.y**2+ msg.wrench.force.z**2)
+        self.torque_mag = math.sqrt(msg.wrench.torque.x**2 + msg.wrench.torque.y**2+ msg.wrench.torque.z**2)
+
+    def gripper_status_cb(self, msg: VacuumGripperStatus):
+        self.object_detected = (msg.gPO < 95)
+
+    def goal_status_cb(self, msg: GoalStatusArray):
+        latest_time = 0
+        latest_status = GoalStatus.SUCCEEDED
+        for g in msg.status_list:
+            new_stamp = g.goal_id.stamp.secs + g.goal_id.stamp.nsecs*10**(-9)
+            if new_stamp > latest_time:
+                latest_time = new_stamp
+                latest_status = g.status
+        self.goal_finished = latest_status != GoalStatus.PENDING and latest_status != GoalStatus.ACTIVE
+        self.goal_stamp = latest_time
 
     def update_running_controllers(self):
         controllers_status = self._controller_lister().controller
@@ -209,12 +250,17 @@ class Tahoma:
         if not return_before_done:
             self._gripper_client.wait_for_result()
 
+    def check_gripper_item(self):
+        return self.object_detected 
+
     def close_gripper(self, return_before_done=False):
         goal = GripperCommandGoal()
         goal.command.position = 0.83
         goal.command.max_effort = 1
         self._gripper_client.send_goal(goal)
+        rospy.loginfo("Waiting for gripper" + str(return_before_done))
         if not return_before_done:
+            rospy.loginfo("Waiting for gripper. \n")
             self._gripper_client.wait_for_result()
 
 
@@ -295,6 +341,7 @@ class Tahoma:
         Returns:
             string describing the error if an error occurred, else None.
         """
+        self.move_group.stop()
 
         self.move_group.set_num_planning_attempts(num_planning_attempts)
         self.move_group.allow_replanning(replan)
@@ -320,7 +367,7 @@ class Tahoma:
                           pose_stamped,
                           allowed_planning_time=10.0,
                           execution_timeout=15.0,
-                          num_planning_attempts=8,
+                          num_planning_attempts=20,
                           orientation_constraint=None,
                           replan=True,
                           replan_attempts=5,
@@ -349,10 +396,12 @@ class Tahoma:
             string describing the error if an error occurred, else None.
         """
 
+        pose_stamped = from_msg_msg(pose_stamped )
+
         goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.move_group.get_planning_frame(),
                                        rospy.Duration(1))
 
-        self.move_group.set_end_effector_link("gripper_equilibrium_grasp")
+        self.move_group.set_end_effector_link("arm_tool0")
         self.move_group.set_pose_target(pose_stamped)
         self.move_group.set_planning_time(allowed_planning_time)
         self.move_group.set_num_planning_attempts(num_planning_attempts)
@@ -372,7 +421,7 @@ class Tahoma:
         self.display_trajectory_publisher.publish(display_trajectory)
 
         # Now, we call the planner to compute the plan and execute it.
-        self.move_group.execute(plan, wait=True)
+        ret = self.move_group.execute(plan, wait=True)
         # Calling `stop()` ensures that there is no residual movement
         self.move_group.stop()
         # It is always good to clear your targets after planning with poses.
@@ -387,9 +436,11 @@ class Tahoma:
     def straight_move_to_pose(self,
                               pose_stamped,
                               tolerance=0.01,
-                              ee_step=0.0025,
-                              jump_threshold=2.0,
-                              avoid_collisions=True):
+                              ee_step=0.001,
+                              jump_threshold=6.0,
+                              avoid_collisions=True,
+                              use_force=False,
+                              use_gripper=False):
         """Moves the end-effector to a pose in a straight line.
 
         Args:
@@ -404,22 +455,62 @@ class Tahoma:
         Returns:
             string describing the error if an error occurred, else None.
         """
+ 
         self.move_group.set_end_effector_link("arm_tool0")
         goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.planning_frame, rospy.Duration(1))
 
-        waypoints = [goal_in_planning_frame.pose]
+        self.grasp_pose_pub.publish(pose_stamped)
 
+        waypoints = [goal_in_planning_frame.pose]
         (plan, fraction) = self.move_group.compute_cartesian_path(
             waypoints, ee_step, jump_threshold, avoid_collisions
         )
+        plan = self.move_group.retime_trajectory(self.move_group.get_current_state(), plan, velocity_scaling_factor=.05, acceleration_scaling_factor=.05)
         if fraction < .9:
             rospy.logwarn(f"Not moving in cartesian path. Only {fraction} waypoints reached")
-            return False
-        self.move_group.execute(plan, wait=True)
+            # return False
 
+        wait = not (use_force or use_gripper)
+        rospy.loginfo("Waiting?: " + str(wait))
+        old_goal_stamp = self.goal_stamp
+
+        ret = self.move_group.execute(plan, wait=wait)
+        if use_gripper:
+            self.close_gripper(return_before_done=True)
+
+        if not wait:
+            timeout = 1
+            steps = 0
+            while steps < timeout and (self.goal_stamp == old_goal_stamp):
+                rospy.loginfo("Waiting for moveit goal to update:" + str(old_goal_stamp) + " " + str(self.goal_stamp))
+                rospy.sleep(.01)
+                steps = steps + .01
+
+
+            force_limit = 50
+            early_stop = False
+            rospy.loginfo("Waiting?: " + str(wait) + " " + str(self.goal_finished))
+            timeout = 5
+            steps = 0
+            while steps < timeout and not self.goal_finished:
+                # rospy.loginfo("Waiting for feedback or goal finishing")
+                if use_force and self.force_mag > force_limit:
+                    self.move_group.stop()
+                    rospy.loginfo("Stopping movement due to force feedback")
+                    early_stop = True
+                    break
+                elif use_gripper and self.object_detected:
+                    self.move_group.stop()
+                    rospy.loginfo("Stopping movement due to object detection")
+                    early_stop = True
+                    break
+                rospy.sleep(.01)
+                steps = steps + .01
+
+ 
         current_pose = self.move_group.get_current_pose()
         rospy.loginfo(f"Pose dist: {pose_dist(goal_in_planning_frame, current_pose)}")
-        return all_close(goal_in_planning_frame, current_pose, tolerance)
+        return early_stop or all_close(goal_in_planning_frame, current_pose, tolerance)
 
     @requires_controller(JOINT_GROUP_CONTROLLER)
     def servo_to_pose(self,

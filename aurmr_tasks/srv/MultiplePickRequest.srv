@@ -1,0 +1,4 @@
+string[] bin_ids
+string[] object_ids
+---
+bool success

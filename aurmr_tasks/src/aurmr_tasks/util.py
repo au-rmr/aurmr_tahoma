@@ -65,6 +65,7 @@ def all_close(goal, actual, tolerance):
 
     elif type(goal) is geometry_msgs.msg.PoseStamped:
         assert (goal.header.frame_id == actual.header.frame_id)
+        print("This is posestamped")
         return all_close(goal.pose, actual.pose, tolerance)
 
     elif type(goal) is geometry_msgs.msg.Pose:
@@ -74,7 +75,8 @@ def all_close(goal, actual, tolerance):
         d = dist((x1, y1, z1), (x0, y0, z0))
         # phi = angle between orientations
         cos_phi_half = fabs(qx0 * qx1 + qy0 * qy1 + qz0 * qz1 + qw0 * qw1)
-        return d <= tolerance and cos_phi_half >= cos(tolerance / 2.0)
+        # return d <= tolerance and cos_phi_half >= cos(tolerance / 2.0)
+        return d <= tolerance
 
     return True
 

@@ -6,8 +6,9 @@
 
 
     <include file="$(find ur_robot_driver)/launch/ur16e_bringup.launch">
-        <arg name="controllers" default="scaled_pos_joint_traj_controller joint_state_controller  force_torque_sensor_controller robot_status_controller"/>
-        <arg name="stopped_controllers" default="pos_joint_traj_controller joint_group_pos_controller joint_group_vel_controller" doc="Controllers that are initally loaded, but not started."/>        <arg name="robot_ip" value="192.168.43.92" />
+        <arg name="controllers" default="joint_group_pos_controller joint_state_controller force_torque_sensor_controller robot_status_controller"/>
+        <arg name="stopped_controllers" default="joint_group_vel_controller scaled_pos_joint_traj_controller pos_joint_traj_controller " doc="Controllers that are initally loaded, but not started."/>
+        <arg name="robot_ip" value="192.168.43.92" />
         <arg name="robot_description_file" value="$(find tahoma_description)/launch/load_tahoma.launch" />
         <arg name="controller_config_file" default="$(find tahoma_bringup)/config/controllers.yaml" />
         <arg name="kinematics_config" value="$(find tahoma_description)/config/arm_calibration.yaml" />

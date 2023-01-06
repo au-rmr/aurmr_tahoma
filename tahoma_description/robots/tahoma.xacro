@@ -2,7 +2,8 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="tahoma">
   <xacro:arg name="camera_arrangement" default="manual" />
   <xacro:arg name="kinematics_params" default="$(find tahoma_description)/config/arm_calibration.yaml" />
-  <xacro:arg name="realsense" default="true"/>
+  <xacro:arg name="realsense" default="false"/>
+  <xacro:arg name="azure_kinect" default="true"/>
   <xacro:arg name="use_nominal_camera_extrinsics" default="false"/>
   <xacro:arg name="safety_limits" default="false" />
 

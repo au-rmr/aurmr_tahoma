@@ -3,10 +3,29 @@ project(aurmr_tasks)
 
 find_package(catkin REQUIRED COMPONENTS
     roslint
+    message_generation
+    std_msgs
 )
 
 catkin_python_setup()
 
+add_message_files(
+  FILES
+  PickStatus.msg
+)
+
+
+add_service_files(
+  FILES
+  PickRequest.srv
+  StowRequest.srv
+  MultiplePickRequest.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
 
 catkin_package(
 )

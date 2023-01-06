@@ -16,6 +16,9 @@ if __name__ == '__main__':
         graspnet_args, unknown = graspnet_parser.parse_known_args()
         estimator = make_graspnet_estimator(graspnet_args)
         detector = graspnet.GraspNetDetector(estimator)
+    elif detector_name == "contact_graspnet":
+        # FIXME; Contact Graspnet should be running in a node, maybe figure out how to launch from here?
+        pass
     else:
         raise RuntimeError(f"Unknown grasp detector requested: {detector_name}")
 
