@@ -5,7 +5,7 @@ from fileinput import filename
 from unittest import result
 import cv2
 import matplotlib
-from aurmr_perception.srv import CaptureObject, RemoveObject, GetObjectPoints, ResetBin
+from aurmr_perception.srv import CaptureObject, RemoveObject, GetObjectPoints, ResetBin, LoadDataset
 import numpy as np
 import ros_numpy
 import rospy
@@ -36,7 +36,7 @@ class PodPerceptionROS:
         self.trigger_update = rospy.Service('~update_bin', CaptureObject, self.update_object_callback)
         self.trigger_retrieve = rospy.Service('~get_object_points', GetObjectPoints, self.get_object_callback)
         self.trigger_reset = rospy.Service('~reset_bin', ResetBin, self.reset_callback)
-	self.trigger_load = rospy.Service('~load_dataset', LoadDataset, self.load_dataset)
+        self.trigger_load = rospy.Service('~load_dataset', LoadDataset, self.load_dataset)
 
 
         rospy.loginfo(camera_type)
@@ -86,7 +86,7 @@ class PodPerceptionROS:
         for entry in dataset.entries[1:]:
             rgb_image = entry.rgb_image 
             depth_image = entry.depth_image
-            for i in entry.inventory()
+            for i in entry.inventory():
                 pass
 
         return {"success": True, "message": f"load dataset {dataset.path}"}
