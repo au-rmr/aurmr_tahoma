@@ -1,0 +1,2444 @@
+gazebos:
+- <Element 'gazebo' at 0x7febce5a0950>
+joints:
+- axis: None
+  calibration: None
+  child: gripper_equilibrium_grasp
+  dynamics: None
+  limit: None
+  mimic: None
+  name: gripper_base_link_gripper_equilibrium_grasp
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+    xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+  parent: epick_end_effector
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: left_light_panel_emitter
+  dynamics: None
+  limit: None
+  mimic: None
+  name: left_light_panel_left_light_panel_emitter_joint
+  origin: None
+  parent: left_light_panel
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: right_light_panel_emitter
+  dynamics: None
+  limit: None
+  mimic: None
+  name: right_light_panel_right_light_panel_emitter_joint
+  origin: None
+  parent: right_light_panel
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: stand_upright
+  dynamics: None
+  limit: None
+  mimic: None
+  name: stand_stand_upright_joint
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+    xyz:
+    - -0.12
+    - 0.0
+    - 0.95
+  parent: stand
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: stand_brace
+  dynamics: None
+  limit: None
+  mimic: None
+  name: stand_upright_stand_brace_joint
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+    xyz:
+    - -0.24
+    - 0.0
+    - -0.59
+  parent: stand_upright
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: camera_beam_lower
+  dynamics: None
+  limit: None
+  mimic: None
+  name: stand_upright_camera_beam_lower_joint
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+    xyz:
+    - -0.1225
+    - 0.0
+    - 0.193
+  parent: stand_upright
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: control_box_mount
+  dynamics: None
+  limit: None
+  mimic: None
+  name: stand_upright_robot_control_box_mount_joint
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+    xyz:
+    - -0.1725
+    - 0.7475
+    - 0.21
+  parent: stand_upright
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: control_box
+  dynamics: None
+  limit: None
+  mimic: None
+  name: control_box_mount_control_box_joint
+  origin:
+    rpy:
+    - 0.05
+    - 0.0
+    - 3.141592653589793
+    xyz:
+    - -0.003
+    - 0.1375
+    - -0.13
+  parent: control_box_mount
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: cantilever
+  dynamics: None
+  limit: None
+  mimic: None
+  name: stand_cantilever_joint
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+    xyz:
+    - 0.0775
+    - 0.0
+    - 0.9442
+  parent: stand_upright
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: robot_plate
+  dynamics: None
+  limit: None
+  mimic: None
+  name: cantilever_robot_plate_joint
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+    xyz:
+    - 0.2505
+    - 0.0
+    - -0.015
+  parent: cantilever
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: front_right_caster
+  dynamics: None
+  limit: None
+  mimic: None
+  name: stand_front_right_caster_joint
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+    xyz:
+    - 0.405
+    - -0.7375
+    - -0.1
+  parent: stand
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: front_left_caster
+  dynamics: None
+  limit: None
+  mimic: None
+  name: stand_front_left_caster_joint
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+    xyz:
+    - 0.405
+    - 0.7025
+    - -0.1
+  parent: stand
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: back_right_caster
+  dynamics: None
+  limit: None
+  mimic: None
+  name: stand_back_right_caster_joint
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+    xyz:
+    - -0.405
+    - -0.7375
+    - -0.1
+  parent: stand
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: back_left_caster
+  dynamics: None
+  limit: None
+  mimic: None
+  name: stand_back_left_caster_joint
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+    xyz:
+    - -0.405
+    - 0.7025
+    - -0.1
+  parent: stand
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: left_light_panel
+  dynamics: None
+  limit: None
+  mimic: None
+  name: stand_left_light_panel_joint
+  origin:
+    rpy:
+    - 0.0
+    - 1.5707963267948966
+    - 0.0
+    xyz:
+    - -0.2625
+    - 0.35
+    - 0.25
+  parent: stand_upright
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: right_light_panel
+  dynamics: None
+  limit: None
+  mimic: None
+  name: stand_left_right_panel_joint
+  origin:
+    rpy:
+    - 0.0
+    - 1.5707963267948966
+    - 0.0
+    xyz:
+    - -0.2625
+    - -0.35
+    - 0.25
+  parent: stand_upright
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: arm_base_link_inertia
+  dynamics: None
+  limit: None
+  mimic: None
+  name: arm_base_link-base_link_inertia
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 3.141592653589793
+    xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+  parent: arm_base_link
+  safety_controller: None
+  type: fixed
+- axis:
+  - 0.0
+  - 0.0
+  - 1.0
+  calibration: None
+  child: arm_shoulder_link
+  dynamics:
+    damping: 0.0
+    friction: 0.0
+  limit:
+    effort: 330.0
+    lower: -6.283185307179586
+    upper: 6.283185307179586
+    velocity: 2.0943951023931953
+  mimic: None
+  name: arm_shoulder_pan_joint
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - -5.226355219677126e-07
+    xyz:
+    - 0.0
+    - 0.0
+    - 0.1808582427003927
+  parent: arm_base_link_inertia
+  safety_controller: None
+  type: revolute
+- axis:
+  - 0.0
+  - 0.0
+  - 1.0
+  calibration: None
+  child: arm_upper_arm_link
+  dynamics:
+    damping: 0.0
+    friction: 0.0
+  limit:
+    effort: 330.0
+    lower: -6.283185307179586
+    upper: 6.283185307179586
+    velocity: 2.0943951023931953
+  mimic: None
+  name: arm_shoulder_lift_joint
+  origin:
+    rpy:
+    - 1.571149055019948
+    - 0.0
+    - -2.842156630394906e-06
+    xyz:
+    - 0.0001146488038115345
+    - 0.0
+    - 0.0
+  parent: arm_shoulder_link
+  safety_controller: None
+  type: revolute
+- axis:
+  - 0.0
+  - 0.0
+  - 1.0
+  calibration: None
+  child: arm_forearm_link
+  dynamics:
+    damping: 0.0
+    friction: 0.0
+  limit:
+    effort: 150.0
+    lower: -3.141592653589793
+    upper: 3.141592653589793
+    velocity: 3.141592653589793
+  mimic: None
+  name: arm_elbow_joint
+  origin:
+    rpy:
+    - 3.140966205585682
+    - 3.14143866526404
+    - 3.141584703118312
+    xyz:
+    - -0.478259666576996
+    - 0.0
+    - 0.0
+  parent: arm_upper_arm_link
+  safety_controller: None
+  type: revolute
+- axis:
+  - 0.0
+  - 0.0
+  - 1.0
+  calibration: None
+  child: arm_wrist_1_link
+  dynamics:
+    damping: 0.0
+    friction: 0.0
+  limit:
+    effort: 56.0
+    lower: -6.283185307179586
+    upper: 6.283185307179586
+    velocity: 3.141592653589793
+  mimic: None
+  name: arm_wrist_1_joint
+  origin:
+    rpy:
+    - 0.006297130801998122
+    - 0.0009340032369312529
+    - 1.229979779393521e-06
+    xyz:
+    - -0.3600303731229585
+    - -0.001096754867652125
+    - 0.1741650928407709
+  parent: arm_forearm_link
+  safety_controller: None
+  type: revolute
+- axis:
+  - 0.0
+  - 0.0
+  - 1.0
+  calibration: None
+  child: arm_wrist_2_link
+  dynamics:
+    damping: 0.0
+    friction: 0.0
+  limit:
+    effort: 56.0
+    lower: -6.283185307179586
+    upper: 6.283185307179586
+    velocity: 3.141592653589793
+  mimic: None
+  name: arm_wrist_2_joint
+  origin:
+    rpy:
+    - 1.568915050891635
+    - 0.0
+    - 1.761825868220462e-06
+    xyz:
+    - 5.900314979285639e-05
+    - -0.1197777051587798
+    - 0.0002253351762985995
+  parent: arm_wrist_1_link
+  safety_controller: None
+  type: revolute
+- axis:
+  - 0.0
+  - 0.0
+  - 1.0
+  calibration: None
+  child: arm_wrist_3_link
+  dynamics:
+    damping: 0.0
+    friction: 0.0
+  limit:
+    effort: 56.0
+    lower: -6.283185307179586
+    upper: 6.283185307179586
+    velocity: 3.141592653589793
+  mimic: None
+  name: arm_wrist_3_joint
+  origin:
+    rpy:
+    - 1.570124239363319
+    - 3.141592653589793
+    - -3.141592198139823
+    xyz:
+    - 9.510304711030174e-05
+    - 0.115763931390055
+    - -7.780349503190604e-05
+  parent: arm_wrist_2_link
+  safety_controller: None
+  type: revolute
+- axis: None
+  calibration: None
+  child: arm_base
+  dynamics: None
+  limit: None
+  mimic: None
+  name: arm_base_link-base_fixed_joint
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 3.141592653589793
+    xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+  parent: arm_base_link
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: arm_flange
+  dynamics: None
+  limit: None
+  mimic: None
+  name: arm_wrist_3-flange
+  origin:
+    rpy:
+    - 0.0
+    - -1.5707963267948966
+    - -1.5707963267948966
+    xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+  parent: arm_wrist_3_link
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: arm_tool0
+  dynamics: None
+  limit: None
+  mimic: None
+  name: arm_flange-tool0
+  origin:
+    rpy:
+    - 1.5707963267948966
+    - 0.0
+    - 1.5707963267948966
+    xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+  parent: arm_flange
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: epick_end_effector
+  dynamics: None
+  limit: None
+  mimic: None
+  name: $hand__end_effector_joint
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+    xyz:
+    - 0.0
+    - 0.0
+    - 0.187
+  parent: gripper_base_link
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: stand
+  dynamics: None
+  limit: None
+  mimic: None
+  name: base_joint
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+    xyz:
+    - 0.0
+    - 0.0
+    - 0.15
+  parent: base_link
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: arm_base_link
+  dynamics: None
+  limit: None
+  mimic: None
+  name: robot_plate_arm_base_link_joint
+  origin:
+    rpy:
+    - 0.0
+    - 3.141592653589793
+    - 4.71238898038469
+    xyz:
+    - 0.0
+    - 0.00175
+    - -0.00885
+  parent: robot_plate
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: gripper_base_link
+  dynamics: None
+  limit: None
+  mimic: None
+  name: coupling_link_gripper_robotiq_arg2f_base_link_joint
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+    xyz:
+    - 0.0
+    - 0.0
+    - 0.017
+  parent: coupling
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: coupling
+  dynamics: None
+  limit: None
+  mimic: None
+  name: arm_tool0-coupling_joint
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 4.71238898038469
+    xyz:
+    - 0.0
+    - 0.0
+    - -0.003
+  parent: arm_tool0
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: camera_lower_left_mount
+  dynamics: None
+  limit: None
+  mimic: None
+  name: camera_beam_lower_camera_lower_left_mount_joint
+  origin:
+    rpy:
+    - 1.5707963267948966
+    - 0.2617993877991494
+    - -0.1767088560700366
+    xyz:
+    - 0.02
+    - 0.2285
+    - 0.14
+  parent: camera_beam_lower
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: camera_lower_right_mount
+  dynamics: None
+  limit: None
+  mimic: None
+  name: camera_beam_lower_camera_lower_right_mount_joint
+  origin:
+    rpy:
+    - 1.5707963267948966
+    - 0.2617993877991494
+    - 0.1767088560700366
+    xyz:
+    - 0.02
+    - -0.2285
+    - 0.14
+  parent: camera_beam_lower
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: camera_upper_mount
+  dynamics: None
+  limit: None
+  mimic: None
+  name: cantilever_camera_upper_mount_joint
+  origin:
+    rpy:
+    - 0.0
+    - 0.2617993877991494
+    - 0.0
+    xyz:
+    - 0.02
+    - 0.0
+    - 0.37
+  parent: cantilever
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: camera_body
+  dynamics: None
+  limit: None
+  mimic: None
+  name: camera_base_to_body
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+    xyz:
+    - -0.0757
+    - 0.0
+    - 0.008
+  parent: camera_base
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: camera_visor
+  dynamics: None
+  limit: None
+  mimic: None
+  name: camera_base_to_visor
+  origin:
+    rpy:
+    - 0.0
+    - 0.0
+    - 0.0
+    xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+  parent: camera_base
+  safety_controller: None
+  type: fixed
+- axis: None
+  calibration: None
+  child: camera_base
+  dynamics: None
+  limit: None
+  mimic: None
+  name: kinect_base_joint
+  origin:
+    rpy:
+    - 3.13764
+    - 3.12912
+    - -3.12899
+    xyz:
+    - -0.245645
+    - -0.011721185
+    - 1.41034
+  parent: base_link
+  safety_controller: None
+  type: fixed
+links:
+- collisions: []
+  inertial: None
+  name: gripper_equilibrium_grasp
+  origin: None
+  visuals: []
+- collisions:
+  - geometry:
+      size:
+      - 0.09
+      - 1.53
+      - 0.045
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.405
+      - 0.0
+      - 0.0281
+  - geometry:
+      size:
+      - 0.9
+      - 0.09
+      - 0.0562
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - -0.72
+      - -0.0225
+  - geometry:
+      size:
+      - 0.9
+      - 0.09
+      - 0.0562
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.72
+      - -0.0225
+  inertial:
+    inertia:
+      ixx: 0.0002835
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.0002835
+      iyz: 0.0
+      izz: 0.000324
+    mass: 10.0
+    origin: None
+  name: stand
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://tahoma_description/meshes/stand/stand_base.stl
+      scale: None
+    material:
+      color: None
+      name: blue_aluminum
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+- collisions:
+  - geometry:
+      size:
+      - 0.2298
+      - 0.045
+      - 1.89
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - -0.1709
+      - 0.6975
+      - 0.0
+  - geometry:
+      size:
+      - 0.2298
+      - 0.045
+      - 1.89
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - -0.1709
+      - -0.6975
+      - 0.0
+  - geometry:
+      size:
+      - 0.237
+      - 1.44
+      - 0.096
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - -0.1733
+      - 0.0
+      - 0.9012
+  inertial:
+    inertia:
+      ixx: 0.0002835
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.0002835
+      iyz: 0.0
+      izz: 0.000324
+    mass: 34.0
+    origin: None
+  name: stand_upright
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://tahoma_description/meshes/stand/stand_upright.stl
+      scale: None
+    material:
+      color: None
+      name: blue_aluminum
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+- collisions:
+  - geometry:
+      size:
+      - 0.102
+      - 1.439
+      - 0.4934
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  inertial:
+    inertia:
+      ixx: 0.0002835
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.0002835
+      iyz: 0.0
+      izz: 0.000324
+    mass: 5.0
+    origin: None
+  name: stand_brace
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://tahoma_description/meshes/stand/stand_brace.stl
+      scale: None
+    material:
+      color: None
+      name: blue_aluminum
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+- collisions:
+  - geometry:
+      size:
+      - 0.045
+      - 1.25
+      - 0.045
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.022
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  inertial:
+    inertia:
+      ixx: 0.0002835
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.0002835
+      iyz: 0.0
+      izz: 0.000324
+    mass: 5.0
+    origin: None
+  name: camera_beam_lower
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://tahoma_description/meshes/stand/camera_beam.stl
+      scale: None
+    material:
+      color: None
+      name: blue_aluminum
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+- collisions:
+  - geometry:
+      size:
+      - 0.726
+      - 0.225
+      - 0.09
+    name: None
+    origin:
+      rpy:
+      - 0
+      - 0
+      - 0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0415
+  inertial:
+    inertia:
+      ixx: 0.0002835
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.0002835
+      iyz: 0.0
+      izz: 0.000324
+    mass: 8.0
+    origin: None
+  name: cantilever
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://tahoma_description/meshes/stand/cantilever.stl
+      scale: None
+    material:
+      color: None
+      name: blue_aluminum
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+- collisions:
+  - geometry:
+      size:
+      - 0.585
+      - 0.0602
+      - 0.179
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  inertial:
+    inertia:
+      ixx: 0.0002835
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.0002835
+      iyz: 0.0
+      izz: 0.000324
+    mass: 3.0
+    origin: None
+  name: control_box_mount
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://tahoma_description/meshes/stand/control_box_mount.stl
+      scale: None
+    material:
+      color: None
+      name: blue_aluminum
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+- collisions:
+  - geometry:
+      size:
+      - 0.46
+      - 0.25
+      - 0.44
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  inertial:
+    inertia:
+      ixx: 0.0002835
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.0002835
+      iyz: 0.0
+      izz: 0.000324
+    mass: 7.0
+    origin: None
+  name: control_box
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://tahoma_description/meshes/stand/control_box.stl
+      scale: None
+    material:
+      color: None
+      name: aluminum
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+- collisions:
+  - geometry:
+      size:
+      - 0.225
+      - 0.225
+      - 0.0225
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  inertial:
+    inertia:
+      ixx: 0.0002835
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.0002835
+      iyz: 0.0
+      izz: 0.000324
+    mass: 0.5
+    origin: None
+  name: robot_plate
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://tahoma_description/meshes/stand/robot_plate.stl
+      scale: None
+    material:
+      color: None
+      name: blue_aluminum
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+- collisions:
+  - geometry:
+      size:
+      - 0.09
+      - 0.104
+      - 0.1225
+    name: None
+    origin:
+      rpy:
+      - 1.56
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  inertial:
+    inertia:
+      ixx: 0.0002835
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.0002835
+      iyz: 0.0
+      izz: 0.0002835
+    mass: 1.0
+    origin: None
+  name: front_right_caster
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://tahoma_description/meshes/stand/caster.stl
+      scale: None
+    material:
+      color:
+        rgba:
+        - 0.2
+        - 0.2
+        - 0.2
+        - 1.0
+      name: wheel
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 1.56
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+- collisions:
+  - geometry:
+      size:
+      - 0.09
+      - 0.104
+      - 0.1225
+    name: None
+    origin:
+      rpy:
+      - 1.56
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  inertial:
+    inertia:
+      ixx: 0.0002835
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.0002835
+      iyz: 0.0
+      izz: 0.0002835
+    mass: 1.0
+    origin: None
+  name: front_left_caster
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://tahoma_description/meshes/stand/caster.stl
+      scale: None
+    material:
+      color:
+        rgba:
+        - 0.2
+        - 0.2
+        - 0.2
+        - 1.0
+      name: wheel
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 1.56
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+- collisions:
+  - geometry:
+      size:
+      - 0.09
+      - 0.104
+      - 0.1225
+    name: None
+    origin:
+      rpy:
+      - 1.56
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  inertial:
+    inertia:
+      ixx: 0.0002835
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.0002835
+      iyz: 0.0
+      izz: 0.0002835
+    mass: 1.0
+    origin: None
+  name: back_left_caster
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://tahoma_description/meshes/stand/caster.stl
+      scale: None
+    material:
+      color:
+        rgba:
+        - 0.2
+        - 0.2
+        - 0.2
+        - 1.0
+      name: wheel
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 1.56
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+- collisions:
+  - geometry:
+      size:
+      - 0.09
+      - 0.104
+      - 0.1225
+    name: None
+    origin:
+      rpy:
+      - 1.56
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  inertial:
+    inertia:
+      ixx: 0.0002835
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.0002835
+      iyz: 0.0
+      izz: 0.0002835
+    mass: 1.0
+    origin: None
+  name: back_right_caster
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://tahoma_description/meshes/stand/caster.stl
+      scale: None
+    material:
+      color:
+        rgba:
+        - 0.2
+        - 0.2
+        - 0.2
+        - 1.0
+      name: wheel
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 1.56
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+- collisions:
+  - geometry:
+      size:
+      - 1.21
+      - 0.602
+      - 0.01
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  inertial:
+    inertia:
+      ixx: 0.0002835
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.0002835
+      iyz: 0.0
+      izz: 0.0002835
+    mass: 1.0
+    origin: None
+  name: left_light_panel
+  origin: None
+  visuals:
+  - geometry:
+      size:
+      - 1.21
+      - 0.602
+      - 0.01
+    material:
+      color:
+        rgba:
+        - 0.3
+        - 0.3
+        - 0.3
+        - 1.0
+      name: gray
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+- collisions:
+  - geometry:
+      size:
+      - 1.17
+      - 0.562
+      - 0.00251
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  inertial: None
+  name: left_light_panel_emitter
+  origin: None
+  visuals:
+  - geometry:
+      size:
+      - 1.17
+      - 0.562
+      - 0.00251
+    material:
+      color:
+        rgba:
+        - 0.9
+        - 0.9
+        - 0.9
+        - 1.0
+      name: white
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.005
+- collisions:
+  - geometry:
+      size:
+      - 1.21
+      - 0.602
+      - 0.01
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  inertial:
+    inertia:
+      ixx: 0.0002835
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.0002835
+      iyz: 0.0
+      izz: 0.0002835
+    mass: 1.0
+    origin: None
+  name: right_light_panel
+  origin: None
+  visuals:
+  - geometry:
+      size:
+      - 1.21
+      - 0.602
+      - 0.01
+    material:
+      color:
+        rgba:
+        - 0.3
+        - 0.3
+        - 0.3
+        - 1.0
+      name: gray
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+- collisions:
+  - geometry:
+      size:
+      - 1.17
+      - 0.562
+      - 0.00251
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  inertial: None
+  name: right_light_panel_emitter
+  origin: None
+  visuals:
+  - geometry:
+      size:
+      - 1.17
+      - 0.562
+      - 0.00251
+    material:
+      color:
+        rgba:
+        - 0.9
+        - 0.9
+        - 0.9
+        - 1.0
+      name: white
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.005
+- collisions: []
+  inertial: None
+  name: arm_base_link
+  origin: None
+  visuals: []
+- collisions:
+  - geometry:
+      filename: package://ur_description/meshes/ur10e/collision/base.stl
+      scale: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 3.141592653589793
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  inertial:
+    inertia:
+      ixx: 0.0061063308908
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.0061063308908
+      iyz: 0.0
+      izz: 0.01125
+    mass: 4.0
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  name: arm_base_link_inertia
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://ur_description/meshes/ur10e/visual/base.dae
+      scale: None
+    material:
+      color:
+        rgba:
+        - 0.7
+        - 0.7
+        - 0.7
+        - 1.0
+      name: LightGrey
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 3.141592653589793
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+- collisions:
+  - geometry:
+      filename: package://ur_description/meshes/ur10e/collision/shoulder.stl
+      scale: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 3.141592653589793
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  inertial:
+    inertia:
+      ixx: 0.029819260655624295
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.029819260655624295
+      iyz: 0.0
+      izz: 0.020725312499999995
+    mass: 7.369
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  name: arm_shoulder_link
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://ur_description/meshes/ur10e/visual/shoulder.dae
+      scale: None
+    material:
+      color:
+        rgba:
+        - 0.7
+        - 0.7
+        - 0.7
+        - 1.0
+      name: LightGrey
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 3.141592653589793
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+- collisions:
+  - geometry:
+      filename: package://ur_description/meshes/ur16e/collision/upperarm.stl
+      scale: None
+    name: None
+    origin:
+      rpy:
+      - 1.5707963267948966
+      - 0.0
+      - -1.5707963267948966
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.176
+  inertial:
+    inertia:
+      ixx: 0.21399985623335657
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.21399985623335657
+      iyz: 0.0
+      izz: 0.029390624999999997
+    mass: 10.45
+    origin:
+      rpy:
+      - 0.0
+      - 1.5707963267948966
+      - 0.0
+      xyz:
+      - -0.2392
+      - 0.0
+      - 0.175
+  name: arm_upper_arm_link
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://ur_description/meshes/ur16e/visual/upperarm.dae
+      scale: None
+    material:
+      color:
+        rgba:
+        - 0.7
+        - 0.7
+        - 0.7
+        - 1.0
+      name: LightGrey
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 1.5707963267948966
+      - 0.0
+      - -1.5707963267948966
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.176
+- collisions:
+  - geometry:
+      filename: package://ur_description/meshes/ur16e/collision/forearm.stl
+      scale: None
+    name: None
+    origin:
+      rpy:
+      - 1.5707963267948966
+      - 0.0
+      - -1.5707963267948966
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.04
+  inertial:
+    inertia:
+      ixx: 0.052743185152717496
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.052743185152717496
+      iyz: 0.0
+      izz: 0.012152812499999997
+    mass: 4.321
+    origin:
+      rpy:
+      - 0.0
+      - 1.5707963267948966
+      - 0.0
+      xyz:
+      - -0.18
+      - 0.0
+      - 0.04
+  name: arm_forearm_link
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://ur_description/meshes/ur16e/visual/forearm.dae
+      scale: None
+    material:
+      color:
+        rgba:
+        - 0.7
+        - 0.7
+        - 0.7
+        - 1.0
+      name: LightGrey
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 1.5707963267948966
+      - 0.0
+      - -1.5707963267948966
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.04
+- collisions:
+  - geometry:
+      filename: package://ur_description/meshes/ur10e/collision/wrist1.stl
+      scale: None
+    name: None
+    origin:
+      rpy:
+      - 1.5707963267948966
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - -0.135
+  inertial:
+    inertia:
+      ixx: 0.0056816227273499996
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.0056816227273499996
+      iyz: 0.0
+      izz: 0.00613125
+    mass: 2.18
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  name: arm_wrist_1_link
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://ur_description/meshes/ur10e/visual/wrist1.dae
+      scale: None
+    material:
+      color:
+        rgba:
+        - 0.7
+        - 0.7
+        - 0.7
+        - 1.0
+      name: LightGrey
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 1.5707963267948966
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - -0.135
+- collisions:
+  - geometry:
+      filename: package://ur_description/meshes/ur10e/collision/wrist2.stl
+      scale: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - -0.12
+  inertial:
+    inertia:
+      ixx: 0.0052985041305975
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.0052985041305975
+      iyz: 0.0
+      izz: 0.0057178125
+    mass: 2.033
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  name: arm_wrist_2_link
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://ur_description/meshes/ur10e/visual/wrist2.dae
+      scale: None
+    material:
+      color:
+        rgba:
+        - 0.7
+        - 0.7
+        - 0.7
+        - 1.0
+      name: LightGrey
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - -0.12
+- collisions:
+  - geometry:
+      filename: package://ur_description/meshes/ur10e/collision/wrist3.stl
+      scale: None
+    name: None
+    origin:
+      rpy:
+      - 1.5707963267948966
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - -0.1168
+  inertial:
+    inertia:
+      ixx: 0.0006481268240825001
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.0006481268240825001
+      iyz: 0.0
+      izz: 0.0009183374999999999
+    mass: 0.907
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - -0.025
+  name: arm_wrist_3_link
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://ur_description/meshes/ur10e/visual/wrist3.dae
+      scale: None
+    material:
+      color:
+        rgba:
+        - 0.7
+        - 0.7
+        - 0.7
+        - 1.0
+      name: LightGrey
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 1.5707963267948966
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - -0.1168
+- collisions: []
+  inertial: None
+  name: arm_base
+  origin: None
+  visuals: []
+- collisions: []
+  inertial: None
+  name: arm_flange
+  origin: None
+  visuals: []
+- collisions: []
+  inertial: None
+  name: arm_tool0
+  origin: None
+  visuals: []
+- collisions:
+  - geometry:
+      length: 0.114
+      radius: 0.035
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.057
+  - geometry:
+      length: 0.08
+      radius: 0.006
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.137
+  inertial:
+    inertia:
+      ixx: 0.003084
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 0.002999
+      iyz: 0.0
+      izz: 0.000546
+    mass: 0.745
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.055
+  name: gripper_base_link
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://robotiq_epick_visualization/meshes/visual/robotiq_epick.dae
+      scale:
+      - 0.001
+      - 0.001
+      - 0.001
+    material:
+      color:
+        rgba:
+        - 1.0
+        - 1.0
+        - 1.0
+        - 1.0
+      name: mat1
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 1.5707963267948966
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0485
+  - geometry:
+      length: 0.08
+      radius: 0.006
+    material:
+      color:
+        rgba:
+        - 1.0
+        - 0.0
+        - 0.0
+        - 1.0
+      name: mat2
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.137
+- collisions:
+  - geometry:
+      length: 0.01
+      radius: 0.0225
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.005
+  inertial:
+    inertia:
+      ixx: 1.0e-08
+      ixy: 0.0
+      ixz: 0.0
+      iyy: 1.0e-08
+      iyz: 0.0
+      izz: 1.0e-08
+    mass: 0.0001
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  name: epick_end_effector
+  origin: None
+  visuals:
+  - geometry:
+      length: 0.01
+      radius: 0.0225
+    material:
+      color:
+        rgba:
+        - 0.0
+        - 0.0
+        - 1.0
+        - 1.0
+      name: transparent
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.005
+- collisions: []
+  inertial: None
+  name: base_link
+  origin: None
+  visuals: []
+- collisions:
+  - geometry:
+      size:
+      - 0.015
+      - 0.033
+      - 0.056
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.041
+      - 0.0
+      - -0.013
+  - geometry:
+      length: 0.0169
+      radius: 0.0375
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.00845
+  inertial: None
+  name: coupling
+  origin: None
+  visuals:
+  - geometry:
+      filename: package://robotiq_2f_85_gripper_visualization/meshes/visual/coupling.stl
+      scale: None
+    material:
+      color:
+        rgba:
+        - 0.1
+        - 0.1
+        - 0.1
+        - 1.0
+      name: ''
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  - geometry:
+      filename: package://robotiq_2f_85_gripper_visualization/meshes/visual/connector_cover.stl
+      scale: None
+    material:
+      color:
+        rgba:
+        - 0.1
+        - 0.1
+        - 0.1
+        - 1.0
+      name: ''
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0335
+      - 0.0
+      - 0.006
+- collisions:
+  - geometry:
+      size:
+      - 0.1
+      - 0.15
+      - 0.15
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  inertial: None
+  name: camera_lower_right_mount
+  origin: None
+  visuals: []
+- collisions:
+  - geometry:
+      size:
+      - 0.1
+      - 0.15
+      - 0.15
+    name: None
+    origin:
+      rpy:
+      - 0.0
+      - 0.0
+      - 0.0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+  inertial: None
+  name: camera_lower_left_mount
+  origin: None
+  visuals: []
+- collisions: []
+  inertial: None
+  name: camera_upper_mount
+  origin: None
+  visuals: []
+- collisions: []
+  inertial: None
+  name: camera_body
+  origin: None
+  visuals:
+  - geometry:
+      size:
+      - 0.0994
+      - 0.0996
+      - 0.023
+    material:
+      color: None
+      name: white
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0
+      - 0
+      - 0
+      xyz:
+      - 0.0
+      - 0.0
+      - 0.0
+- collisions: []
+  inertial: None
+  name: camera_base
+  origin: None
+  visuals:
+  - geometry:
+      size:
+      - 0.026
+      - 0.103
+      - 0.039
+    material:
+      color: None
+      name: grey
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0
+      - 0
+      - 0
+      xyz:
+      - -0.013
+      - 0.0
+      - 0.0
+- collisions: []
+  inertial: None
+  name: camera_visor
+  origin: None
+  visuals:
+  - geometry:
+      size:
+      - 0.026
+      - 0.101
+      - 0.037
+    material:
+      color: None
+      name: black
+      texture: None
+    name: None
+    origin:
+      rpy:
+      - 0
+      - 0
+      - 0
+      xyz:
+      - -0.0128
+      - 0.0
+      - 0.0
+materials:
+- color:
+    rgba:
+    - 0.23
+    - 0.42
+    - 0.64
+    - 1.0
+  name: blue_aluminum
+  texture: None
+- color:
+    rgba:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 1.0
+  name: black
+  texture: None
+- color:
+    rgba:
+    - 0.1
+    - 0.1
+    - 0.1
+    - 1.0
+  name: dark_grey
+  texture: None
+- color:
+    rgba:
+    - 0.6
+    - 0.6
+    - 0.6
+    - 1.0
+  name: grey
+  texture: None
+- color:
+    rgba:
+    - 0.9
+    - 0.9
+    - 0.9
+    - 1.0
+  name: white
+  texture: None
+name: tahoma
+transmissions:
+- actuators:
+  - mechanicalReduction: 1.0
+    name: arm_shoulder_pan_motor
+  joints:
+  - hardwareInterfaces:
+    - hardware_interface/PositionJointInterface
+    name: arm_shoulder_pan_joint
+  name: arm_shoulder_pan_trans
+  type: transmission_interface/SimpleTransmission
+- actuators:
+  - mechanicalReduction: 1.0
+    name: arm_shoulder_lift_motor
+  joints:
+  - hardwareInterfaces:
+    - hardware_interface/PositionJointInterface
+    name: arm_shoulder_lift_joint
+  name: arm_shoulder_lift_trans
+  type: transmission_interface/SimpleTransmission
+- actuators:
+  - mechanicalReduction: 1.0
+    name: arm_elbow_motor
+  joints:
+  - hardwareInterfaces:
+    - hardware_interface/PositionJointInterface
+    name: arm_elbow_joint
+  name: arm_elbow_trans
+  type: transmission_interface/SimpleTransmission
+- actuators:
+  - mechanicalReduction: 1.0
+    name: arm_wrist_1_motor
+  joints:
+  - hardwareInterfaces:
+    - hardware_interface/PositionJointInterface
+    name: arm_wrist_1_joint
+  name: arm_wrist_1_trans
+  type: transmission_interface/SimpleTransmission
+- actuators:
+  - mechanicalReduction: 1.0
+    name: arm_wrist_2_motor
+  joints:
+  - hardwareInterfaces:
+    - hardware_interface/PositionJointInterface
+    name: arm_wrist_2_joint
+  name: arm_wrist_2_trans
+  type: transmission_interface/SimpleTransmission
+- actuators:
+  - mechanicalReduction: 1.0
+    name: arm_wrist_3_motor
+  joints:
+  - hardwareInterfaces:
+    - hardware_interface/PositionJointInterface
+    name: arm_wrist_3_joint
+  name: arm_wrist_3_trans
+  type: transmission_interface/SimpleTransmission
+version: '1.0'
