@@ -57,7 +57,8 @@ class HeuristicGraspDetector:
         # center = np.vstack([center, np.ones(center.shape[1])])  # convert to homogenous
         # points = np.matmul(camera_to_target_mat, points)[0:3, :].T  # apply transform
 
-        POD_OFFSET = -0.15
+        center[0] = center[0] - 0.035
+        POD_OFFSET = -0.10
         transform= self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
         center[0] = transform.transform.translation.x- POD_OFFSET
 
@@ -69,7 +70,7 @@ class HeuristicGraspDetector:
         align_to_bin_orientation = transformations.quaternion_from_euler(math.pi / 2., -math.pi / 2., math.pi / 2.)
 
         poses_stamped = [(position, align_to_bin_orientation)]
-        # print(poses_stamped)
+        print(poses_stamped)
         return poses_stamped
 
 
