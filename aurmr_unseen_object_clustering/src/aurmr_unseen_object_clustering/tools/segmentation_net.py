@@ -807,7 +807,7 @@ class SegNet:
         old_mask[old_mask > obj_n] -= 1
 
         # Find object correspondence between scenes
-        recs, sift_failed, row_recs = self.match_masks(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
+        recs, sift_failed, row_recs = self.match_masks(bin.last['rgb'],bin.current['rgb'], old_mask, mask_crop)
 
         if(sift_failed):
             print(f"WARNING: SIFT Matching Failure on bin {bin_id}. But not Appending to bad bins yet.")
