@@ -57,8 +57,8 @@ class HeuristicGraspDetector:
         # center = np.vstack([center, np.ones(center.shape[1])])  # convert to homogenous
         # points = np.matmul(camera_to_target_mat, points)[0:3, :].T  # apply transform
 
-        center[0] = center[0] - 0.035
-        POD_OFFSET = -0.10
+        # center[0] = center[0] - 0.02
+        POD_OFFSET = -0.1
         transform= self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
         center[0] = transform.transform.translation.x- POD_OFFSET
 

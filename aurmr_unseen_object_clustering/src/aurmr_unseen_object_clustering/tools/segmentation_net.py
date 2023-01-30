@@ -811,7 +811,7 @@ class SegNet:
 
         if(sift_failed):
             print(f"WARNING: SIFT Matching Failure on bin {bin_id}. But not Appending to bad bins yet.")
-            recs, color_failed = self.match_masks_using_color(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop, recs, row_recs)
+            recs, color_failed = self.match_masks_using_color(bin.last['rgb'],bin.current['rgb'], old_mask, mask_crop, recs, row_recs)
             sift_failed = False
 
             if color_failed:
