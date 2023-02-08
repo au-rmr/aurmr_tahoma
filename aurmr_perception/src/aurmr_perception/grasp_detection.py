@@ -19,6 +19,8 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import sys
 sys.path.append("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/UIE_main/mask2former_frame/")
+
+#from UIE_main import mask2former_frame
 from normal_std.inference_grasp_main import run_normal_std
 
 from scipy.spatial.transform import Rotation as R
