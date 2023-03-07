@@ -185,7 +185,7 @@ class GetGraspPose(State):
 
         grasp_response = self.get_grasp(points=points_response.points,
                                         mask=points_response.mask,
-                                        dist_threshold=self.pre_grasp_offset)
+                                        dist_threshold=self.pre_grasp_offset, bin_id=userdata['target_bin_id'])
 
         if not grasp_response.success:
             userdata["status"] = "pass"

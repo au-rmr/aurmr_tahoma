@@ -58,7 +58,7 @@
           args="load depth_image_proc/point_cloud_xyz nodelet_manager">
       <remap from="camera_info" to="/camera_lower_right/aligned_depth_to_color/camera_info"/>
       <remap from="image_rect" to="/camera_lower_right/aligned_depth_to_color/image_raw"/>
-      <remap from="points" to="/camera/depth/points"/>
+      <remap from="points" to="/camera/depth/points2"/>
     </node>
 
 
