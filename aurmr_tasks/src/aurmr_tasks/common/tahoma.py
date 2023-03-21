@@ -455,7 +455,7 @@ class Tahoma:
         Returns:
             string describing the error if an error occurred, else None.
         """
- 
+        prev_force_limit = self.force_mag
         self.move_group.set_end_effector_link("arm_tool0")
         goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.planning_frame, rospy.Duration(1))
 
@@ -494,7 +494,8 @@ class Tahoma:
             steps = 0
             while steps < timeout and not self.goal_finished:
                 # rospy.loginfo("Waiting for feedback or goal finishing")
-                if use_force and self.force_mag > force_limit:
+                if use_force and abs(self.force_mag-prev_force_limit) > force_limit:
+                    rospy.loginfo(f" Force values: {abs(self.force_mag-prev_force_limit)}")
                     self.move_group.stop()
                     rospy.loginfo("Stopping movement due to force feedback")
                     early_stop = True
