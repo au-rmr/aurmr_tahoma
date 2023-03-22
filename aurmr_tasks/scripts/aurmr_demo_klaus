@@ -151,12 +151,15 @@ def main():
     pose_drop = PoseStamped()
     pose_drop.header=std_msgs.msg.Header(frame_id='pod_base_link')
     pose_drop.pose.orientation = Quaternion(0.7071068, 0, 0, 0.7071068)
-    pose_drop.pose.position = Point(x=0.0, y=0.32, z=1.1)
+    pose_drop.pose.position = Point(x=0.0, y=0.32, z=0.9)
 
     # pose_pre_grasp = PoseStamped()
     # pose_pre_grasp.header=std_msgs.msg.Header(frame_id='pod_base_link')
     # pose_pre_grasp.pose.orientation = Quaternion(x=0, y=1, z=0, w=0)
     # pose_pre_grasp.pose.position = Point(x=0.33, y=1.23, z=-0.4)
+
+
+    THRUST_DISTANCE = 0.23
 
     with demo_sm:
 
@@ -172,14 +175,15 @@ def main():
             StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion_storm.MoveEndEffectorToPoseStorm(), ["succeeded", "aborted"])
 
             # StateMachine.add_auto("OPEN_BEFORE_GRASP", motion.OpenGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
+            
             StateMachine.add_auto('MOVE_INTO_POD',
-                              motion_storm.MoveEndEffectorInLineByDistStorm(dist=[0.18,0,0] , quat=[0, 0.7071068, 0, 0.7071068], use_force=True, use_gripper=True),
+                              motion_storm.MoveEndEffectorInLineByDistStorm(dist=[THRUST_DISTANCE,0,0] , quat=[0, 0.7071068, 0, 0.7071068], use_force=True, use_gripper=True),
                               ["succeeded", "aborted"])
             StateMachine.add_auto('MOVE_UP_POD',
                               motion_storm.MoveEndEffectorInLineByDistStorm(dist=[0,0,-0.1] , quat=[0, 0.7071068, 0, 0.7071068], use_force=False, use_gripper=False),
                               ["succeeded", "aborted"])
             StateMachine.add_auto('MOVE_OUT_POD',
-                              motion_storm.MoveEndEffectorInLineByDistStorm(dist=[-0.18,0,0], quat=[0, 0.7071068, 0, 0.7071068 ] , use_force=False, use_gripper=False),
+                              motion_storm.MoveEndEffectorInLineByDistStorm(dist=[THRUST_DISTANCE,0,0], quat=[0, 0.7071068, 0, 0.7071068 ] , use_force=False, use_gripper=False),
                               ["succeeded", "aborted"])
             # StateMachine.add_auto("MOVE_TO_GRASP", motion.grasp_move_to_offset(robot, (0, 0, 0.300)), ["succeeded", "aborted", "preempted"])
             # StateMachine.add_auto("LIFT_OBJ", motion.robust_move_to_offset(robot, (0, 0, 0.035), 'base_link'), ["succeeded", "aborted", "preempted"])
