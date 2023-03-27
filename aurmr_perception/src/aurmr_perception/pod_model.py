@@ -18,7 +18,7 @@ from std_msgs.msg import Header
 from std_srvs.srv import Trigger
 # from aurmr_unseen_object_clustering.tools.run_network import clustering_network
 # from aurmr_unseen_object_clustering.tools.match_masks import match_masks
-from aurmr_unseen_object_clustering.tools.segmentation_net import SegNet, NO_OBJ_STORED, UNDERSEGMENTATION, OBJ_NOT_FOUND, SIFT_FAILED, IN_BAD_BINS
+from aurmr_unseen_object_clustering.tools.segmentation_net import SegNet, NO_OBJ_STORED, UNDERSEGMENTATION, OBJ_NOT_FOUND, MATCH_FAILED, IN_BAD_BINS
 
 class PodPerceptionROS:
     def __init__(self, model, camera_name, visualize, camera_type):
