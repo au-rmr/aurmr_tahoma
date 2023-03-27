@@ -1,0 +1,6 @@
+int16[] input_image
+int16 width
+int16 height
+---
+int16[] out_label
+float64[] embeddings
