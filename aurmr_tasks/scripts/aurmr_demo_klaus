@@ -183,7 +183,7 @@ def main():
                               motion_storm.MoveEndEffectorInLineByDistStorm(dist=[0,0,-0.1] , quat=[0, 0.7071068, 0, 0.7071068], use_force=False, use_gripper=False),
                               ["succeeded", "aborted"])
             StateMachine.add_auto('MOVE_OUT_POD',
-                              motion_storm.MoveEndEffectorInLineByDistStorm(dist=[THRUST_DISTANCE,0,0], quat=[0, 0.7071068, 0, 0.7071068 ] , use_force=False, use_gripper=False),
+                              motion_storm.MoveEndEffectorInLineByDistStorm(dist=[-THRUST_DISTANCE,0,0], quat=[0, 0.7071068, 0, 0.7071068 ] , use_force=False, use_gripper=False),
                               ["succeeded", "aborted"])
             # StateMachine.add_auto("MOVE_TO_GRASP", motion.grasp_move_to_offset(robot, (0, 0, 0.300)), ["succeeded", "aborted", "preempted"])
             # StateMachine.add_auto("LIFT_OBJ", motion.robust_move_to_offset(robot, (0, 0, 0.035), 'base_link'), ["succeeded", "aborted", "preempted"])
