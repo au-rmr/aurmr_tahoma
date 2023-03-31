@@ -29,6 +29,10 @@ import moveit_commander
 from controller_manager_msgs.srv import ListControllers, SwitchController
 from tahoma_moveit_config.msg import ServoToPoseAction, ServoToPoseGoal
 
+import json
+import requests 
+from std_msgs.msg import String
+from ....srv import ToF 
 
 
 ARM_GROUP_NAME = 'manipulator'
@@ -144,6 +148,9 @@ class Tahoma:
             queue_size=1,
             latch=True
         )
+        # ToF
+        self.ToF = rospy.Service('ToF', ToF, self.get_tof_sensor_data)
+
         self._controller_lister = rospy.ServiceProxy("/controller_manager/list_controllers", ListControllers)
         self._controller_switcher = rospy.ServiceProxy("/controller_manager/switch_controller", SwitchController)
         self.servo_to_pose_client = SimpleActionClient("/servo_server/servo_to_pose", ServoToPoseAction)
@@ -262,6 +269,17 @@ class Tahoma:
         if not return_before_done:
             rospy.loginfo("Waiting for gripper. \n")
             self._gripper_client.wait_for_result()
+
+    def get_tof_sensor_data(self):
+        url = 'http://10.42.0.129/'
+        r = requests.get(url, stream = True)
+        ##json.loads gets the json as a python dict
+        data = json.loads(r.text)
+        #typecast individual data points to str
+        dataSensorOne = str(data["sensor1"])
+        dataSensorTwo = str(data["sensor2"])
+
+        return dataSensorOne, dataSensorTwo
 
 
     @requires_controller(JOINT_TRAJ_CONTROLLER)
