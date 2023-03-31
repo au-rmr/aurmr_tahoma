@@ -32,8 +32,7 @@ from tahoma_moveit_config.msg import ServoToPoseAction, ServoToPoseGoal
 import json
 import requests 
 from std_msgs.msg import String
-from ....srv import ToF 
-
+from aurmr_tasks.srv import ToF
 
 ARM_GROUP_NAME = 'manipulator'
 JOINT_ACTION_SERVER = '/pos_joint_traj_controller/follow_joint_trajectory'
@@ -270,7 +269,8 @@ class Tahoma:
             rospy.loginfo("Waiting for gripper. \n")
             self._gripper_client.wait_for_result()
 
-    def get_tof_sensor_data(self):
+    def get_tof_sensor_data(self, aca):
+        print('========================', aca)
         url = 'http://10.42.0.129/'
         r = requests.get(url, stream = True)
         ##json.loads gets the json as a python dict
@@ -279,7 +279,11 @@ class Tahoma:
         dataSensorOne = str(data["sensor1"])
         dataSensorTwo = str(data["sensor2"])
 
+        rospy.loginfo("------------------------------->>>>>> Published sensor data")
+
         return dataSensorOne, dataSensorTwo
+    
+    
 
 
     @requires_controller(JOINT_TRAJ_CONTROLLER)

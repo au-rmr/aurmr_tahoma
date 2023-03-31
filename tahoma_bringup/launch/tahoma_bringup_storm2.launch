@@ -62,6 +62,9 @@
       <remap from="points" to="/camera/depth/points"/>
     </node>
 
+    <include file="$(find aurmr_tasks)/launch/tof.launch">
+    </include>
+
 
   <!-- Server for webserver communication -->
   <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" > 
