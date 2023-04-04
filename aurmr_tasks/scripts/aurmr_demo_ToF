@@ -43,15 +43,15 @@ def move_arm_storm_continuous():
         # update orientation
         #angle = get_angle_from_tof(TOF_data[0], TOF_data[1])
         # constant yaw dif
-        d_left, d_right = TOF_data[1], TOF_data[0] 
+        d_left, d_right = TOF_data[1], TOF_data[0] # d2, d1
         d_dif = d_left - d_right
-        bias = 0
+        bias = -10
         buffer = 5
 
-        if d_dif > (0 + buffer):
-            yaw_angle += 0.5
-        elif d_dif < (0 - buffer):
-            yaw_angle -= 0.5
+        if d_dif > (bias + buffer):
+            yaw_angle += 0.6
+        elif d_dif < (bias - buffer):
+            yaw_angle -= 0.6
 
         pose = set_ee_pose(gripper_pose, [0 , 0 , yaw_angle])
         goal_pub.publish(pose)
