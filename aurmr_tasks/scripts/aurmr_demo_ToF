@@ -13,7 +13,7 @@ ACTIVATE_CONTROL = '/activate_control'
 STROM_RESULT = '/storm_info/result'
 gripper_pose = [0.35, 0.174, 0.774]
 
-goal_pub, AC_pub, goal_finished, TOF_data = None, None, None, [50, 50]
+goal_pub, AC_pub, goal_finished, TOF_data, yaw_angle = None, None, None, [50, 50], 0.
 
 def move_arm_storm(pose):
     global goal_pub, AC_pub, goal_finished
@@ -21,7 +21,7 @@ def move_arm_storm(pose):
     AC_pub.publish(Bool(data=True))
     goal_finished = False
     time_out, steps = 50, 0.0
-    while not(goal_finished):
+    while not rospy.is_shutdown() and not(goal_finished):
         # print("The robot is still moving to: ", pose)
         goal_pub.publish(pose)
         AC_pub.publish(Bool(data=True))
@@ -36,13 +36,24 @@ def move_arm_storm(pose):
     AC_pub.publish(Bool(data=False))
 
 def move_arm_storm_continuous():
-    global goal_pub, AC_pub, goal_finished, TOF_data
+    global goal_pub, AC_pub, goal_finished, TOF_data, yaw_angle
     goal_finished = False
     #time_out, steps = 50, 0.0
     while not rospy.is_shutdown():
         # update orientation
-        angle = get_angle_from_tof(TOF_data[0], TOF_data[1])
-        pose = set_ee_pose(gripper_pose, [0 , 0 , angle])
+        #angle = get_angle_from_tof(TOF_data[0], TOF_data[1])
+        # constant yaw dif
+        d_left, d_right = TOF_data[1], TOF_data[0] 
+        d_dif = d_left - d_right
+        bias = 0
+        buffer = 5
+
+        if d_dif > (0 + buffer):
+            yaw_angle += 0.5
+        elif d_dif < (0 - buffer):
+            yaw_angle -= 0.5
+
+        pose = set_ee_pose(gripper_pose, [0 , 0 , yaw_angle])
         goal_pub.publish(pose)
         AC_pub.publish(Bool(data=True))
         # print("Goal has not reached yet")
