@@ -1,17 +1,19 @@
 #!/usr/bin/env python
 import rospy
 import std_msgs
-from std_msgs.msg import String, Float64MultiArray, MultiArrayDimension, Bool
+from std_msgs.msg import String, Float64MultiArray, MultiArrayDimension, Bool, Int32MultiArray
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from scipy.spatial.transform import Rotation as R
 import numpy as np
+import math
 
-tof_topic = 'tof_sensors'
+TOF_TOPIC = '/tof_sensors'
 GOAL_POSE = '/goal_pose'
 ACTIVATE_CONTROL = '/activate_control'
 STROM_RESULT = '/storm_info/result'
+gripper_pose = [0.35, 0.174, 0.774]
 
-goal_pub, AC_pub, goal_finished = None, None, None
+goal_pub, AC_pub, goal_finished, TOF_data = None, None, None, [50, 50]
 
 def move_arm_storm(pose):
     global goal_pub, AC_pub, goal_finished
@@ -19,7 +21,7 @@ def move_arm_storm(pose):
     AC_pub.publish(Bool(data=True))
     goal_finished = False
     time_out, steps = 50, 0.0
-    while True:#not(goal_finished):
+    while not(goal_finished):
         # print("The robot is still moving to: ", pose)
         goal_pub.publish(pose)
         AC_pub.publish(Bool(data=True))
@@ -33,9 +35,51 @@ def move_arm_storm(pose):
 
     AC_pub.publish(Bool(data=False))
 
+def move_arm_storm_continuous():
+    global goal_pub, AC_pub, goal_finished, TOF_data
+    goal_finished = False
+    #time_out, steps = 50, 0.0
+    while not rospy.is_shutdown():
+        # update orientation
+        angle = get_angle_from_tof(TOF_data[0], TOF_data[1])
+        pose = set_ee_pose(gripper_pose, [0 , 0 , angle])
+        goal_pub.publish(pose)
+        AC_pub.publish(Bool(data=True))
+        # print("Goal has not reached yet")
+        rospy.sleep(0.1)
+        #steps = steps + 0.1
+
+
+    AC_pub.publish(Bool(data=False))
+
 def storm_result_callback(msg):
     global goal_pub, AC_pub, goal_finished
     goal_finished = msg.data
+
+def tof_listener(msg):
+    global goal_pub, AC_pub, goal_finished, TOF_data
+    TOF_data = msg.data
+    print('tof data', TOF_data)
+
+def get_angle_from_tof(d1, d2):
+    d1_bias = 0.
+    d2_bias = 0.1
+    theta = math.atan(abs((d1 + d1_bias) - (d2 + d2_bias)) / 32.)
+    if d1 > d2:
+        return -math.degrees(theta)
+    else:
+        return math.degrees(theta)
+    
+def set_ee_pose(position, euler):
+    # move to pre-grasp pose, r1 for hardcoded orientation
+    r1 = R.from_euler('zyx', [0, 90, -30], degrees=True)
+    r2 = R.from_euler('zyx', euler, degrees=True)
+    tq = (r1 * r2).as_quat() # x, y, z, w
+    ps = PoseStamped()
+    ps.header=std_msgs.msg.Header(frame_id='')
+    ps.pose.orientation = Quaternion(tq[3], tq[0], tq[1], tq[2]) # w, x, y, z
+    ps.pose.position = Point(x=position[0], y=position[1], z=position[2])
+    return ps
 
 if __name__ == '__main__':
     #global goal_pub, AC_pub
@@ -43,16 +87,25 @@ if __name__ == '__main__':
     goal_pub = rospy.Publisher(GOAL_POSE, PoseStamped, queue_size=1)
     AC_pub = rospy.Publisher(ACTIVATE_CONTROL, Bool, queue_size=1)
     rospy.Subscriber(STROM_RESULT, Bool, storm_result_callback)
-    # move to pre-grasp pose
-    r = R.from_euler('zyx', [0, 0, 0], degrees=True)
-    tq = r.as_quat() # x, y, z, w
+    rospy.Subscriber(TOF_TOPIC, Int32MultiArray, tof_listener)
+    # move to pre-grasp pose, r1 for hardcoded orientation
+    '''r1 = R.from_euler('zyx', [0, 90, -30], degrees=True)
+    # r2 for pre-touch yaw adjustment
+    r2 = R.from_euler('zyx', [0 , 0 , -30], degrees=True)
+    tq = (r1 * r2).as_quat() # x, y, z, w
     demo_grasp_pose = PoseStamped()
     demo_grasp_pose.header=std_msgs.msg.Header(frame_id='')
     demo_grasp_pose.pose.orientation = Quaternion(tq[3], tq[0], tq[1], tq[2]) # w, x, y, z
-    demo_grasp_pose.pose.position = Point(x=0.40, y=0.174, z=0.774)
+    demo_grasp_pose.pose.position = Point(x=0.40, y=0.174, z=0.774)'''
+    pre_grasp_pose = set_ee_pose(gripper_pose, [0 , 0 , 0])
     print('move to pre grasp ctrl')
-    move_arm_storm(demo_grasp_pose)
-    print('done')
+    move_arm_storm(pre_grasp_pose)
+    print('Arrived pre grasp')
+    move_arm_storm_continuous()
+    
+
+
+
 
     
     

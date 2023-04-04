@@ -1,0 +1,5 @@
+<?xml version="1.0" ?>
+<launch>
+    <node pkg="aurmr_tasks" name="ToF_sensors_client" type="ToF_sensors_client.py">
+    </node>
+</launch>
