@@ -1,4 +1,4 @@
 <launch>
     <node name="robot_to_pod_transform" pkg="tf2_ros" type="static_transform_publisher"
-          args="0.832 0.4125 0 -1.57 0 0 base_link pod_base_link"/>
+          args="0.802 0.4425 0 -1.57 0 0 base_link pod_base_link"/>
 </launch>
