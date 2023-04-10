@@ -203,7 +203,7 @@
         <parent link="base_link"/>
         <child link="camera_base"/>
         <!-- Link is centered on the optical frames. Slight offset in Y direction to compensate -->
-        <origin xyz="-0.260 -0.012 1.465" rpy="3.13764 3.12912 -3.12899" />
+        <origin xyz="-0.260 -0.015 1.465" rpy="3.13764 3.12912 -3.12899" />
       </joint>
     </xacro:if>
 
@@ -239,9 +239,15 @@
     </link>
 
     <!-- L515 Realsense Camera -->
-    <xacro:sensor_l515 parent="coupling" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
+    <!-- <xacro:sensor_l515 parent="coupling" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
       <origin xyz="0.0 0.046 0.1165" rpy="${pi} -${0.5 * pi} ${0.5 * pi}"/>
+    </xacro:sensor_l515> -->
+
+    <xacro:sensor_l515 parent="coupling" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
+      <origin xyz="0.0 0.046 0.0765" rpy="${pi} -${0.5 * pi} ${0.5 * pi}"/>
     </xacro:sensor_l515>
+
+
 
     <!-- <link name="realsense_lower_mount">
       <collision>
