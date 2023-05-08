@@ -379,7 +379,38 @@ class ServoEndEffectorToOffset(State):
             return "succeeded"
         else:
             return "aborted"
-
+        
+class AdjustRightIfColumn1(State):
+    def __init__(self, robot, offset, frame=None):
+        State.__init__(self, input_keys=["target_bin_id"], outcomes=['succeeded', 'aborted', 'pass'])
+        self.robot = robot
+        self.offset = offset
+        self.frame = frame
+        
+    def execute(self, ud):
+        column_1 = ['1E', '1F', '1G', '1H']
+        if ud['target_bin_id'] in column_1:
+            sm = robust_move_to_offset(self.robot, self.offset, self.frame)
+            outcome = sm.execute()
+            return 'succeeded' if outcome == "succeeded" else 'aborted'
+        else:
+            return 'pass'
+        
+class AdjustLeftIfColumn4(State):
+    def __init__(self, robot, offset, frame=None):
+        State.__init__(self, input_keys=["target_bin_id"], outcomes=['succeeded', 'aborted', 'pass'])
+        self.robot = robot
+        self.offset = offset
+        self.frame = frame
+        
+    def execute(self, ud):
+        column_4 = ['4E', '4F', '4G', '4H']
+        if ud['target_bin_id'] in column_4:
+            sm = robust_move_to_offset(self.robot, self.offset, self.frame)
+            outcome = sm.execute()
+            return 'succeeded' if outcome == "succeeded" else 'aborted'
+        else:
+            return 'pass'
 
 def robust_move_to_offset(robot, offset, frame=None):
     sm = StateMachine(["succeeded", "preempted", "aborted"])
