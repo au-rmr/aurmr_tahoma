@@ -7,8 +7,8 @@
     <arg name="gripper_type" default="vacuum" />
 
     <!-- <include file="$(find tahoma_bringup)/launch/calibration.launch"/> -->
-
-
+    <remap from="/ur_cartesian_compliance_controller/ft_sensor_wrench" to="/wrench" />
+    <remap from="/ur_cartesian_force_controller/ft_sensor_wrench" to="/wrench" />
     <include file="$(find ur_robot_driver)/launch/ur16e_bringup.launch">
         <arg name="controllers" default="scaled_pos_joint_traj_controller joint_state_controller  force_torque_sensor_controller robot_status_controller"/>
         <arg name="stopped_controllers" default="pos_joint_traj_controller joint_group_pos_controller joint_group_vel_controller" doc="Controllers that are initally loaded, but not started."/>
