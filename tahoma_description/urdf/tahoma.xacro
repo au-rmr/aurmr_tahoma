@@ -199,7 +199,7 @@
           <mesh filename="package://tahoma_description/meshes/realsense/couple_l515_mount.obj"/>
         </geometry>
       </visual>
-    </link>
+    </link> -->
 
 
     <xacro:if value="${realsense}">

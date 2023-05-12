@@ -338,7 +338,6 @@ class MoveEndEffectorToPose(State):
                           replan=True,
                           replan_attempts=8,
                           tolerance=0.01)
-        # input('check planning frame!!!!!!!!!!!!!!')
         if success:
             return "succeeded"
         else:
@@ -372,10 +371,6 @@ class MoveEndEffectorToPoseManipulable(State):
             return "succeeded"
         else:
             return "aborted"
-<<<<<<< HEAD
-=======
-
->>>>>>> 1. Added changes for multiple suction outlets for vaccum gripper 2. Added pod models which were created by sanjar. 3. Added pod calibration script for both the pods. 4. Added modified version of reachability code originally implemented by hitesh. 4. Modified collision scene for arm by adding a constraint space instead of only pod model. 5. Modified the 3d point calibration for multiple files
 
 class MoveEndEffectorToPoseLinear(State):
     def __init__(self, robot, to_pose):
