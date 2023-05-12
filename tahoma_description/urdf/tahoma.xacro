@@ -199,7 +199,7 @@
           <mesh filename="package://tahoma_description/meshes/realsense/couple_l515_mount.obj"/>
         </geometry>
       </visual>
-    </link>
+    </link> -->
 
 
     <xacro:if value="${realsense}">
@@ -233,7 +233,7 @@
         <parent link="coupling"/>
         <child link="realsense_back_gripper_mount"/>
         <origin xyz="-0.018 0.010227 -0.036" rpy="0 0 ${-0.5 * pi}" />
-    </joint>
+    </joint> -->
 
 
   <link name="gripper_equilibrium_grasp"/>
