@@ -283,7 +283,6 @@ class MoveEndEffectorToPose(State):
                           replan=True,
                           replan_attempts=8,
                           tolerance=0.01)
-        input('check planning frame!!!!!!!!!!!!!!')
         if success:
             return "succeeded"
         else:
