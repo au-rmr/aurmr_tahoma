@@ -186,7 +186,7 @@ ur_cartesian_force_controller:
     gravity: 9.81
 
     solver:
-        error_scale: 0.1
+        error_scale: 0.025
     
     pd_gains:
         trans_x: {p: 0.1, d: 0.0}
@@ -215,22 +215,22 @@ ur_cartesian_compliance_controller:
     gravity: 9.81
 
     stiffness:  # w.r.t. compliance_ref_link coordinates
-        trans_x: 500.0
-        trans_y: 500.0
-        trans_z: 500.0
-        rot_x: 20.0
-        rot_y: 20.0
-        rot_z: 20.0
+        trans_x: 140.0
+        trans_y: 100.0
+        trans_z: 400.0
+        rot_x: 5.0
+        rot_y: 5.0
+        rot_z: 5.0
 
     solver:
-        error_scale: 0.1
+        error_scale: 0.01
         iterations: 1
 
     # For all controllers, these gains are w.r.t. the robot_base_link coordinates.
     pd_gains:
-        trans_x: {p: 0.5, d: 0.0}
-        trans_y: {p: 0.5, d: 0.0}
-        trans_z: {p: 0.5, d: 0.0}
-        rot_x: {p: 0.8}
-        rot_y: {p: 0.8}
-        rot_z: {p: 0.8}
+        trans_x: {p: 0.8, d: 0.0}
+        trans_y: {p: 0.8, d: 0.0}
+        trans_z: {p: 0.8, d: 0.0}
+        rot_x: {p: 8.0}
+        rot_y: {p: 8.0}
+        rot_z: {p: 8.0}

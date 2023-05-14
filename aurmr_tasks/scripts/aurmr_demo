@@ -9,6 +9,7 @@ from smach import State, StateMachine
 from typing import List
 import rospy
 
+from aurmr_tasks import util
 from aurmr_tasks.common.tahoma import Tahoma
 from aurmr_tasks.common import motion, perception, planning_scene
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
