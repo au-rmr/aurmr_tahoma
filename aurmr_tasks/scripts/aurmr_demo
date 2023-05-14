@@ -10,6 +10,7 @@ from smach import State, StateMachine
 from typing import List
 import rospy
 
+from aurmr_tasks import util
 from aurmr_tasks.common.tahoma import Tahoma
 from aurmr_tasks.common import motion, perception, compliance_controller
 from aurmr_tasks import interaction
@@ -173,14 +174,14 @@ def main():
             StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPoseManipulable(robot), ["succeeded", "aborted", "preempted"])
             StateMachine.add_auto("CLEAR_SCENE_PREGRASP", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_PREGRASP", motion.AddPartialPodCollisionGeometry(robot), ["succeeded", "aborted"])
-            StateMachine.add_auto('SWAP_TO_COMPLIANCE', compliance_controller.SwitchControllers(['ur_cartesian_compliance_controller'], ['scaled_pos_joint_traj_controller']), ["succeeded", "aborted"])
+            StateMachine.add_auto('SWAP_TO_COMPLIANCE', util.SwitchControllers(['ur_cartesian_compliance_controller'], ['scaled_pos_joint_traj_controller']), ["succeeded", "aborted"])
             StateMachine.add_auto("DO_NOTHING_INIT_CONTROLLER", compliance_controller.MoveToOffset(robot, (0, 0, 0.0), 'arm_tool0'), ["succeeded", "aborted"])
             StateMachine.add_auto("MOVE_TO_GRASP", motion.grasp_move_to_offset(robot, (0, 0, 0.5)), ["succeeded", "aborted", "preempted"])
             StateMachine.add_auto("LIFT_OBJ", motion.robust_move_to_offset(robot, (0, 0, 0.035), 'base_link'), ["succeeded", "aborted", "preempted"])
             StateMachine.add_auto("ADJUST_RIGHT_IF_COLUMN_1", motion.AdjustRightIfColumn1(robot, (0, 0.05, 0)), ["succeeded", "aborted", "pass"])
             StateMachine.add_auto("ADJUST_LEFT_IF_COLUMN_4", motion.AdjustLeftIfColumn4(robot, (0, -0.05, 0)), ["succeeded", "aborted", "pass"])
             StateMachine.add_auto("RETRACT_ARM", motion.robust_move_to_offset(robot, (0, 0, -0.3)), ["succeeded", "aborted", "preempted"])
-            StateMachine.add_auto('SWAP_TO_MOVEIT', compliance_controller.SwitchControllers(['scaled_pos_joint_traj_controller'], ['ur_cartesian_compliance_controller']), ["succeeded", "aborted"])
+            StateMachine.add_auto('SWAP_TO_MOVEIT', util.SwitchControllers(['scaled_pos_joint_traj_controller'], ['ur_cartesian_compliance_controller']), ["succeeded", "aborted"])
             # StateMachine.add_auto("TURN_OFF_GRIPPER_IF_NO_ITEM", motion.ReleaseGripperIfNoItem(robot), ['succeeded'])
             StateMachine.add_auto("CLEAR_SCENE_POSTGRASP", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_POSTGRASP", motion.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
