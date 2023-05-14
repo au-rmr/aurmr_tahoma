@@ -1,57 +1,46 @@
-from aurmr_tasks.util import apply_offset_to_pose
+from aurmr_tasks.util import apply_offset_to_pose, all_close
 import rospy
 from smach import State
-from controller_manager_msgs.srv import SwitchController
-import tf2_ros
-import tf2_geometry_msgs
-from geometry_msgs.msg import PoseStamped, Point, Quaternion
-
-# Define the state
-class SwitchControllers(State):
-    def __init__(self, start_controllers, stop_controllers):
-        State.__init__(self, outcomes=['succeeded', 'aborted'])
-        self.start_controllers = start_controllers
-        self.stop_controllers = stop_controllers
-
-    def execute(self, userdata):
-        rospy.wait_for_service('/controller_manager/switch_controller')
-        try:
-            # Create a service proxy
-            switch_controller_service = rospy.ServiceProxy('/controller_manager/switch_controller', SwitchController)
-
-            # Call the service with the provided arguments
-            response = switch_controller_service(self.start_controllers, self.stop_controllers, 1, False, 0.0)
-            print(f"Service call response: {response}")
-            
-            return 'succeeded'
-        except rospy.ServiceException as e:
-            print(f"Service call failed: {e}")
-            return 'aborted'
-
+from geometry_msgs.msg import PoseStamped
+import time
 
 class MoveToOffset(State):
-    def __init__(self, robot, offset, frame_id):
-        State.__init__(self, outcomes=['succeeded', 'aborted'])
+    def __init__(self, robot, offset, frame_id, detect_object):
+        super().__init__(outcomes=['succeeded', 'aborted'])
         self.robot = robot
         self.offset = offset
         self.frame_id = frame_id
+        self.detect_object = detect_object
+        self.pub = rospy.Publisher('/ur_cartesian_compliance_controller/target_frame', PoseStamped, queue_size=10)
+        self.target_frame = 'arm_base_link'
 
     def execute(self, userdata):
-        rospy.sleep(1)
+        self.close_robot_gripper()
+        target_pose = self.calculate_target_pose()
+        self.publish_target_pose(target_pose)
+        return self.wait_for_target_pose_or_timeout(target_pose)
 
-        target_frame = 'arm_base_link'
+    def close_robot_gripper(self):
+        self.robot.close_gripper(return_before_done=True)
 
-        print(f'frame id: {self.frame_id}')
+    def calculate_target_pose(self):
         current = self.robot.move_group.get_current_pose()
         target_pose = apply_offset_to_pose(current, self.offset, self.frame_id, self.robot.tf2_buffer)
+        return self.robot.tf2_buffer.transform(target_pose, self.target_frame, rospy.Duration(1))
 
-        target_pose = self.robot.tf2_buffer.transform(target_pose, target_frame, rospy.Duration(1))
+    def publish_target_pose(self, target_pose):
+        self.pub.publish(target_pose)
 
-        print(target_pose)
-        input('moving to offset')
-
-        # Publish the target pose
-        pub = rospy.Publisher('/ur_cartesian_compliance_controller/target_frame', PoseStamped, queue_size=10)
-        pub.publish(target_pose)
-
+    def wait_for_target_pose_or_timeout(self, target_pose):
+        timeout = 5.0
+        start_time = time.time()
+        while ((time.time() - start_time) < timeout) and not rospy.is_shutdown():
+            if self.has_reached_target_pose(target_pose):
+                return 'succeeded'
+            rospy.sleep(0.005)
         return 'succeeded'
+
+    def has_reached_target_pose(self, target_pose):
+        current_pose = self.robot.move_group.get_current_pose()
+        current_pose = self.robot.tf2_buffer.transform(current_pose, self.target_frame, rospy.Duration(1))
+        return (self.detect_object and self.robot.object_detected) or all_close(target_pose, current_pose, 0.03)
