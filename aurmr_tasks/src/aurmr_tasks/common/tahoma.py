@@ -138,7 +138,7 @@ class Tahoma:
         self.commander = moveit_commander.RobotCommander()
         self.scene = moveit_commander.PlanningSceneInterface(synchronous=True)
         self.move_group = moveit_commander.MoveGroupCommander(ARM_GROUP_NAME)
-        self.MAX_VEL_FACTOR = .3
+        self.MAX_VEL_FACTOR = .5
         self.MAX_ACC_FACTOR = .5
         self.move_group.set_max_velocity_scaling_factor(self.MAX_VEL_FACTOR)
         self.move_group.set_max_acceleration_scaling_factor(self.MAX_ACC_FACTOR)
