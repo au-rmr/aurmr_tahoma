@@ -7,6 +7,7 @@ import rospy
 from geometry_msgs.msg import PoseStamped
 from moveit_commander.conversions import pose_to_list
 from smach import State, StateMachine
+from controller_manager_msgs.srv import SwitchController
 
 
 def apply_offset_to_pose(pose, offset, offset_frame=None, tf_buffer=None):
@@ -65,7 +66,6 @@ def all_close(goal, actual, tolerance):
 
     elif type(goal) is geometry_msgs.msg.PoseStamped:
         assert (goal.header.frame_id == actual.header.frame_id)
-        print("This is posestamped")
         return all_close(goal.pose, actual.pose, tolerance)
 
     elif type(goal) is geometry_msgs.msg.Pose:
@@ -95,3 +95,25 @@ def pose_dist(goal, actual):
         return (d, cos_phi_half)
     else:
         return None
+    
+
+class SwitchControllers(State):
+    def __init__(self, start_controllers, stop_controllers):
+        State.__init__(self, outcomes=['succeeded', 'aborted'])
+        self.start_controllers = start_controllers
+        self.stop_controllers = stop_controllers
+
+    def execute(self, userdata):
+        rospy.wait_for_service('/controller_manager/switch_controller')
+        try:
+            # Create a service proxy
+            switch_controller_service = rospy.ServiceProxy('/controller_manager/switch_controller', SwitchController)
+
+            # Call the service with the provided arguments
+            response = switch_controller_service(self.start_controllers, self.stop_controllers, 1, False, 0.0)
+            print(f"Service call response: {response}")
+            
+            return 'succeeded'
+        except rospy.ServiceException as e:
+            print(f"Service call failed: {e}")
+            return 'aborted'
