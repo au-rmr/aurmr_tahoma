@@ -21,6 +21,8 @@ from aurmr_unseen_object_clustering.srv import GetSegmentationUOIS
 import rospy
 import imutils
 
+import os
+
 rectangle = None
 
 UOC_PATH = '/home/aurmr/workspaces/uois_soofiyan_ws/src/aurmr_tahoma/aurmr_unseen_object_clustering/src/aurmr_unseen_object_clustering/'
@@ -295,11 +297,11 @@ class SegNet:
         xyz_img = np.stack([x_e, y_e, z_e], axis=-1) # Shape: [H x W x 3]
         return xyz_img
     
-    def uois_segmentation(self, img_msg, width, height):
+    def uois_segmentation(self, bin_id):
         rospy.wait_for_service('segmentation_with_embeddings')
         try:
             uois_client = rospy.ServiceProxy('segmentation_with_embeddings', GetSegmentationUOIS)
-            req = uois_client(img_msg, width, height)
+            req = uois_client(bin_id)
             return req.out_label, req.embeddings
         except rospy.ServiceException as e:
             print("Service call failed: %s"%e)
@@ -354,8 +356,20 @@ class SegNet:
         #     rgb = cv2.resize(rgb, (256, 256), interpolation=cv2.INTER_AREA)
         #     xyz = cv2.resize(xyz, (256, 256), interpolation=cv2.INTER_AREA) 
         #     bg_mask_now = cv2.resize(bin.bg_mask.astype(np.uint8), (256, 256), interpolation=cv2.INTER_AREA)
-       
+
         rgb_segment = rgb.astype(np.uint8)
+
+        path = "/home/aurmr/workspaces/uois_multi_frame_ws/src/uois_service_multi_demo/dataset/"+bin_id+"/"
+        files = os.listdir(path)
+        indices = [int(f.split('_')[-1].split('.')[0]) for f in files if f.startswith('color_') and f.endswith('.npy')]
+        if indices:
+            next_index = max(indices) + 1
+        else:
+            next_index = 0
+        index_str = str(next_index).zfill(4)
+        file_path = os.path.join(path, f"color_{index_str}.npy")
+        np.save(file_path, rgb_segment)
+
         # xyz = xyz.astype(np.uint8)
 
         '''
@@ -366,12 +380,14 @@ class SegNet:
         '''
         new method
         '''
-        reshaped_img = rgb_segment.reshape(-1)
-        mask, embed = self.uois_segmentation(reshaped_img, rgb_segment.shape[0], rgb_segment.shape[1])
+        # mask, embed = self.uois_segmentation(reshaped_img, rgb_segment.shape[0], rgb_segment.shape[1])
+        mask, embed = self.uois_segmentation(bin_id)
+
         mask = np.asarray(mask).astype(np.uint8).reshape(rgb_segment.shape[0], rgb_segment.shape[1])
         embed = np.asarray(embed).astype(np.float64)
+        print(embed)
         if(np.max(mask) > 0):
-            embed = embed.reshape(np.max(mask), 256)
+            embed = embed.reshape(int(len(embed)/256), 256)
         
         out_label = mask
         out_label_new = out_label.astype(np.uint8)
@@ -441,7 +457,13 @@ class SegNet:
             max_score = 0
             for j in range(np.max(mask2)):
                 score = np.dot(embed2[j], embed1[i])
-                mask_recs[i, j] = score
+                
+                try:
+                    mask_recs[i, j] = score
+                except:
+                    print(np.max(mask1), np.max(mask2))
+                    print(embed1, embed2)
+                    print(score)
                 if(score > max_score):
                     max_score = score
             if(max_score < -0.2):
