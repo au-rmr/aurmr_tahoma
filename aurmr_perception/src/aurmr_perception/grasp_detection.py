@@ -163,7 +163,7 @@ class GraspDetectionROS:
 
     def detect_grasps_cb(self, request):
         cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
-        cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
+        # cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
         pts = ros_numpy.numpify(request.points)
         self.points_viz_pub.publish(request.points)
         pts = np.stack([pts['x'],
@@ -182,7 +182,7 @@ class GraspDetectionROS:
 
     def detect_grasps__normal_cb(self, request):
         cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
-        cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
+        # cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
         
         # convert point cloud to mask
         fx, fy = 1940.1367, 1940.1958
@@ -191,7 +191,7 @@ class GraspDetectionROS:
         height = 3072
 
         cv_image_new = np.zeros([height, width])
-        cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/zero_cv_image.png", cv_image_new)
+        # cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/zero_cv_image.png", cv_image_new)
         pts = ros_numpy.numpify(request.points)
         pts = np.stack([pts['x'],
                         pts['y'],

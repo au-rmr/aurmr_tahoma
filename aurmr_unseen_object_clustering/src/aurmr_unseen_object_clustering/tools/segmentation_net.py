@@ -61,6 +61,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 # not reachable: 1d, 
 #317 296 407 353
 #1268 1184 1628 1412
+
 bin_bounds = {
           '1H':[297*4, 353*4, 315*4, 406*4],
           '2H':[300*4, 355*4, 409*4, 514*4],
@@ -144,10 +145,10 @@ def_config = {
 
 
 class Bin:
-    def __init__(self, bin_id, bounds=None, init_depth=None, config=def_config, visualize=False):
+    def __init__(self, bin_id, bounds=None, init_depth=None, config=def_config):
         # String ID of the bin
         self.bin = bin_id
-        self.visualize = visualize
+        self.visualize = False
   
         # The crop bounds of the bin
         if bounds is None:
@@ -210,6 +211,7 @@ class SegNet:
         if len(cfg.TEST.CLASSES) == 0:
             cfg.TEST.CLASSES = cfg.TRAIN.CLASSES
        
+        self.visualize = False
         # Locates the device
         cfg.gpu_id = 0
         cfg.device = torch.device('cuda:{:d}'.format(cfg['gpu_id']))
