@@ -196,10 +196,6 @@ class UserPromptForRetry(State):
             closest_point = pc[np.argmin(np.linalg.norm(np.cross(p1-p0, p0-pc, axisb=1), axis=1)/np.linalg.norm(p1-p0))]
             return closest_point
 
-        # Old code:
-        # points = ros_numpy.numpify(self.ros_pointcloud)
-        # points = np.reshape(points, rgb_image.shape[0:2])
-        # points = np.stack((points['x'],points['y'],points['z']), axis=2)
 
     def execute(self, userdata):
         if self.ros_pointcloud is None or self.ros_rgb_image is None or self.camera_model is None:
@@ -246,13 +242,6 @@ class UserPromptForRetry(State):
 
         # Start building pose
         grasp_point = Point(x=xyz[0], y=xyz[1], z=xyz[2])
-
-        # stamped_transform = self.tf2_buffer.lookup_transform(request.frame_id, self.camera_points_frame, rospy.Time(0),
-        #                                                          rospy.Duration(1))
-        # camera_to_target_mat = ros_numpy.numpify(stamped_transform.transform)
-        # points = np.vstack([points, np.ones(points.shape[1])])  # convert to homogenous
-        # print(points.shape)
-        # points = np.matmul(camera_to_target_mat, points)[0:3, :].T  # apply transform
 
         orientation = transformations.quaternion_from_euler(math.pi / 2., -math.pi / 2., math.pi / 2.)
 
