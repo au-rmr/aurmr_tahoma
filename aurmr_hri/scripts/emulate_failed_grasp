@@ -1,0 +1,162 @@
+#! /usr/bin/env python
+
+import roslib
+roslib.load_manifest('aurmr_hri')
+import rospy
+import actionlib
+import sys
+import cv2
+import pathlib
+import os
+import numpy as np
+import ros_numpy
+from sensor_msgs.msg import Image, PointCloud2
+from cv_bridge import CvBridge
+from visualization_msgs.msg import Marker
+from tf2_geometry_msgs import PointStamped
+
+
+from aurmr_hri.msg import RetryGraspAction, RetryGraspGoal
+from sensor_msgs.msg import CompressedImage
+
+bin_bounds = {
+    '1H':[297*4, 353*4, 315*4, 406*4],
+    '2H':[300*4, 355*4, 409*4, 514*4],
+    '3H':[303*4, 356*4, 515*4, 620*4],
+    '4H':[302*4, 355*4, 619*4, 711*4],
+    '1G':[365*4, 409*4, 315*4, 405*4],
+    '2G':[367*4, 407*4, 407*4, 512*4],
+    '3G':[370*4, 411*4, 513*4, 619*4],
+    '4G':[371*4, 412*4, 619*4, 711*4],
+    '1F':[420*4, 514*4, 314*4, 405*4],
+    '2F':[424*4, 511*4, 407*4, 512*4],
+    '3F':[425*4, 515*4, 515*4, 620*4],    
+    '4F':[426*4, 514*4, 621*4, 714*4],
+    '1E':[527*4, 572*4, 311*4, 405*4],
+    '2E':[529*4, 571*4, 407*4, 513*4],
+    '3E':[527*4, 574*4, 515*4, 620*4],
+    '4E':[531*4, 574*4, 622*4, 714*4],
+}
+
+def visualize_point(marker_publisher, point, frame_id):
+    marker2 = Marker()
+    # marker2.header.frame_id = self.camera_model.tfFrame()
+    marker2.header.frame_id = frame_id
+    marker2.header.stamp = rospy.rostime.Time.now()
+    marker2.ns = "basic_shapes"
+    marker2.id = 1
+    marker2.type = Marker.SPHERE
+    marker2.action = Marker.ADD
+
+    print(f"publishing {point}")
+    marker2.pose.position.x = point[0]
+    marker2.pose.position.y = point[1]
+    marker2.pose.position.z = point[2]
+    marker2.pose.orientation.x = 0.0;
+    marker2.pose.orientation.y = 0.0;
+    marker2.pose.orientation.z = 0.0;
+    marker2.pose.orientation.w = 1.0;
+
+    # marker2.points = [p1, p2]
+    
+
+    # Set the scale of the marker -- 1x1x1 here means 1m on a side
+    marker2.scale.x = 0.05
+    marker2.scale.y = 0.05
+    marker2.scale.z = 0.05
+
+    # Set the color -- be sure to set alpha to something non-zero!
+    marker2.color.r = 0.0
+    marker2.color.g = 1.0
+    marker2.color.b = 0.0
+    marker2.color.a = 1.0
+
+    marker2.lifetime = rospy.rostime.Duration()
+
+    # self.marker_publisher.publish(marker)
+    marker_publisher.publish(marker2)
+
+if __name__ == '__main__':
+
+    timeout_connection_secs = 10.0
+    timeout_response_secs = 120.0
+    camera_name = 'camera_lower_right'
+    marker_publisher = rospy.Publisher("visualization_marker", Marker)
+
+    bridge = CvBridge()
+
+    if (len(sys.argv) > 1):
+        timeout_response_secs = float(sys.argv[1])
+
+    print(f"Triggering failed grasp, response timeout is {timeout_response_secs}s")
+    print("rospy.init_node")
+    rospy.init_node('aurmr_hri_emu_failed_grasp')
+    print("actionlib.SimpleActionClient")
+    client = actionlib.SimpleActionClient('/aurmr/hri/retry_grasp', RetryGraspAction)
+    print("client.wait_for_server")
+    if not client.wait_for_server(rospy.Duration.from_sec(timeout_connection_secs)):
+        raise Exception("timed out connecting to server")
+
+    ros_pointcloud = rospy.wait_for_message(f'/{camera_name}/points2', PointCloud2, timeout=10)
+    ros_rgb_image = rospy.wait_for_message(f'/{camera_name}/rgb/image_raw', Image, timeout=10)
+    rgb_image = bridge.imgmsg_to_cv2(ros_rgb_image)
+    points = ros_numpy.numpify(ros_pointcloud)
+    points = np.reshape(points, rgb_image.shape[0:2])
+    # points = np.vstack((points['x'],points['y'],points['z']))
+    points = np.stack((points['x'],points['y'],points['z']), axis=2)
+
+    # import pdb; pdb.set_trace()
+
+    bounds = bin_bounds['3F']
+    cropped_rgb_image = rgb_image[bounds[0]:bounds[1], bounds[2]:bounds[3], 0:3]
+
+    # if (len(sys.argv) > 2):
+    # Assemble image message
+    # file_path = pathlib.Path(__file__).parent.resolve()
+    # image_path = os.path.join(file_path, '../static/mock_shelf_image.png')
+    # image = cv2.imread(image_path)
+    image_msg = CompressedImage()
+    image_msg.header.stamp = rospy.Time.now()
+    image_msg.format = "jpeg"
+    image_msg.data = np.array(cv2.imencode('.jpg', cropped_rgb_image)[1]).tostring()
+
+    goal = RetryGraspGoal(camera_image=image_msg, object_id="1")
+        
+    # Fill in the goal here
+    print("client.send_goal")
+    client.send_goal(goal)
+    print("client.wait_for_result")
+    if not client.wait_for_result(rospy.Duration.from_sec(timeout_response_secs)):
+        client.cancel_goal()
+        client.wait_for_result(rospy.Duration.from_sec(15.0))
+        raise Exception("timed out waiting for result")
+
+    result = client.get_result()
+    print("---")
+    print("Response from operator:")
+    print(result)
+
+    x = round(result.x + bounds[1])
+    y = round(result.y + bounds[0])
+    xyz = points[y,x]
+
+    # import pdb; pdb.set_trace()
+    # visualize_point(marker_publisher, xyz, "rgb_camera_link")
+    # import pdb; pdb.set_trace()
+
+    publisher = rospy.Publisher('/debugImage', Image)
+
+    rgb_image = cv2.circle(rgb_image,(x, y), 20, (0,255,0), -1)
+
+    scale_percent = 20 # percent of original size
+    width = int(rgb_image.shape[1] * scale_percent / 100)
+    height = int(rgb_image.shape[0] * scale_percent / 100)
+    dim = (width, height)
+    
+    # resize image
+    resized = cv2.resize(rgb_image, dim, interpolation = cv2.INTER_AREA)
+
+    # rgb_image = cv2.resize()
+    # cv2.imshow('rgb_image', resized)
+    # cv2.waitKey(-1)
+    
