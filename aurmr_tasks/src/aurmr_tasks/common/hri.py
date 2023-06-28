@@ -258,33 +258,7 @@ class UserPromptForRetry(State):
         POD_OFFSET = 0.025 #-0.1
         transform = self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
         grasp_pose.pose.position.x = transform.transform.translation.x - POD_OFFSET
-        def visualize(pose, frame='base_link'):
-            self.visualize_point_marker([
-                pose.position.x,
-                pose.position.y,
-                pose.position.z
-            ], frame)
-        
-        # visualize(grasp_pose.pose)
-        # import pdb; pdb.set_trace()
-        
-        # visualize()
-
-        # import pdb; pdb.set_trace()
-
-        # NOTE: No extra filtering or ranking on our part. Just take the first one
-        # As the arm_tool0 is 20cm in length w.r.t tip of suction cup thus adding 0.2m offset
-        # grasp_pose = self.add_offset(-0.22, grasp_pose)
 
         userdata['human_grasp_pose'] = grasp_pose
 
-        # # adding 0.12m offset for pre grasp pose to prepare it for grasp pose which is use to pick the object
-        # pregrasp_pose = self.add_offset(-self.pre_grasp_offset, grasp_pose)
-
-        # userdata['pre_grasp_pose'] = pregrasp_pose
-
-        # self.pose_viz.publish(grasp_pose)
-        # self.pre_grasp_viz.publish(pregrasp_pose)
-
-        # userdata["status"] = "picking"
         return "retry"
