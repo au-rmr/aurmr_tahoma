@@ -1,175 +1,179 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="tahoma">
-  <xacro:include filename="$(find ur_description)/urdf/inc/ur16e_macro.xacro"/>
-  <xacro:include filename="$(find tahoma_description)/urdf/stand.xacro"/>
-  <xacro:include filename="$(find tahoma_description)/urdf/camera_mount_tilted.xacro"/>
-  <xacro:include filename="$(find robotiq_2f_85_gripper_visualization)/urdf/robotiq_arg2f_85_macro.xacro"/>
+  <xacro:include filename="$(find ur_description)/urdf/inc/ur16e_macro.xacro" />
+  <xacro:include filename="$(find tahoma_description)/urdf/stand.xacro" />
+  <xacro:include filename="$(find robotiq_epick_visualization)/urdf/robotiq_epick_model_macro.xacro" />
 
-  <xacro:include filename="$(find tahoma_description)/urdf/l515.xacro"/>
-  <xacro:include filename="$(find tahoma_description)/urdf/d405.xacro"/>
-  <xacro:macro name="tahoma" params="
-  realsense:=true
-  use_nominal_camera_extrinsics:=false
-  wrist_camera:='true'
-  camera_arrangement:='manual'
-  camera_baseline:=.5
-  camera_focal_depth:=1.4
-  gripper_transmission_hw_interface:='hardware_interface/EffortJointInterface'
-  joint_limits_parameters_file:='$(find ur_description)/config/ur16e/joint_limits.yaml'
-  kinematics_parameters_file:='$(find tahoma_description)/config/arm_calibration.yaml'
-  physical_parameters_file:='$(find ur_description)/config/ur16e/physical_parameters.yaml'
-  visual_parameters_file:='$(find ur_description)/config/ur16e/visual_parameters.yaml'
-  transmission_hw_interface:=hardware_interface/PositionJointInterface
-  safety_limits:=false
-  safety_pos_margin:=0.15
-  safety_k_position:=20">
+  <xacro:include filename="$(find tahoma_description)/urdf/l515.xacro" />
+  <xacro:macro name="tahoma" params="realsense:=true
+                                     use_nominal_camera_extrinsics:=false
+                                     camera_arrangement:='manual'
+                                     camera_baseline:=.5
+                                     camera_focal_depth:=1.4
+                                     gripper_transmission_hw_interface:='hardware_interface/EffortJointInterface'
+                                     joint_limits_parameters_file:='$(find ur_description)/config/ur16e/joint_limits.yaml'
+                                     kinematics_parameters_file:='$(find tahoma_description)/config/arm_calibration.yaml'
+                                     physical_parameters_file:='$(find ur_description)/config/ur16e/physical_parameters.yaml'
+                                     visual_parameters_file:='$(find ur_description)/config/ur16e/visual_parameters.yaml'
+                                     transmission_hw_interface:=hardware_interface/PositionJointInterface
+                                     safety_limits:=false
+                                     safety_pos_margin:=0.15
+                                     safety_k_position:=20">
 
-    <xacro:stand/>
-    <xacro:ur16e_robot prefix="arm_"
-                       joint_limits_parameters_file="${joint_limits_parameters_file}"
-                       kinematics_parameters_file="${kinematics_parameters_file}"
-                       physical_parameters_file="${physical_parameters_file}"
-                       visual_parameters_file="${visual_parameters_file}"
-                       transmission_hw_interface="${transmission_hw_interface}"
-                       safety_limits="${safety_limits}"
-                       safety_pos_margin="${safety_pos_margin}"
-                       safety_k_position="${safety_k_position}"/>
-    <xacro:robotiq_arg2f_85
-            prefix="gripper_"
-            transmission_hw_interface="${gripper_transmission_hw_interface}"/>
+      <xacro:stand />
+      <xacro:ur16e_robot prefix="arm_"
+                        joint_limits_parameters_file="${joint_limits_parameters_file}"
+                        kinematics_parameters_file="${kinematics_parameters_file}"
+                        physical_parameters_file="${physical_parameters_file}"
+                        visual_parameters_file="${visual_parameters_file}"
+                        transmission_hw_interface="${transmission_hw_interface}"
+                        safety_limits="${safety_limits}"
+                        safety_pos_margin="${safety_pos_margin}"
+                        safety_k_position="${safety_k_position}" />
+                       
+      <xacro:epick_hand hand_link_name="gripper_base_link" robot_name="tahoma" />
 
-    <link name="base_link"/>
-    <joint name="base_joint" type="fixed">
-      <origin rpy="0 0 0" xyz="0 0 0.15"/>
-      <parent link="base_link"/>
-      <child link="stand"/>
-    </joint>
+      <xacro:property name="coupling_D" value="0.070" />
+      <xacro:property name="coupling_H" value="0.020" />
+      <xacro:property name="coupling_h" value="0.003" />
 
-    <joint name="robot_plate_arm_base_link_joint" type="fixed">
-      <parent link="robot_plate"/>
-      <child link="arm_base_link"/>
-      <origin rpy="0 ${pi} ${1.5 * pi}" xyz="0 0.00175 -0.00885"/>
-    </joint>
+      <xacro:property name="coupling_flat_edge_X_offset" value="0.034" />
+      <xacro:property name="coupling_flat_edge_Z_offset" value="0.006" />
+
+      <xacro:property name="connector_cover_X" value="0.030" />
+      <xacro:property name="connector_cover_Y" value="0.030" />
+      <xacro:property name="connector_cover_Z" value="0.060" />
+      <!-- stl object origin reference frame is offset from its geometric center (rectangle bounding box) -->
+      <xacro:property name="cover_orgX_offset" value="0.015" />
+      <xacro:property name="cover_orgZ_offset" value="0.020" />
 
 
-    <link name="coupling">
-      <visual>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <geometry>
-          <mesh filename="package://robotiq_2f_85_gripper_visualization/meshes/visual/coupling.stl"/>
-        </geometry>
-        <material name="">
-          <color rgba="0.1 0.1 0.1 1"/>
-        </material>
-      </visual>
-      <collision>
-        <!-- Primitives are centered, so offset -->
-        <origin xyz="0 0 ${.0169 / 2}" rpy="0 0 0"/>
-        <geometry>
-          <cylinder radius=".0375" length=".0169"/>
-        </geometry>
-      </collision>
-    </link>
+      <link name="base_link" />
 
-    <xacro:unless value="${wrist_camera}">
-      <!-- Assume we'll have the connector cover installed -->
-      <link name="coupling_connector_cover">
+      <joint name="base_link-stand_joint" type="fixed">
+        <origin rpy="0 0 0" xyz="0 0 0.15"/>
+        <parent link="base_link"/>
+        <child link="stand"/>
+      </joint>
+
+      <joint name="robot_plate-arm_base_link_joint" type="fixed">
+        <parent link="robot_plate" />
+        <child link="arm_base_link" />
+        <origin rpy="0 ${pi} ${1.5 * pi}" xyz="0 0.00175 -0.00885" />
+      </joint>
+
+      <link name="coupling">
         <visual>
-          <origin xyz="0.0335 0 0.006" rpy="0 0 0"/>
+          <origin xyz="0 0 0" rpy="0 0 0" />
           <geometry>
-            <mesh filename="package://robotiq_2f_85_gripper_visualization/meshes/visual/connector_cover.stl"/>
+            <mesh filename="package://robotiq_2f_85_gripper_visualization/meshes/visual/coupling.stl" />
           </geometry>
           <material name="">
-            <color rgba="0.1 0.1 0.1 1"/>
+            <color rgba="0.1 0.1 0.1 1" />
           </material>
         </visual>
         <collision>
-          <!-- Primitives are centered, so offset -->
-          <origin xyz="${(0.029 / 2) + 0.0335} 0 -0.013" rpy="0 0 0"/>
+          <origin xyz="0 0 ${coupling_H/2}" rpy="0 0 0" />
           <geometry>
-            <box size=".029 0.033 .056"/>
+            <cylinder radius="${coupling_D/2}" length="${coupling_H - coupling_h * 2}" />
           </geometry>
         </collision>
       </link>
-      <joint name="coupling_coupling_connector_cover" type="fixed">
+      
+      <link name="connector_cover">
+        <visual>
+          <origin xyz="0 0 0" rpy="0 0 0" />
+          <geometry>
+            <mesh filename="package://robotiq_2f_85_gripper_visualization/meshes/visual/connector_cover.stl" />
+          </geometry>
+          <material name="">
+            <color rgba="0.1 0.1 0.1 1" />
+          </material>
+        </visual>
+        <collision>
+          <origin xyz="${cover_orgX_offset} 0 ${-cover_orgZ_offset}" rpy="0 0 0" />
+          <geometry>
+            <box size="${connector_cover_X} ${connector_cover_Y} ${connector_cover_Z}" />
+          </geometry>
+        </collision>
+      </link>
+
+      <joint name="coupling-connector_cover_joint" type="fixed">
+        <origin xyz="${coupling_flat_edge_X_offset} 0 ${coupling_flat_edge_Z_offset}" rpy="0 0 0" />
+        <parent link="coupling" />
+        <child link="connector_cover"/>
+      </joint>
+
+      <joint name="coupling-gripper_base_link_joint" type="fixed">
+        <origin xyz="0 0 ${coupling_H - coupling_h}" rpy="0 0 0" />
+        <parent link="coupling" />
+        <child link="gripper_base_link" />
+      </joint>
+
+      <!-- Coupling edge height = 0.003. Rotate -90(270)deg around z to align with the robot's wrist electric connection -->
+      <joint name="arm_tool0-coupling_joint" type="fixed">
+        <origin xyz="0 0 ${-coupling_h}" rpy="0 0 ${1.5 * pi}" />
+        <parent link="arm_tool0" />
+        <child link="coupling" />
+      </joint>  
+    </xacro:macro> 
+</robot>
+
+    <!-- <link name="camera_lower_right_mount">
+      <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>
-        <parent link="coupling"/>
-        <child link="coupling_connector_cover"/>
-      </joint>
-    </xacro:unless>
-
-    <xacro:if value="${wrist_camera}">
-      <!-- We use the coupling connector cover mount points to attach our camera mount -->
-      <link name="gripper_camera_mount"/>
-      <link name="gripper_camera_mount_attach_point"/>
-      <joint name="coupling_wrist_camera_mount" type="fixed">
-        <origin xyz="0.0335 0 0.006" rpy="${pi / 2} -${pi / 2} ${pi / 2}"/>
-        <parent link="coupling"/>
-        <child link="gripper_camera_mount"/>
-      </joint>
-
-      <joint name="gripper_camera_mount-gripper_camera_mount_attach_point" type="fixed">
-        <origin xyz="-0.01 0 0.035" rpy="0 0 0"/>
-        <parent link="gripper_camera_mount"/>
-        <child link="gripper_camera_mount_attach_point"/>
-      </joint>
-
-    </xacro:if>
-
-    <joint name="coupling_link_gripper_robotiq_arg2f_base_link_joint" type="fixed">
-      <origin xyz="0 0 0.0139" rpy="0 0 0"/>
-      <parent link="coupling"/>
-      <child link="gripper_base_link"/>
-    </joint>
-
-    <joint name="arm_tool0-coupling_joint" type="fixed">
-      <origin xyz="0 0 -0.003" rpy="0 0 ${1.5 * pi}"/>
-      <parent link="arm_tool0"/>
-      <child link="coupling"/>
-    </joint>
-
-      <xacro:camera_mount_tilted prefix="camera_lower_left_" side="left"/>
-      <xacro:camera_mount_tilted prefix="camera_lower_right_" side="right"/>
+        <geometry>
+          <box size=".1 .15 .15"/>
+        </geometry>
+      </collision>
+    </link> -->
+    
+    <!-- <link name="camera_lower_left_mount">
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size=".1 .15 .15"/>
+        </geometry>
+      </collision>
+    </link> -->
 
     <!-- These are the planned ("nominal") mount placements. On the real system, these should
      be overridden by calibrated transforms published separately -->
-    <xacro:if value="${camera_arrangement == 'manual' }">
+    <!-- Link (camera_lower_left_mount) is centered on the optical frames. Slight offset in Y direction to compensate -->
+    <!-- <xacro:if value="${camera_arrangement == 'manual' }">
       <joint name="camera_beam_lower_camera_lower_left_mount_joint" type="fixed">
         <parent link="camera_beam_lower"/>
         <child link="camera_lower_left_mount"/>
-        <!-- Link is centered on the optical frames. Slight offset in Y direction to compensate -->
-        <origin xyz="0 ${-0.0215 + (camera_baseline / 2)} 0.042"
-                rpy="0 0 0"/>
+        <origin xyz="0.02 ${-0.0215 + (camera_baseline / 2)} 0.14"
+                rpy="${pi / 2} ${radians(15)} ${-atan2((camera_baseline /2),camera_focal_depth)}"/> 
       </joint>
       <joint name="camera_beam_lower_camera_lower_right_mount_joint" type="fixed">
         <parent link="camera_beam_lower"/>
         <child link="camera_lower_right_mount"/>
-        <origin xyz="0 ${0.0215 + (-camera_baseline / 2)} 0.042"
-                rpy="0 0 0"/>
+        <origin xyz="0.02 ${0.0215 + (-camera_baseline / 2)} 0.14"
+                rpy="${pi / 2} ${radians(15)} ${atan2((camera_baseline /2),camera_focal_depth)}"/>
       </joint>
-    </xacro:if>
+    </xacro:if> -->
 
-    <xacro:if value="${camera_arrangement == 'convergent' }">
+    <!-- <xacro:if value="${camera_arrangement == 'convergent' }">
       <joint name="camera_beam_lower_camera_lower_left_mount_joint" type="fixed">
         <parent link="camera_beam_lower"/>
         <child link="camera_lower_left_mount"/>
-        <!-- Link is centered on the optical frames. Slight offset in Y direction to compensate -->
-        <origin xyz="0 ${-0.0215 + -camera_baseline / 2} 0.09"
-                rpy="0 0 0"/>
+        <origin xyz="0 ${-0.0215 + (camera_baseline / 2)} 0.09"
+                rpy="${pi / 2} 0 ${-atan2((camera_baseline /2),camera_focal_depth)}"/>
       </joint>
       <joint name="camera_beam_lower_camera_lower_right_mount_joint" type="fixed">
         <parent link="camera_beam_lower"/>
         <child link="camera_lower_right_mount"/>
-        <origin xyz="0 ${-0.0215 + -camera_baseline / 2} 0.09"
-                rpy="0 0 0"/>
+        <origin xyz="0 ${0.0215 + (-camera_baseline / 2)} 0.09"
+                rpy="${pi / 2} 0 ${atan2((camera_baseline /2),camera_focal_depth)}"/>
       </joint>
-    </xacro:if>
+    </xacro:if> -->
 
-    <xacro:if value="${camera_arrangement == 'convergent_tilted' }">
+    <!-- <xacro:if value="${camera_arrangement == 'convergent_tilted' }">
       <joint name="camera_beam_lower_camera_lower_left_mount_joint" type="fixed">
         <parent link="camera_beam_lower"/>
         <child link="camera_lower_left_mount"/>
-        <!-- Link is centered on the optical frames. Slight offset in Y direction to compensate -->
         <origin xyz="-0.00 ${-0.0215 + (camera_baseline / 2)} 0.09"
                 rpy="${pi / 2} ${radians(15)} ${-math.atan2((camera_baseline /2),camera_focal_depth)}"/>
       </joint>
@@ -179,44 +183,23 @@
         <origin xyz="-0.00 ${0.0215 + (-camera_baseline / 2)} 0.09"
                 rpy="${pi / 2} ${radians(15)} ${math.atan2((camera_baseline /2),camera_focal_depth)}"/>
       </joint>
-    </xacro:if>
+    </xacro:if>  -->
 
-    <!-- Upper cameras -->
-    <!-- Link is centered on the optical frames. Slight offset in Y direction to compensate -->
-    <!-- Z=1.10 for on top of the top beam -->
-    <!-- Z=0.80 for underneath the top beam -->
-    <!-- Disabled until we know about manipulability in upper bins
-    <link name="camera_upper_right_mount"/>
-    <link name="camera_upper_left_mount"/>
-    <joint name="stand_upright_camera_upper_left_mount_joint" type="fixed">
-      <parent link="stand_upright"/>
-      <child link="camera_upper_left_mount"/>
-
-      <origin xyz="-.1 ${-0.0215 + (camera_baseline / 2)} 0.80"
-              rpy="${pi / 2} ${radians(15)} ${-math.atan2((camera_baseline /2),camera_focal_depth)}"/>
-    </joint>
-    <joint name="stand_upright_camera_upper_right_mount_joint" type="fixed">
-      <parent link="stand_upright"/>
-      <child link="camera_upper_right_mount"/>
-      <origin xyz="-.1 ${0.0215 + (-camera_baseline / 2)} 0.80"
-              rpy="${pi / 2} ${radians(15)} ${math.atan2((camera_baseline /2),camera_focal_depth)}"/>
-    </joint>
-    -->
-    <link name="camera_upper_mount"/>
+    <!-- <link name="camera_upper_mount"/>
     <joint name="cantilever_camera_upper_mount_joint" type="fixed">
       <parent link="cantilever"/>
       <child link="camera_upper_mount"/>
       <origin xyz=".02 0 0.37"
               rpy="0 ${radians(15)} 0"/>
-    </joint>
+    </joint> -->
 
-    <xacro:if value="${realsense}">
-      <xacro:sensor_l515 name="camera_lower_right" parent="camera_lower_right_mount_attach_point"
+    <!-- <xacro:if value="${realsense}">
+      <xacro:sensor_l515 name="camera_lower_right" parent="camera_lower_right_mount"
                          use_nominal_extrinsics="${use_nominal_camera_extrinsics}" attach_at_bottom="false">
         <origin xyz="0 0 0" rpy="0 0 0"/>
       </xacro:sensor_l515>
 
-      <xacro:sensor_l515 name="camera_lower_left" parent="camera_lower_left_mount_attach_point"
+      <xacro:sensor_l515 name="camera_lower_left" parent="camera_lower_left_mount"
                          use_nominal_extrinsics="${use_nominal_camera_extrinsics}" attach_at_bottom="false">
         <origin xyz="0 0 0" rpy="0 0 0"/>
       </xacro:sensor_l515>
@@ -225,33 +208,14 @@
                          use_nominal_extrinsics="${use_nominal_camera_extrinsics}" attach_at_bottom="false">
         <origin xyz="0 0 0" rpy="0 0 0"/>
       </xacro:sensor_l515>
+    </xacro:if> -->
 
-      <xacro:if value="${wrist_camera}">
-        <xacro:sensor_d405 name="camera_wrist" parent="gripper_camera_mount_attach_point"
-                           use_nominal_extrinsics="${use_nominal_camera_extrinsics}" attach_at_bottom="false">
-          <origin xyz="0 0 0" rpy="0 0 0"/>
-        </xacro:sensor_d405>
-      </xacro:if>
-      <!-- Upper cameras
+      <!-- Upper cameras  
       <xacro:sensor_l515 name="camera_upper_right" parent="camera_upper_right_mount" use_nominal_extrinsics="${use_nominal_camera_extrinsics}">
         <origin xyz="0 0 0" rpy="0 0 0"/>
       </xacro:sensor_l515>
-
       <xacro:sensor_l515 name="camera_upper_left" parent="camera_upper_left_mount" use_nominal_extrinsics="${use_nominal_camera_extrinsics}">
         <origin xyz="0 0 0" rpy="0 0 0"/>
       </xacro:sensor_l515> -->
-    </xacro:if>
-  </xacro:macro>
-
-  <link name="gripper_equilibrium_grasp"/>
-
-  <joint name="gripper_base_link_gripper_equilibrium_grasp" type="fixed">
-    <parent link="gripper_base_link"/>
-    <child link="gripper_equilibrium_grasp"/>
-    <origin xyz="0 0 0.13"
-            rpy="0 0 0"/>
-  </joint>
-
-</robot>
-
+    
 

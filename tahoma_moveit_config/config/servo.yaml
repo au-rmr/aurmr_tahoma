@@ -29,11 +29,11 @@ publish_joint_accelerations: false
 
 ## MoveIt properties
 move_group_name:  manipulator
-planning_frame: arm_base_link  # The MoveIt planning frame. Often 'base_link' or 'world'
+planning_frame: base_link  # The MoveIt planning frame. Often 'base_link' or 'world'. The previous value: arm_base_link 
 
 ## Other frames
-ee_frame_name: arm_tool0  # The name of the end effector link, used to return the EE pose
-robot_link_command_frame:  arm_tool0  # commands must be given in the frame of a robot link. Usually either the base or end effector
+ee_frame_name: epick_end_effector  # The name of the end effector link, used to return the EE pose. The previous value: arm_tool0
+robot_link_command_frame:  epick_end_effector  # commands must be given in the frame of a robot link. Usually either the base or end effector. The previous value: arm_tool0
 
 ## Stopping behaviour
 incoming_command_timeout:  0.1  # Stop servoing if X seconds elapse without a new command
@@ -55,7 +55,9 @@ command_out_topic: /joint_group_pos_controller/command # Publish outgoing comman
 
 ## Collision checking for the entire robot body
 check_collisions: false
-collision_check_rate: 50 # [Hz] Collision-checking can easily bog down a CPU if done too often.
+# If robot poses are very close to scene objects/self-collision, the rate should be high as it determines how often to check for collision
+# It relates to cases when path is collision free, but control isn't good enough to follow the path
+collision_check_rate: 200 # [Hz] Collision-checking can easily bog down a CPU if done too often. 
 # Two collision check algorithms are available:
 # "threshold_distance" begins slowing down when nearer than a specified distance. Good if you want to tune collision thresholds manually.
 # "stop_distance" stops if a collision is nearer than the worst-case stopping distance and the distance is decreasing. Requires joint acceleration limits
@@ -84,6 +86,6 @@ x_derivative_gain: 1
 y_derivative_gain: 1
 z_derivative_gain: 1
 
-angular_proportional_gain: 1
-angular_integral_gain: 0.2
-angular_derivative_gain: 0.5
+angular_proportional_gain: 1 # The previous value: 1
+angular_integral_gain: 0.2 # The previous value: 0.2
+angular_derivative_gain: 0.5 # The previous value: 0.5

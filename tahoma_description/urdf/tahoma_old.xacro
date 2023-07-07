@@ -1,0 +1,198 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="tahoma">
+  <xacro:include filename="$(find ur_description)/urdf/inc/ur16e_macro.xacro"/>
+  <xacro:include filename="$(find tahoma_description)/urdf/stand.xacro"/>
+  <xacro:include filename="$(find robotiq_epick_visualization)/urdf/robotiq_epick_model_macro.xacro" />
+
+  <xacro:include filename="$(find tahoma_description)/urdf/l515.xacro"/>
+  <xacro:macro name="tahoma" params="
+  realsense:=true
+  use_nominal_camera_extrinsics:=false
+  camera_arrangement:='manual'
+  camera_baseline:=.5
+  camera_focal_depth:=1.4
+  gripper_transmission_hw_interface:='hardware_interface/EffortJointInterface'
+  joint_limits_parameters_file:='$(find ur_description)/config/ur16e/joint_limits.yaml'
+  kinematics_parameters_file:='$(find tahoma_description)/config/arm_calibration.yaml'
+  physical_parameters_file:='$(find ur_description)/config/ur16e/physical_parameters.yaml'
+  visual_parameters_file:='$(find ur_description)/config/ur16e/visual_parameters.yaml'
+  transmission_hw_interface:=hardware_interface/PositionJointInterface
+  safety_limits:=false
+  safety_pos_margin:=0.15
+  safety_k_position:=20">
+
+    <xacro:stand/>
+    <xacro:ur16e_robot prefix="arm_"
+                       joint_limits_parameters_file="${joint_limits_parameters_file}"
+                       kinematics_parameters_file="${kinematics_parameters_file}"
+                       physical_parameters_file="${physical_parameters_file}"
+                       visual_parameters_file="${visual_parameters_file}"
+                       transmission_hw_interface="${transmission_hw_interface}"
+                       safety_limits="${safety_limits}"
+                       safety_pos_margin="${safety_pos_margin}"
+                       safety_k_position="${safety_k_position}"/>
+                       
+    <xacro:epick_hand hand_link_name="gripper_base_link" robot_name="tahoma"/>
+
+    <link name="base_link"/>
+    <joint name="base_joint" type="fixed">
+      <origin rpy="0 0 0" xyz="0 0 0.15"/>
+      <parent link="base_link"/>
+      <child link="stand"/>
+    </joint>
+
+    <joint name="robot_plate_arm_base_link_joint" type="fixed">
+      <parent link="robot_plate"/>
+      <child link="arm_base_link"/>
+      <origin rpy="0 ${pi} ${1.5 * pi}" xyz="0 0.00175 -0.00885"/>
+    </joint>
+
+
+    <link name="coupling">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://robotiq_2f_85_gripper_visualization/meshes/visual/coupling.stl"/>
+        </geometry>
+        <material name="">
+          <color rgba="0.1 0.1 0.1 1"/>
+        </material>
+      </visual>
+      <collision>
+        <!-- Primitives are centered, so offset -->
+        <origin xyz="0 0 ${.0169 / 2}" rpy="0 0 0"/>
+        <geometry>
+          <cylinder radius=".0375" length=".0169"/>
+        </geometry>
+      </collision>
+    </link>
+
+    
+
+    <joint name="coupling_link_gripper_robotiq_arg2f_base_link_joint" type="fixed">
+      <origin xyz="0 0 0.017" rpy="0 0 0"/>
+      <parent link="coupling"/>
+      <child link="gripper_base_link"/>
+    </joint>
+
+    <joint name="arm_tool0-coupling_joint" type="fixed">
+      <origin xyz="0 0 -0.003" rpy="0 0 ${1.5 * pi}"/>
+      <parent link="arm_tool0"/>
+      <child link="coupling"/>
+    </joint>
+    
+    <link name="camera_lower_right_mount">
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size=".1 .15 .15"/>
+        </geometry>
+      </collision>
+    </link>
+    
+    <link name="camera_lower_left_mount">
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size=".1 .15 .15"/>
+        </geometry>
+      </collision>
+    </link>
+
+
+    <!-- These are the planned ("nominal") mount placements. On the real system, these should
+     be overridden by calibrated transforms published separately -->
+    <xacro:if value="${camera_arrangement == 'manual' }">
+      <joint name="camera_beam_lower_camera_lower_left_mount_joint" type="fixed">
+        <parent link="camera_beam_lower"/>
+        <child link="camera_lower_left_mount"/>
+        
+        <origin xyz="0.02 ${-0.0215 + (camera_baseline / 2)} 0.14"
+                rpy="${pi / 2} ${radians(15)} ${-atan2((camera_baseline /2),camera_focal_depth)}"/>
+      </joint>
+      <joint name="camera_beam_lower_camera_lower_right_mount_joint" type="fixed">
+        <parent link="camera_beam_lower"/>
+        <child link="camera_lower_right_mount"/>
+        <origin xyz="0.02 ${-0.0215 + (camera_baseline / 2)} 0.14"
+                rpy="${pi / 2} ${radians(15)} ${-atan2((camera_baseline /2),camera_focal_depth)}"/>
+      </joint>
+    </xacro:if>
+
+    <xacro:if value="${camera_arrangement == 'convergent' }">
+      <joint name="camera_beam_lower_camera_lower_left_mount_joint" type="fixed">
+        <parent link="camera_beam_lower"/>
+        <child link="camera_lower_left_mount"/>
+        
+        <origin xyz="0 ${-0.0215 + -camera_baseline / 2} 0.09"
+                rpy="${pi / 2} 0 ${-atan2((camera_baseline /2),camera_focal_depth)}"/>
+      </joint>
+      <joint name="camera_beam_lower_camera_lower_right_mount_joint" type="fixed">
+        <parent link="camera_beam_lower"/>
+        <child link="camera_lower_right_mount"/>
+        <origin xyz="0 ${-0.0215 + -camera_baseline / 2} 0.09"
+                rpy="${pi / 2} 0 ${atan2((camera_baseline /2),camera_focal_depth)}"/>
+      </joint>
+    </xacro:if>
+
+    <xacro:if value="${camera_arrangement == 'convergent_tilted' }">
+      <joint name="camera_beam_lower_camera_lower_left_mount_joint" type="fixed">
+        <parent link="camera_beam_lower"/>
+        <child link="camera_lower_left_mount"/>
+        
+        <origin xyz="-0.00 ${-0.0215 + (camera_baseline / 2)} 0.09"
+                rpy="${pi / 2} ${radians(15)} ${-math.atan2((camera_baseline /2),camera_focal_depth)}"/>
+      </joint>
+      <joint name="camera_beam_lower_camera_lower_right_mount_joint" type="fixed">
+        <parent link="camera_beam_lower"/>
+        <child link="camera_lower_right_mount"/>
+        <origin xyz="-0.00 ${0.0215 + (-camera_baseline / 2)} 0.09"
+                rpy="${pi / 2} ${radians(15)} ${math.atan2((camera_baseline /2),camera_focal_depth)}"/>
+      </joint>
+    </xacro:if> -->
+
+  
+    <link name="camera_upper_mount"/>
+    <joint name="cantilever_camera_upper_mount_joint" type="fixed">
+      <parent link="cantilever"/>
+      <child link="camera_upper_mount"/>
+      <origin xyz=".02 0 0.37"
+              rpy="0 ${radians(15)} 0"/>
+    </joint>
+
+    <xacro:if value="${realsense}">
+      <xacro:sensor_l515 name="camera_lower_right" parent="camera_lower_right_mount"
+                         use_nominal_extrinsics="${use_nominal_camera_extrinsics}" attach_at_bottom="false">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+      </xacro:sensor_l515>
+
+      <xacro:sensor_l515 name="camera_lower_left" parent="camera_lower_left_mount"
+                         use_nominal_extrinsics="${use_nominal_camera_extrinsics}" attach_at_bottom="false">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+      </xacro:sensor_l515>
+
+      <xacro:sensor_l515 name="camera_upper" parent="camera_upper_mount"
+                         use_nominal_extrinsics="${use_nominal_camera_extrinsics}" attach_at_bottom="false">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+      </xacro:sensor_l515>
+
+      <!-- Upper cameras  
+      <xacro:sensor_l515 name="camera_upper_right" parent="camera_upper_right_mount" use_nominal_extrinsics="${use_nominal_camera_extrinsics}">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+      </xacro:sensor_l515>
+      <xacro:sensor_l515 name="camera_upper_left" parent="camera_upper_left_mount" use_nominal_extrinsics="${use_nominal_camera_extrinsics}">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+      </xacro:sensor_l515> -->
+    </xacro:if>
+  </xacro:macro> 
+
+  <link name="gripper_equilibrium_grasp"/>
+
+  <joint name="gripper_base_link_gripper_equilibrium_grasp" type="fixed">
+    <parent link="gripper_base_link"/>
+    <child link="gripper_equilibrium_grasp"/>
+    <origin xyz="0 0 0.13"
+            rpy="0 0 0"/>
+  </joint>
+
+</robot>
+

@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 import geometry_msgs.msg
-from math import pi, tau, dist, fabs, cos
+from math import pi, tau, dist, fabs, acos
 
 import rospy
 from geometry_msgs.msg import PoseStamped
@@ -48,33 +48,38 @@ def formulate_ud_str_auto(name, template, input_keys, output_key, transitions=No
     StateMachine.add_auto(name, Formulator(template, input_keys, output_key), ["succeeded"],transitions=transitions)
 
 
-def all_close(goal, actual, tolerance):
+def all_close(goal, actual, joint_tolerance=0.01, position_tolerance=0.001, orientation_tolerance=1.0):
     """
     Convenience method for testing if the values in two lists are within a tolerance of each other.
     For Pose and PoseStamped inputs, the angle between the two quaternions is compared (the angle
     between the identical orientations q and -q is calculated correctly).
-    @param: goal       A list of floats, a Pose or a PoseStamped
-    @param: actual     A list of floats, a Pose or a PoseStamped
-    @param: tolerance  A float
+    @param:                  goal:  A list of floats, a Pose or a PoseStamped
+    @param:                actual:  A list of floats, a Pose or a PoseStamped
+    @param:       joint_tolerance:  A float. radians
+    @param:    position_tolerance:  A float. meters
+    @param: orientation_tolerance:  A float. radians
     @returns: bool
     """
     if type(goal) is list:
         for index in range(len(goal)):
-            if abs(actual[index] - goal[index]) > tolerance:
+            if abs(actual[index] - goal[index]) > joint_tolerance:
                 return False
 
     elif type(goal) is geometry_msgs.msg.PoseStamped:
         assert (goal.header.frame_id == actual.header.frame_id)
-        return all_close(goal.pose, actual.pose, tolerance)
+        return all_close(goal.pose, actual.pose, 
+                         position_tolerance=position_tolerance, 
+                         orientation_tolerance=orientation_tolerance)
 
     elif type(goal) is geometry_msgs.msg.Pose:
         x0, y0, z0, qx0, qy0, qz0, qw0 = pose_to_list(actual)
         x1, y1, z1, qx1, qy1, qz1, qw1 = pose_to_list(goal)
         # Euclidean distance
         d = dist((x1, y1, z1), (x0, y0, z0))
-        # phi = angle between orientations
-        cos_phi_half = fabs(qx0 * qx1 + qy0 * qy1 + qz0 * qz1 + qw0 * qw1)
-        return d <= tolerance and cos_phi_half >= cos(tolerance / 2.0)
+        # phi = angle between orientations in degrees
+        # cos_phi_half = fabs(qx0 * qx1 + qy0 * qy1 + qz0 * qz1 + qw0 * qw1)
+        phi = acos(fabs(qx0 * qx1 + qy0 * qy1 + qz0 * qz1 + qw0 * qw1))
+        return (d <= position_tolerance) and (phi <= orientation_tolerance)
 
     return True
 
@@ -89,7 +94,7 @@ def pose_dist(goal, actual):
         # Euclidean distance
         d = dist((x1, y1, z1), (x0, y0, z0))
         # phi = angle between orientations
-        cos_phi_half = fabs(qx0 * qx1 + qy0 * qy1 + qz0 * qz1 + qw0 * qw1)
-        return (d, cos_phi_half)
+        phi = acos(fabs(qx0 * qx1 + qy0 * qy1 + qz0 * qz1 + qw0 * qw1)) * 180 / pi
+        return (d, phi)
     else:
         return None

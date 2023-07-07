@@ -1,0 +1,1368 @@
+{
+    "id": {
+        "partNumber": "790-00265-022",
+        "recipeVersion": 2
+    },
+    "partNumber": "790-00265-022",
+    "barcode": "RCP79000265022",
+    "podTypeId": 400,
+    "podProfileId": 2,
+    "emptyMassKg": 80,
+    "emptyCGHeightMm": 1041,
+    "heightWhenLifted": 291,
+    "bins": [
+        {
+            "binDimensionIndex": 0,
+            "binDimensionName": "A1",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 0,
+            "y": 0,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 1,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "A",
+            "colorLevel": 1
+        },
+        {
+            "binDimensionIndex": 0,
+            "binDimensionName": "A1",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 313,
+            "y": 0,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 1,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 2,
+            "vendingMachineLetter": "A",
+            "colorLevel": 1
+        },
+        {
+            "binDimensionIndex": 0,
+            "binDimensionName": "A1",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 626,
+            "y": 0,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 1,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 3,
+            "vendingMachineLetter": "A",
+            "colorLevel": 1
+        },
+        {
+            "binDimensionIndex": 1,
+            "binDimensionName": "A2",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 0,
+            "y": 356,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 3,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "B",
+            "colorLevel": 2
+        },
+        {
+            "binDimensionIndex": 1,
+            "binDimensionName": "A2",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 313,
+            "y": 356,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 3,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 2,
+            "vendingMachineLetter": "B",
+            "colorLevel": 2
+        },
+        {
+            "binDimensionIndex": 1,
+            "binDimensionName": "A2",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 626,
+            "y": 356,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 3,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 3,
+            "vendingMachineLetter": "B",
+            "colorLevel": 2
+        },
+        {
+            "binDimensionIndex": 2,
+            "binDimensionName": "A35",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 0,
+            "y": 660,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 7,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "C",
+            "colorLevel": 3
+        },
+        {
+            "binDimensionIndex": 2,
+            "binDimensionName": "A35",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 313,
+            "y": 660,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 7,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 2,
+            "vendingMachineLetter": "C",
+            "colorLevel": 3
+        },
+        {
+            "binDimensionIndex": 2,
+            "binDimensionName": "A35",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 626,
+            "y": 660,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 7,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 3,
+            "vendingMachineLetter": "C",
+            "colorLevel": 3
+        },
+        {
+            "binDimensionIndex": 3,
+            "binDimensionName": "A4",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 0,
+            "y": 914,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 11,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "D",
+            "colorLevel": 4
+        },
+        {
+            "binDimensionIndex": 3,
+            "binDimensionName": "A4",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 313,
+            "y": 914,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 11,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 2,
+            "vendingMachineLetter": "D",
+            "colorLevel": 4
+        },
+        {
+            "binDimensionIndex": 3,
+            "binDimensionName": "A4",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 626,
+            "y": 914,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 11,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 3,
+            "vendingMachineLetter": "D",
+            "colorLevel": 4
+        },
+        {
+            "binDimensionIndex": 2,
+            "binDimensionName": "A35",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 0,
+            "y": 1143,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 14,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "E",
+            "colorLevel": 5
+        },
+        {
+            "binDimensionIndex": 2,
+            "binDimensionName": "A35",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 313,
+            "y": 1143,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 14,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 2,
+            "vendingMachineLetter": "E",
+            "colorLevel": 5
+        },
+        {
+            "binDimensionIndex": 2,
+            "binDimensionName": "A35",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 626,
+            "y": 1143,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 14,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 3,
+            "vendingMachineLetter": "E",
+            "colorLevel": 5
+        },
+        {
+            "binDimensionIndex": 4,
+            "binDimensionName": "A6",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 0,
+            "y": 1397,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 17,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "F",
+            "colorLevel": 6
+        },
+        {
+            "binDimensionIndex": 4,
+            "binDimensionName": "A6",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 313,
+            "y": 1397,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 17,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 2,
+            "vendingMachineLetter": "F",
+            "colorLevel": 6
+        },
+        {
+            "binDimensionIndex": 4,
+            "binDimensionName": "A6",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 626,
+            "y": 1397,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 17,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 3,
+            "vendingMachineLetter": "F",
+            "colorLevel": 6
+        },
+        {
+            "binDimensionIndex": 5,
+            "binDimensionName": "A7",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 0,
+            "y": 1676,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 20,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "G",
+            "colorLevel": 7
+        },
+        {
+            "binDimensionIndex": 5,
+            "binDimensionName": "A7",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 313,
+            "y": 1676,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 20,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 2,
+            "vendingMachineLetter": "G",
+            "colorLevel": 7
+        },
+        {
+            "binDimensionIndex": 5,
+            "binDimensionName": "A7",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 626,
+            "y": 1676,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 20,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 3,
+            "vendingMachineLetter": "G",
+            "colorLevel": 7
+        },
+        {
+            "binDimensionIndex": 6,
+            "binDimensionName": "A8",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 0,
+            "y": 2007,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 23,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "H",
+            "colorLevel": 8
+        },
+        {
+            "binDimensionIndex": 6,
+            "binDimensionName": "A8",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 313,
+            "y": 2007,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 23,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 2,
+            "vendingMachineLetter": "H",
+            "colorLevel": 8
+        },
+        {
+            "binDimensionIndex": 6,
+            "binDimensionName": "A8",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 626,
+            "y": 2007,
+            "inset": 0,
+            "primaryFace": "A",
+            "shelf": 23,
+            "accessibleFaces": [
+                "A"
+            ],
+            "vendingMachineNumber": 3,
+            "vendingMachineLetter": "H",
+            "colorLevel": 8
+        },
+        {
+            "binDimensionIndex": 7,
+            "binDimensionName": "B1",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 356,
+            "y": 0,
+            "inset": 0,
+            "primaryFace": "B",
+            "shelf": 1,
+            "accessibleFaces": [
+                "B"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "A",
+            "colorLevel": 1
+        },
+        {
+            "binDimensionIndex": 8,
+            "binDimensionName": "B27",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 356,
+            "y": 356,
+            "inset": 0,
+            "primaryFace": "B",
+            "shelf": 3,
+            "accessibleFaces": [
+                "B"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "B",
+            "colorLevel": 2
+        },
+        {
+            "binDimensionIndex": 9,
+            "binDimensionName": "B35",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 356,
+            "y": 610,
+            "inset": 0,
+            "primaryFace": "B",
+            "shelf": 5,
+            "accessibleFaces": [
+                "B"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "C",
+            "colorLevel": 3
+        },
+        {
+            "binDimensionIndex": 10,
+            "binDimensionName": "B4",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 356,
+            "y": 838,
+            "inset": 0,
+            "primaryFace": "B",
+            "shelf": 9,
+            "accessibleFaces": [
+                "B"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "D",
+            "colorLevel": 4
+        },
+        {
+            "binDimensionIndex": 9,
+            "binDimensionName": "B35",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 356,
+            "y": 1143,
+            "inset": 0,
+            "primaryFace": "B",
+            "shelf": 14,
+            "accessibleFaces": [
+                "B"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "E",
+            "colorLevel": 5
+        },
+        {
+            "binDimensionIndex": 11,
+            "binDimensionName": "B6",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 356,
+            "y": 1372,
+            "inset": 0,
+            "primaryFace": "B",
+            "shelf": 16,
+            "accessibleFaces": [
+                "B"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "F",
+            "colorLevel": 6
+        },
+        {
+            "binDimensionIndex": 8,
+            "binDimensionName": "B27",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 356,
+            "y": 1702,
+            "inset": 0,
+            "primaryFace": "B",
+            "shelf": 21,
+            "accessibleFaces": [
+                "B"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "G",
+            "colorLevel": 7
+        },
+        {
+            "binDimensionIndex": 12,
+            "binDimensionName": "B8",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 356,
+            "y": 1956,
+            "inset": 0,
+            "primaryFace": "B",
+            "shelf": 22,
+            "accessibleFaces": [
+                "B"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "H",
+            "colorLevel": 8
+        },
+        {
+            "binDimensionIndex": 13,
+            "binDimensionName": "C1",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 0,
+            "y": 0,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 1,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "A",
+            "colorLevel": 1
+        },
+        {
+            "binDimensionIndex": 13,
+            "binDimensionName": "C1",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 313,
+            "y": 0,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 1,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 2,
+            "vendingMachineLetter": "A",
+            "colorLevel": 1
+        },
+        {
+            "binDimensionIndex": 13,
+            "binDimensionName": "C1",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 626,
+            "y": 0,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 1,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 3,
+            "vendingMachineLetter": "A",
+            "colorLevel": 1
+        },
+        {
+            "binDimensionIndex": 14,
+            "binDimensionName": "C257",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 0,
+            "y": 330,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 2,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "B",
+            "colorLevel": 2
+        },
+        {
+            "binDimensionIndex": 14,
+            "binDimensionName": "C257",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 313,
+            "y": 330,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 2,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 2,
+            "vendingMachineLetter": "B",
+            "colorLevel": 2
+        },
+        {
+            "binDimensionIndex": 14,
+            "binDimensionName": "C257",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 626,
+            "y": 330,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 2,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 3,
+            "vendingMachineLetter": "B",
+            "colorLevel": 2
+        },
+        {
+            "binDimensionIndex": 15,
+            "binDimensionName": "C3",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 0,
+            "y": 635,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 6,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "C",
+            "colorLevel": 3
+        },
+        {
+            "binDimensionIndex": 15,
+            "binDimensionName": "C3",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 313,
+            "y": 635,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 6,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 2,
+            "vendingMachineLetter": "C",
+            "colorLevel": 3
+        },
+        {
+            "binDimensionIndex": 15,
+            "binDimensionName": "C3",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 626,
+            "y": 635,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 6,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 3,
+            "vendingMachineLetter": "C",
+            "colorLevel": 3
+        },
+        {
+            "binDimensionIndex": 16,
+            "binDimensionName": "C4",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 0,
+            "y": 889,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 10,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "D",
+            "colorLevel": 4
+        },
+        {
+            "binDimensionIndex": 16,
+            "binDimensionName": "C4",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 313,
+            "y": 889,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 10,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 2,
+            "vendingMachineLetter": "D",
+            "colorLevel": 4
+        },
+        {
+            "binDimensionIndex": 16,
+            "binDimensionName": "C4",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 626,
+            "y": 889,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 10,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 3,
+            "vendingMachineLetter": "D",
+            "colorLevel": 4
+        },
+        {
+            "binDimensionIndex": 14,
+            "binDimensionName": "C257",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 0,
+            "y": 1118,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 13,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "E",
+            "colorLevel": 5
+        },
+        {
+            "binDimensionIndex": 14,
+            "binDimensionName": "C257",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 313,
+            "y": 1118,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 13,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 2,
+            "vendingMachineLetter": "E",
+            "colorLevel": 5
+        },
+        {
+            "binDimensionIndex": 14,
+            "binDimensionName": "C257",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 626,
+            "y": 1118,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 13,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 3,
+            "vendingMachineLetter": "E",
+            "colorLevel": 5
+        },
+        {
+            "binDimensionIndex": 17,
+            "binDimensionName": "C6",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 0,
+            "y": 1422,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 18,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "F",
+            "colorLevel": 6
+        },
+        {
+            "binDimensionIndex": 17,
+            "binDimensionName": "C6",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 313,
+            "y": 1422,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 18,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 2,
+            "vendingMachineLetter": "F",
+            "colorLevel": 6
+        },
+        {
+            "binDimensionIndex": 17,
+            "binDimensionName": "C6",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 626,
+            "y": 1422,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 18,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 3,
+            "vendingMachineLetter": "F",
+            "colorLevel": 6
+        },
+        {
+            "binDimensionIndex": 14,
+            "binDimensionName": "C257",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 0,
+            "y": 1702,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 21,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "G",
+            "colorLevel": 7
+        },
+        {
+            "binDimensionIndex": 14,
+            "binDimensionName": "C257",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 313,
+            "y": 1702,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 21,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 2,
+            "vendingMachineLetter": "G",
+            "colorLevel": 7
+        },
+        {
+            "binDimensionIndex": 14,
+            "binDimensionName": "C257",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 626,
+            "y": 1702,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 21,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 3,
+            "vendingMachineLetter": "G",
+            "colorLevel": 7
+        },
+        {
+            "binDimensionIndex": 18,
+            "binDimensionName": "C8",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 0,
+            "y": 2007,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 23,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "H",
+            "colorLevel": 8
+        },
+        {
+            "binDimensionIndex": 18,
+            "binDimensionName": "C8",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 313,
+            "y": 2007,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 23,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 2,
+            "vendingMachineLetter": "H",
+            "colorLevel": 8
+        },
+        {
+            "binDimensionIndex": 18,
+            "binDimensionName": "C8",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 626,
+            "y": 2007,
+            "inset": 0,
+            "primaryFace": "C",
+            "shelf": 23,
+            "accessibleFaces": [
+                "C"
+            ],
+            "vendingMachineNumber": 3,
+            "vendingMachineLetter": "H",
+            "colorLevel": 8
+        },
+        {
+            "binDimensionIndex": 19,
+            "binDimensionName": "D1",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 356,
+            "y": 0,
+            "inset": 0,
+            "primaryFace": "D",
+            "shelf": 1,
+            "accessibleFaces": [
+                "D"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "A",
+            "colorLevel": 1
+        },
+        {
+            "binDimensionIndex": 20,
+            "binDimensionName": "D2356",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 356,
+            "y": 357,
+            "inset": 0,
+            "primaryFace": "D",
+            "shelf": 4,
+            "accessibleFaces": [
+                "D"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "B",
+            "colorLevel": 2
+        },
+        {
+            "binDimensionIndex": 20,
+            "binDimensionName": "D2356",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 356,
+            "y": 686,
+            "inset": 0,
+            "primaryFace": "D",
+            "shelf": 8,
+            "accessibleFaces": [
+                "D"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "C",
+            "colorLevel": 3
+        },
+        {
+            "binDimensionIndex": 21,
+            "binDimensionName": "D4",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 356,
+            "y": 1016,
+            "inset": 0,
+            "primaryFace": "D",
+            "shelf": 12,
+            "accessibleFaces": [
+                "D"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "D",
+            "colorLevel": 4
+        },
+        {
+            "binDimensionIndex": 20,
+            "binDimensionName": "D2356",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 356,
+            "y": 1295,
+            "inset": 0,
+            "primaryFace": "D",
+            "shelf": 15,
+            "accessibleFaces": [
+                "D"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "E",
+            "colorLevel": 5
+        },
+        {
+            "binDimensionIndex": 20,
+            "binDimensionName": "D2356",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 356,
+            "y": 1626,
+            "inset": 0,
+            "primaryFace": "D",
+            "shelf": 19,
+            "accessibleFaces": [
+                "D"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "F",
+            "colorLevel": 6
+        },
+        {
+            "binDimensionIndex": 22,
+            "binDimensionName": "D7",
+            "trayRecipeIndex": 0,
+            "trayRecipeName": null,
+            "x": 356,
+            "y": 1956,
+            "inset": 0,
+            "primaryFace": "D",
+            "shelf": 22,
+            "accessibleFaces": [
+                "D"
+            ],
+            "vendingMachineNumber": 1,
+            "vendingMachineLetter": "G",
+            "colorLevel": 7
+        }
+    ],
+    "binDimensions": [
+        {
+            "name": "A1",
+            "width": 313,
+            "height": 346,
+            "depth": 356,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 22
+        },
+        {
+            "name": "A2",
+            "width": 313,
+            "height": 295,
+            "depth": 356,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        },
+        {
+            "name": "A35",
+            "width": 313,
+            "height": 244,
+            "depth": 356,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        },
+        {
+            "name": "A4",
+            "width": 313,
+            "height": 219,
+            "depth": 356,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        },
+        {
+            "name": "A6",
+            "width": 313,
+            "height": 269,
+            "depth": 356,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        },
+        {
+            "name": "A7",
+            "width": 313,
+            "height": 320,
+            "depth": 356,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        },
+        {
+            "name": "A8",
+            "width": 313,
+            "height": 257,
+            "depth": 356,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        },
+        {
+            "name": "B1",
+            "width": 229,
+            "height": 346,
+            "depth": 470,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 22
+        },
+        {
+            "name": "B27",
+            "width": 229,
+            "height": 244,
+            "depth": 470,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        },
+        {
+            "name": "B35",
+            "width": 229,
+            "height": 219,
+            "depth": 470,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        },
+        {
+            "name": "B4",
+            "width": 229,
+            "height": 295,
+            "depth": 470,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        },
+        {
+            "name": "B6",
+            "width": 229,
+            "height": 320,
+            "depth": 470,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        },
+        {
+            "name": "B8",
+            "width": 229,
+            "height": 308,
+            "depth": 368,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        },
+        {
+            "name": "C1",
+            "width": 313,
+            "height": 320,
+            "depth": 356,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 22
+        },
+        {
+            "name": "C257",
+            "width": 313,
+            "height": 295,
+            "depth": 356,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        },
+        {
+            "name": "C3",
+            "width": 313,
+            "height": 244,
+            "depth": 356,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        },
+        {
+            "name": "C4",
+            "width": 313,
+            "height": 219,
+            "depth": 356,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        },
+        {
+            "name": "C6",
+            "width": 313,
+            "height": 269,
+            "depth": 356,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        },
+        {
+            "name": "C8",
+            "width": 313,
+            "height": 257,
+            "depth": 356,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        },
+        {
+            "name": "D1",
+            "width": 229,
+            "height": 346,
+            "depth": 470,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 22
+        },
+        {
+            "name": "D2356",
+            "width": 229,
+            "height": 320,
+            "depth": 470,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        },
+        {
+            "name": "D4",
+            "width": 229,
+            "height": 269,
+            "depth": 470,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        },
+        {
+            "name": "D7",
+            "width": 229,
+            "height": 308,
+            "depth": 368,
+            "angle": 0,
+            "lipHeight": 22,
+            "drawer": false,
+            "minProductDepth": 0,
+            "maxMass": 11
+        }
+    ],
+    "trays": [
+        {
+            "name": null,
+            "trayTypeId": 167,
+            "leg": 2286,
+            "lip": 0,
+            "rise": 0,
+            "thicknesses": [
+                0,
+                0,
+                0,
+                0
+            ]
+        }
+    ],
+    "fbaFamily": "H12",
+    "faceBarcodeLocations": [
+        {
+            "face": "A",
+            "x": 0,
+            "y": 2136,
+            "barcode": "A Side"
+        }
+    ],
+    "recipeTag": null,
+    "cgheightLimitAtZeroRadiusMm": 1457,
+    "cgheightLimitAtMaxRadiusMm": 1028
+}
