@@ -1,0 +1,14 @@
+# Goal
+string object_asin
+string bin_id
+sensor_msgs/CompressedImage camera_image
+float64 failed_x
+float64 failed_y
+---
+# Result
+bool retry
+float64 x
+float64 y
+---
+# Feedback
+bool accepted

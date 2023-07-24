@@ -143,8 +143,8 @@ class GetGraspPose(State):
     def __init__(self, tf_buffer, frame_id='base_link', pre_grasp_offset=.12):
         State.__init__(
             self,
-            input_keys=['target_bin_id', 'target_object_id'],
-            output_keys=['grasp_pose', 'pre_grasp_pose', 'status'],
+            input_keys=['target_bin_id', 'target_object_id', 'human_grasp_pose'],
+            output_keys=['grasp_pose', 'pre_grasp_pose', 'status', 'human_grasp_pose'],
             outcomes=['succeeded', 'preempted', 'aborted']
         )
         self.get_points = rospy.ServiceProxy('/aurmr_perception/get_object_points', GetObjectPoints)
@@ -155,6 +155,8 @@ class GetGraspPose(State):
         self.frame_id = frame_id
         self.pre_grasp_offset = pre_grasp_offset
         self.pose_viz = rospy.Publisher("selected_grasp_pose", geometry_msgs.msg.PoseStamped,
+                                                      queue_size=1, latch=True)
+        self.percep_pose_viz = rospy.Publisher("selected_grasp_pose_perception", geometry_msgs.msg.PoseStamped,
                                                       queue_size=1, latch=True)
         self.pre_grasp_viz = rospy.Publisher("selected_pre_grasp_pose", geometry_msgs.msg.PoseStamped,
                                         queue_size=1, latch=True)
@@ -171,29 +173,37 @@ class GetGraspPose(State):
         return offset_pose
 
     def execute(self, userdata):
-        get_points_req = GetObjectPointsRequest(
-            bin_id=userdata['target_bin_id'],
-            object_id=userdata['target_object_id'],
-            frame_id=self.frame_id
-        )
-        print(get_points_req, get_points_req)
-        points_response = self.get_points(get_points_req)
+        if 'human_grasp_pose' in userdata and userdata['human_grasp_pose'] != None:
+            rospy.loginfo("Using human provided grasp pose")
+            grasp_pose = userdata['human_grasp_pose']
+            userdata["human_grasp_pose"] = None
 
-        if not points_response.success:
-            userdata["status"] = "pass"
-            return "aborted"
+        else:
+            rospy.loginfo("Using perception system to get grasp pose")
+            get_points_req = GetObjectPointsRequest(
+                bin_id=userdata['target_bin_id'],
+                object_id=userdata['target_object_id'],
+                frame_id=self.frame_id
+            )
+            print(get_points_req, get_points_req)
+            points_response = self.get_points(get_points_req)
 
-        grasp_response = self.get_grasp(points=points_response.points,
-                                        mask=points_response.mask,
-                                        dist_threshold=self.pre_grasp_offset, bin_id=userdata['target_bin_id'])
+            if not points_response.success:
+                userdata["status"] = "pass"
+                return "aborted"
 
-        if not grasp_response.success:
-            userdata["status"] = "pass"
-            return "aborted"
+            grasp_response = self.get_grasp(points=points_response.points,
+                                            mask=points_response.mask,
+                                            dist_threshold=self.pre_grasp_offset, bin_id=userdata['target_bin_id'])
 
-        # NOTE: No extra filtering or ranking on our part. Just take the first one
-        # As the arm_tool0 is 20cm in length w.r.t tip of suction cup thus adding 0.2m offset
-        grasp_pose = grasp_response.poses[0]
+            if not grasp_response.success:
+                userdata["status"] = "pass"
+                return "aborted"
+
+            # NOTE: No extra filtering or ranking on our part. Just take the first one
+            # As the arm_tool0 is 20cm in length w.r.t tip of suction cup thus adding 0.2m offset
+            grasp_pose = grasp_response.poses[0]
+
         grasp_pose = self.add_offset(-0.22, grasp_pose)
 
         userdata['grasp_pose'] = grasp_pose
@@ -205,6 +215,8 @@ class GetGraspPose(State):
 
         self.pose_viz.publish(grasp_pose)
         self.pre_grasp_viz.publish(pregrasp_pose)
+
+        # import pdb; pdb.set_trace()
 
         userdata["status"] = "picking"
         return "succeeded"
