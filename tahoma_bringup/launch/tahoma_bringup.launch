@@ -73,6 +73,13 @@
       <arg name="gripper_type" default="$(arg gripper_type)" />
     </include>
 
+    <!-- <include file="$(find vacuum_gripper_control)/launch/vacuum_gripper_socket.launch">
+      <arg name="gripper_type" default="$(arg gripper_type)" />
+    </include>
+    <include file="$(find vacuum_gripper_action_server)/launch/vacuum_gripper_socket_action_server.launch">
+      <arg name="gripper_type" default="$(arg gripper_type)" />
+    </include> -->
+
     <node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" />
 
     <node pkg="nodelet" type="nodelet" name="nodelet1"

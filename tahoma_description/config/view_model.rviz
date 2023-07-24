@@ -174,6 +174,10 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        cantilever_camera_upper_mount:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
         control_box:
           Alpha: 1
           Show Axes: false
@@ -1125,7 +1129,7 @@ Visualization Manager:
       Value: false
     - Acceleration_Scaling_Factor: 0.1
       Class: moveit_rviz_plugin/MotionPlanning
-      Enabled: true
+      Enabled: false
       Move Group Namespace: ""
       MoveIt_Allow_Approximate_IK: false
       MoveIt_Allow_External_Program: false
@@ -1203,7 +1207,7 @@ Visualization Manager:
         Robot Alpha: 1
         Show Robot Collision: false
         Show Robot Visual: true
-      Value: true
+      Value: false
       Velocity_Scaling_Factor: 0.1
     - Class: rviz/TF
       Enabled: true
@@ -1265,6 +1269,8 @@ Visualization Manager:
         camera_visor:
           Value: false
         cantilever:
+          Value: false
+        cantilever_camera_upper_mount:
           Value: false
         control_box:
           Value: false
@@ -1962,6 +1968,14 @@ Visualization Manager:
                                   arm_flange:
                                     arm_tool0:
                                       coupling:
+                                        camera_bottom_screw_frame:
+                                          camera_link:
+                                            realsense_back_gripper_mount:
+                                              {}
+                                          camera_lower_mount:
+                                            {}
+                                          camera_secondary_upper_mount:
+                                            {}
                                         gripper_base_link:
                                           epick_end_effector:
                                             gripper_equilibrium_grasp:
