@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>vacuum_gripper_control</name>
+  <version>0.0.0</version>
+  <description><p>Package to control a Vacuum Gripper from UW</p></description>
+  <maintainer email="paolo.a.torrado@gmail.com">Paolo Torrado</maintainer>
+  <license>BSD</license>
+  <url type="website">http://ros.org/wiki/robotiq</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>rospy</depend>
+  <depend>roscpp</depend>
+
+  <build_depend>message_generation</build_depend>
+
+  <exec_depend>message_runtime</exec_depend>
+
+</package>

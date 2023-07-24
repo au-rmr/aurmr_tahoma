@@ -204,7 +204,7 @@
         <parent link="base_link"/>
         <child link="camera_base"/>
         <!-- Link is centered on the optical frames. Slight offset in Y direction to compensate -->
-        <origin xyz="-0.260 0 1.465" rpy="3.13764 3.12912 -3.12899" />
+        <origin xyz="-0.260 0.0 1.465" rpy="3.13764 3.12912 -3.12899" />
       </joint>
     </xacro:if>
 
@@ -224,6 +224,7 @@
       <origin xyz="-0.217 -0.025 1.364" rpy="0 0 0"/>
     </xacro:sensor_d455> -->
 
+    <!-- ##################################################################3 -->
     <link name="realsense_back_gripper_mount">
       <collision>
         <origin xyz="0.010227 -0.005 0.035" rpy="0 0 0"/>
@@ -259,6 +260,7 @@
         <origin xyz="0.03 0 -0.05" rpy="0 0 0" />
     </joint> -->
 
+    <!-- #######################################################################3 -->
     <joint name="realsense_back_gripper_mount_joint" type="fixed">
         <parent link="camera_link"/>
         <child link="realsense_back_gripper_mount"/>
