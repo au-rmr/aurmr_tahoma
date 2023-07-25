@@ -78,44 +78,25 @@ class VacuumGripper:
             raise RuntimeError(f"Unknown gripper type requested: {self.gripper_type}")
         return message
     
-    def vacuum(self, pressure, release):
-        var_dict = dict([(self.GTO, 0)]) # GTO is gripper regulation -- similar to ejector control
-        self._set_vars(var_dict) 
-        while(self._get_var(self.GTO) != 0): # sleep until the gripper regulation is 0, meaning the gripper is off
-            rospy.sleep(.005)
-        # var_dict = dict([(self.PR, pressure), (self.GTO, 1)])
-        print(var_dict) 
-        var_dict = dict([(self.MOD, 0b01), (self.PR, pressure), (self.SP, 0), (self.FR, pressure+40), (self.GTO, 1)])
-        # MOD - gripper mode  
-        #   X
-        # PR - max pressure requested when writing / pressure reading when read
-        #   similar to SETPOINT_H1 <-- why is this set to 100 above? 
-        # SP - timeout period
-        #  
-        # FR - minimum pressure requested when writing
-
-        # GTO - gripper
-        return self._set_vars(var_dict)
-
-    def sendCommand(self):
-        #if self.gripper_type == RobotiqCModelURCap.GripperType.VACUUM:
-            #self.vacuum(command.rPR, command.rATR)
-            #rPR is the register for pressure on the vacuum
-            #rATR is the register for auto release on the vacuum
-            #don't need gripper mode, max-pressure
-        # EJECTOR_CONTROL is an instance so it should not be set to 0, 
-        # is there a way to to make this gripper be regulated to 0 - meaning off
-        var_dict = {EJECTOR_CONTROL, 0} # this is the instance - I need a varible that does the same thing
-        while(EJECTOR_CONTROL != 0) {
-            rospy.sleep(0.005);
-        }
+    def sendCommand(self, pressure): 
+        var_dict = {EJECTOR_CONTROL: 0b10} # bit 2 is for ejector blow off, is there another GTO equivalent?
+        while var_dict[EJECTOR_CONTROL] != 0b10:
+            rospy.sleep(0.005)
         print(var_dict)
         var_dict = {
-            #self.MOD: 0b01
-            #set the max pressure
-            #set the timeout
-            #in our case this would be the H1 and h1 values?
-            #regulate gripper on
+            # 
+            
+            # The Switching Points switches the ejector on and off, 
+            # based on monitoring the frequency - is this the same as using pressure?
+
+            # How can we access the values that these variables hold rather than changing
+            # their addresses? 
+            (SETPOINT_H1, pressure), # H1 to given pressure, its max value is 998
+            (HYSTERESIS_h1, 10),     # setting h1 to lowest possible
+            (SETPOINT_H2, (SETPOINT_H1 - SETPOINT_h1)) # H2 to highest amount pressure,
+            (HYSTERESIS_h2, 10),     # setting h2 to lowest possible
+            (EJECTOR_CONTROL, 0b01)  #should we also set-up these as "" string that correspond to the value  
+                          #Ejector suction
         }
         
 
@@ -176,7 +157,8 @@ class VacuumGripper:
 def mainLoop(ur_address, gripper_type):
   # Gripper is a C-Model that is connected to a UR controller with the Robotiq URCap installed. 
   # Commands are published to port 63352 as ASCII strings.
-  gripper = RobotiqCModelURCap(ur_address, gripper_type)
+  #gripper = RobotiqCModelURCap(ur_address, gripper_type)
+  gripper = VacuumGripper()
 
   gripper.activate(True)
   # The Gripper status
@@ -204,5 +186,3 @@ if __name__ == '__main__':
   try:
     mainLoop(ip, gripper_type)
   except rospy.ROSInterruptException: pass
-
-
