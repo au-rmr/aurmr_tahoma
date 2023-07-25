@@ -79,25 +79,45 @@ class VacuumGripper:
         return message
     
     def vacuum(self, pressure, release):
-        var_dict = dict([(self.GTO, 0)]) #GTO is gripper regulation
-        self._set_vars(var_dict)
-        while(self._get_var(self.GTO) != 0):
+        var_dict = dict([(self.GTO, 0)]) # GTO is gripper regulation -- similar to ejector control
+        self._set_vars(var_dict) 
+        while(self._get_var(self.GTO) != 0): # sleep until the gripper regulation is 0, meaning the gripper is off
             rospy.sleep(.005)
         # var_dict = dict([(self.PR, pressure), (self.GTO, 1)])
-        print(var_dict)
+        print(var_dict) 
         var_dict = dict([(self.MOD, 0b01), (self.PR, pressure), (self.SP, 0), (self.FR, pressure+40), (self.GTO, 1)])
-        # MOD - gripper mode 
+        # MOD - gripper mode  
+        #   X
         # PR - max pressure requested when writing / pressure reading when read
+        #   similar to SETPOINT_H1 <-- why is this set to 100 above? 
         # SP - timeout period
+        #  
         # FR - minimum pressure requested when writing
-        # GTO - gripper regulation
+
+        # GTO - gripper
         return self._set_vars(var_dict)
 
     def sendCommand(self):
-        if self.gripper_type == RobotiqCModelURCap.GripperType.VACUUM:
-            self.vacuum(command.rPR, command.rATR)
+        #if self.gripper_type == RobotiqCModelURCap.GripperType.VACUUM:
+            #self.vacuum(command.rPR, command.rATR)
             #rPR is the register for pressure on the vacuum
             #rATR is the register for auto release on the vacuum
+            #don't need gripper mode, max-pressure
+        # EJECTOR_CONTROL is an instance so it should not be set to 0, 
+        # is there a way to to make this gripper be regulated to 0 - meaning off
+        var_dict = {EJECTOR_CONTROL, 0} # this is the instance - I need a varible that does the same thing
+        while(EJECTOR_CONTROL != 0) {
+            rospy.sleep(0.005);
+        }
+        print(var_dict)
+        var_dict = {
+            #self.MOD: 0b01
+            #set the max pressure
+            #set the timeout
+            #in our case this would be the H1 and h1 values?
+            #regulate gripper on
+        }
+        
 
 # request = cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=13, attribute=5, request_data=bytearray([0b00000011] * 16))
 # request = cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=13, attribute=5, request_data=bytearray([0x00] * 16))
