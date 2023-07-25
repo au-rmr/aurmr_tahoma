@@ -216,5 +216,3 @@ if __name__ == '__main__':
   try:
     mainLoop(ip, gripper_type)
   except rospy.ROSInterruptException: pass
-
-
