@@ -109,9 +109,10 @@ class VacuumGripper:
 
     def close_valve(self, number):
         try:
-            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data = 1 << 0)
+            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data = bytearray([0b00000001] + [0b00000001]*15))
                                                                                                                                         # does the above change the bit on ejector 13? 
                                                                                                                                         # could also just do 0b01 = 0b00000001
+                                                                                                                                        # (1 << 0)
                                                                                                                                         # bytearray([0b00000001] + [0b00000001]*15) 
                                                                                                                                         # ^if we need to reference all ejectors, this is the best way to do it
         except exceptions.CommError:
@@ -125,8 +126,9 @@ class VacuumGripper:
         ejectors[number - 1] = 1
         SINT[None].encode(ejectors)
         try:
-            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data = ~(1 << 0))
+            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data = bytearray([0b00000000] + [0b00000001]*15)
                                                                                                                                           # 0b00000000
+                                                                                                                                          #  ~(1 << 0)
                                                                                                                                           # bytearray([0b00000000] + [0b00000001]*15)
                                                                                                                                           
         except exceptions.CommError:
