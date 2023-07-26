@@ -10,11 +10,16 @@ from aurmr_tasks import interaction
 import aurmr_tasks.common.control_flow as cf
 from aurmr_tasks.util import formulate_ud_str_auto
 
-BIN_IDS = []
+BIN_IDS_1 = []
+BIN_IDS_2 = []
 
 for letter in "abcdefghijklm":
     for i in range(4):
-        BIN_IDS.append(f"{i + 1}{letter}")
+        BIN_IDS_1.append(f"{i + 1}{letter}")
+
+for letter in "abcdefgh":
+    for i in range(3):
+        BIN_IDS_2.append(f"{i + 1}{letter}")
 
 
 def load_sm(stows):
