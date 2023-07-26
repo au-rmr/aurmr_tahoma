@@ -1,4 +1,5 @@
 string[] bin_ids
 string[] object_ids
+string[] object_asins
 ---
 bool success

@@ -134,17 +134,6 @@ class WaitForPickStow(State):
         else:
             return "done"
 
-# class UserPromptForRetry(State):
-#     def __init__(self):
-#         State.__init__(self, outcomes=['retry', 'continue'])
-    
-#     def execute(self, userdata):
-#         user_text, timed_out = timedKey('[Timing out in 10 seconds...] Grasp failed. Retry? (y/n) ', allowCharacters='yn', timeout=10)
-#         if not timed_out and user_text == 'y':
-#             return 'retry'
-#         else:
-#             return 'continue'
-
 def main():
     rospy.init_node("aurmr_demo")
     pose_pub_test = rospy.Publisher("/tote_drop", PoseStamped, queue_size=5, latch=True)
@@ -169,6 +158,7 @@ def main():
         with pick_sm:
             StateMachine.add_auto("RECORD_TIME", RecordTime(), ["succeeded"])
             cf.splat_auto("SPLAT_PICK", "request", ["target_bin_id", "target_object_id", "target_object_asin"])
+            StateMachine.add('USER_PROMPT_FOR_RETRY', UserPromptForRetry(robot.tf2_buffer), {'retry': 'CLEAR_SCENE_PREMOVE', 'continue': 'CLEAR_SCENE_PREMOVE'})
             StateMachine.add_auto("CLEAR_SCENE_PREMOVE", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_PREMOVE", motion.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX_PRE_GRASP", motion.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
@@ -182,9 +172,9 @@ def main():
             # StateMachine.add_auto("OPEN_BEFORE_GRASP", motion.OpenGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
             StateMachine.add_auto("CLEAR_SCENE_PREGRASP", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_PREGRASP", motion.AddPartialPodCollisionGeometry(robot), ["succeeded", "aborted"])
-            StateMachine.add_auto("MOVE_TO_GRASP", motion.grasp_move_to_offset(robot, (0, 0, 0.5)), ["succeeded", "aborted", "preempted"])
+            StateMachine.add_auto("MOVE_TO_GRASP", motion.grasp_move_to_offset(robot, (0, 0, 0.35)), ["succeeded", "aborted", "preempted"])
             StateMachine.add_auto("LIFT_OBJ", motion.robust_move_to_offset(robot, (0, 0, 0.035), 'base_link'), ["succeeded", "aborted", "preempted"])
-            StateMachine.add_auto("RETRACT_ARM", motion.robust_move_to_offset(robot, (0, 0, -0.3)), ["succeeded", "aborted", "preempted"])
+            StateMachine.add_auto("RETRACT_ARM", motion.robust_move_to_offset(robot, (0, 0, -0.25)), ["succeeded", "aborted", "preempted"])
             StateMachine.add_auto("TURN_OFF_GRIPPER_IF_NO_ITEM", motion.ReleaseGripperIfNoItem(robot), ['succeeded'])
             StateMachine.add_auto("CLEAR_SCENE_POSTGRASP", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_POSTGRASP", motion.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
@@ -196,8 +186,7 @@ def main():
             StateMachine.add("POST_PICK_UPDATE_MASKS", perception.PickObject(),
                             {"succeeded": "PUBLISH_PICK_STATUS", "aborted": "PUBLISH_PICK_STATUS", "preempted": "PUBLISH_PICK_STATUS"})
             StateMachine.add("UPDATE_BIN_MASKS", perception.UpdateBin(),
-                            {"succeeded": "USER_PROMPT_FOR_RETRY", "aborted": "USER_PROMPT_FOR_RETRY", "preempted": "USER_PROMPT_FOR_RETRY"})
-            StateMachine.add('USER_PROMPT_FOR_RETRY', UserPromptForRetry(robot.tf2_buffer, timeout_connection_secs=10.0), {'retry': 'CLEAR_SCENE_PREMOVE', 'continue': 'PUBLISH_PICK_STATUS'})
+                            {"succeeded": "PUBLISH_PICK_STATUS", "aborted": "PUBLISH_PICK_STATUS", "preempted": "PUBLISH_PICK_STATUS"})
             StateMachine.add_auto("PUBLISH_PICK_STATUS", PublishStatus(status_pub), ["succeeded"])
             StateMachine.add("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot, return_before_done=True), {"succeeded": "done", "aborted": "done", "preempted": "done"})
 
