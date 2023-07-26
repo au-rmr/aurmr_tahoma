@@ -126,7 +126,7 @@ class VacuumGripper:
         ejectors[number - 1] = 1
         SINT[None].encode(ejectors)
         try:
-            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data = bytearray([0b00000000] + [0b00000001]*15)
+            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data = bytearray([0b00000000] + [0b00000001]*15))
                                                                                                                                           # 0b00000000
                                                                                                                                           #  ~(1 << 0)
                                                                                                                                           # bytearray([0b00000000] + [0b00000001]*15)
