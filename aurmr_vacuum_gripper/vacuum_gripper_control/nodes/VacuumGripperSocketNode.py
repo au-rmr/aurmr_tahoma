@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-
-
 # Driver for Schmalz vacuum ejectors. Manual can be found at chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.schmalz.com/site/binaries/content/assets/media/01_vacuum-technology-automation/SCTSi/en/BAL_10.02.99.10501_en-EN_02.pdf
+
 import os
 from pycomm3 import CIPDriver, Services, configure_default_logger, LOG_VERBOSE, exceptions, SINT, UINT, USINT
 from logging import INFO
@@ -22,7 +21,7 @@ VALVE_ONE = None
 DEVICE_STATUS = 10 # UINT8 Length 1 byte ro
 EJECTOR_STATUS = 11 # UINT8 Length 16 bytes ro
 SUPPLY_PRESSURE = 12 # UINT8 Length 1 rw
-EJECTOR_CONTROL = 13 # UINT8 Length 16 rw
+EJECTOR_CONTROL = 13 # UINT8 Length 16 rw, Controlling ejector 13
 SUPPLY_VOLTAGE = 66
 SETPOINT_H1 = 100 # UINT16 Length 16 x 2 rw
 HYSTERESIS_h1 = 101 # UINT16 Lenth 16 x 2 rw
@@ -85,24 +84,22 @@ class VacuumGripper:
             raise RuntimeError(f"Unknown gripper type requested: {self.gripper_type}")
         return message
     
-    def vacuum(self, pressure, release):
-        var_dict = dict([(self.GTO, 0)]) # GTO is gripper regulation -- similar to ejector control
-        self._set_vars(var_dict) 
-        while(self._get_var(self.GTO) != 0): # sleep until the gripper regulation is 0, meaning the gripper is off
-            rospy.sleep(.005)
-        # var_dict = dict([(self.PR, pressure), (self.GTO, 1)])
-        print(var_dict) 
-        var_dict = dict([(self.MOD, 0b01), (self.PR, pressure), (self.SP, 0), (self.FR, pressure+40), (self.GTO, 1)])
-        # MOD - gripper mode  
-        #   X
-        # PR - max pressure requested when writing / pressure reading when read
-        #   similar to SETPOINT_H1 <-- why is this set to 100 above? 
-        # SP - timeout period
-        #  
-        # FR - minimum pressure requested when writing
+    # CHECK can a command be done with the following?
+    # Robotiq socket does: sendCommand -- sends pressure value --> vacuum -- sends dictionary with new register values --> _set_vars -- sets the variables for the specific registers
+    def sendCommand(self, pressure): 
+        self.close_valve(self) 
+        while self.get_ejector_control != 0b10: 
+            rospy.sleep(0.005)
+        print(self.get_ejector_control)
+        self.set_vacuum_gripper(self, pressure)
+        self.close_valve(self)
+            # IDEAS: 
+            # var_dict = {EJECTOR_CONTROL: 0b10} # bit 2 is for ejector blow off, is there another GTO equivalent?
+            # The Switching Points switches the ejector on and off, 
+            # based on monitoring the frequency - is this the same as using pressure?
 
-        # GTO - gripper
-        return self._set_vars(var_dict)
+            # How can we access the values that these variables hold rather than changing
+            # their addresses? 
 
     def sendCommand(self, command):
         #if self.gripper_type == RobotiqCModelURCap.GripperType.VACUUM:
@@ -162,24 +159,57 @@ class VacuumGripper:
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=DEVICE_STATUS, attribute=5)
         return USINT.decode(msg.value)
     
-    #TODO Is a list comprehension correct?
+    #TODO Is a list comprehension correct? <<
     def get_ejector_status(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=EJECTOR_STATUS, attribute=5)
         status = [USINT.decode(msg) for ejector in msg]
         return status 
-
+    def get_ejector_control(self):
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5)
+        status = [USINT.decode(msg) for ejector in msg]
+        return status 
     def get_supply_pressure(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SUPPLY_PRESSURE, attribute=5)
         return USINT.decode(msg)
     
     def get_leakage_rate(self):
-        pass
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=LEAKAGE_RATE, attribute=5)
+        return USINT.decode(msg)
     def get_system_vacuum(self):
-        pass
-    def get_max_vacuum_range():
-        pass
-    def get_free_flow_vacuum():
-        pass
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SYSTEM_VACUUM, attribute=5)
+        return USINT.decode(msg)
+    
+    # CHECK: Does this set the vacuum range and correctly? 
+    def set_vacuum_range(self, pressure):
+        if (pressure > 998):
+            print("Pressure amount too high")
+        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5, request_Data = pressure)
+        hysteresis1 = 10
+        defaultDifference = 600
+        # when the value of H1 subtracted by the default difference (default H1 = 750, default h1 = 150)
+        # is greater than the minimum value of 10 set the pressure, or else set it to the lowest possible
+        if ((pressure - defaultDifference) > 10):
+            hysteresis1 = pressure - defaultDifference
+            msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5, request_Data = pressure - 600)
+        else:
+            msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5, request_Data = 10)
+        setpoint2 = pressure - hysteresis1
+        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H2, attribute=5, request_Data = pressure - hysteresis1)
+        hysteresis2 = setpoint2 - 2
+        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h2, attribute=5, request_Data = hysteresis2)
+        
+        # Extra check to make sure the values are within the range:
+        if (pressure < (setpoint2 + hysteresis1) or setpoint2 > (pressure - hysteresis1)): 
+            print("Issue with setting the points for pressure change")
+        if ((pressure - setpoint2) < hysteresis1 or (setpoint2 - 2) < hysteresis2):
+            print("Issye with the hysteresis value")
+    
+    def get_max_vacuum_range(self):
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=MAX_VACUUM_REACHED, attribute=5)
+        return USINT.decode(msg)
+    def get_free_flow_vacuum(self):
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=FREE_FLOW_VACUUM, attribute=5)
+        return USINT.decode(msg)
     def get_supply_voltage(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SUPPLY_VOLTAGE, attribute=1)
         return UINT.decode(msg[0:3])/10
@@ -216,5 +246,3 @@ if __name__ == '__main__':
   try:
     mainLoop(ip, gripper_type)
   except rospy.ROSInterruptException: pass
-
-
