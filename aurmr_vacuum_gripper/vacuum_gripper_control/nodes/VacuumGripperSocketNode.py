@@ -6,11 +6,14 @@ import os
 from pycomm3 import CIPDriver, Services, configure_default_logger, LOG_VERBOSE, exceptions, SINT, UINT, USINT
 from logging import INFO
 import socket
-from robotiq_2f_gripper_control.msg import vacuum_gripper_input, vacuum_gripper_output
+from vacuum_gripper_control.msg import vacuum_gripper_input, vacuum_gripper_output
 import rospy
 
 
-LOG_FILE_PATH = 'c:/tmp/pycomm3.log'
+LOG_FILE_PATH = '/home/aurmr/workspaces/ToF/logs/vacuum_gripper_control/pycomm3.log'
+
+# '/home/aurmr/workspaces/' + os + '/logs/vacuum_gripper_control/pycomm3.log'
+
 # Log levels are LOG_VERBOSE or INFO
 LOG_LEVEL = INFO
 VALVE_ONE = None
@@ -33,13 +36,14 @@ SYSTEM_VACUUM = 515 # UINT16 Length 16 x 2 ro
 
 
 class VacuumGripper:
-    def __init__(self, ip = '192.168.250.2'):
+    def __init__(self, ip = '192.168.137.2', gripper_type = "vacuum"):
         self.ip = ip
+        self.gripper_type = gripper_type
 
         if os.path.exists(LOG_FILE_PATH):
             configure_default_logger(level=LOG_LEVEL, filename=LOG_FILE_PATH)
         else:
-            f = open(LOG_FILE_PATH, "w")
+            f = open(LOG_FILE_PATH, "x")
             f.write("\n")
             f.close()
             print("Created new log file ", LOG_FILE_PATH)
@@ -64,16 +68,19 @@ class VacuumGripper:
         return self.cip_driver.connected
 
     def getStatus(self):
-        if self.gripper_type == RobotiqCModelURCap.GripperType.VACUUM:
+        if self.gripper_type == "vacuum":
+            # TODO
             message = vacuum_gripper_input()
-            #Assign the values to their respective variables
-            message.DEVICE_STATUS = self.get_device_status(self)
-            message.EJECTOR_STATUS = self.get_ejector_status(self)
-            message.SUPPLY_VOLTAGE = self.get_supply_voltage(self)
-            message.LEAKAGE_RATE = self.get_leakage_rate(self) # what is the leakage rate supposed to give
-            message.FREE_FLOW_VACUUM = self.get_free_flow_vacuum(self) #what is the free flow supposed to give
-            message.MAX_VACUUM_REACHED = self.get_max_vacuum_range(self) # what is this max vacuum supposed to give
-            message.SYSTEM_VACUUM = self.get_system_vacuum(self)
+            pass
+            # #Assign the values to their respective variables
+            # message.DEVICE_STATUS = self.get_device_status()
+            # message.EJECTOR_STATUS = self.get_ejector_status()
+            # message.SUPPLY_VOLTAGE = self.get_supply_voltage()
+            # message.LEAKAGE_RATE = self.get_leakage_rate() # what is the leakage rate supposed to give
+            # message.FREE_FLOW_VACUUM = self.get_free_flow_vacuum() #what is the free flow supposed to give
+            # message.MAX_VACUUM_REACHED = self.get_max_vacuum_range() # what is this max vacuum supposed to give
+            # message.SYSTEM_VACUUM = self.get_system_vacuum()
+            
         else:
             raise RuntimeError(f"Unknown gripper type requested: {self.gripper_type}")
         return message
@@ -97,7 +104,7 @@ class VacuumGripper:
         # GTO - gripper
         return self._set_vars(var_dict)
 
-    def sendCommand(self):
+    def sendCommand(self, command):
         #if self.gripper_type == RobotiqCModelURCap.GripperType.VACUUM:
             #self.vacuum(command.rPR, command.rATR)
             #rPR is the register for pressure on the vacuum
@@ -105,18 +112,22 @@ class VacuumGripper:
             #don't need gripper mode, max-pressure
         # EJECTOR_CONTROL is an instance so it should not be set to 0, 
         # is there a way to to make this gripper be regulated to 0 - meaning off
-        var_dict = {EJECTOR_CONTROL, 0} # this is the instance - I need a varible that does the same thing
-        while(EJECTOR_CONTROL != 0) {
-            rospy.sleep(0.005);
-        }
-        print(var_dict)
-        var_dict = {
+        # var_dict = {EJECTOR_CONTROL, 0} # this is the instance - I need a varible that does the same thing
+        # while(EJECTOR_CONTROL != 0):
+            # rospy.sleep(0.005)
+
+        # print(var_dict)
+        # var_dict = {
             #self.MOD: 0b01
             #set the max pressure
             #set the timeout
             #in our case this would be the H1 and h1 values?
             #regulate gripper on
-        }
+        # }
+        if command.EJECTOR_CONTROL == 1:
+            self.open_valve(1)
+        else:
+            self.close_valve(1)
         
 
 # request = cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=13, attribute=5, request_data=bytearray([0b00000011] * 16))
@@ -126,8 +137,9 @@ class VacuumGripper:
         pass
 
     def close_valve(self, number):
+        print('Closing valve')
         try:
-            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000001] + [0b00000001]*15))
+            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000000] + [0b00000000]*15))
         except exceptions.CommError:
             if not self.open_connection():
                 raise exceptions.CommError
@@ -139,7 +151,7 @@ class VacuumGripper:
         ejectors[number - 1] = 1
         SINT[None].encode(ejectors)
         try:
-            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000000] + [0b00000001]*15))
+            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000001] + [0b00000001]*15))
         except exceptions.CommError:
             if not self.open_connection():
                 raise exceptions.CommError
@@ -148,7 +160,7 @@ class VacuumGripper:
 
     def get_device_status(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=DEVICE_STATUS, attribute=5)
-        return USINT.decode(msg)
+        return USINT.decode(msg.value)
     
     #TODO Is a list comprehension correct?
     def get_ejector_status(self):
@@ -176,9 +188,9 @@ class VacuumGripper:
 def mainLoop(ur_address, gripper_type):
   # Gripper is a C-Model that is connected to a UR controller with the Robotiq URCap installed. 
   # Commands are published to port 63352 as ASCII strings.
-  gripper = RobotiqCModelURCap(ur_address, gripper_type)
+  gripper = VacuumGripper('192.168.137.2', gripper_type)
 
-  gripper.activate(True)
+  gripper.open_connection()
   # The Gripper status
   if gripper_type == 'vacuum':
     input_msg = vacuum_gripper_input
@@ -198,9 +210,9 @@ def mainLoop(ur_address, gripper_type):
     rospy.sleep(0.1)
 
 if __name__ == '__main__':
-  rospy.init_node('robotiq_2f_gripper_socket_node')
+  rospy.init_node('vacuum_gripper_socket_node')
   ip = rospy.get_param("~robot_ip", "192.168.43.92")
-  gripper_type = rospy.get_param("~gripper_type", "finger")
+  gripper_type = rospy.get_param("~gripper_type", "vacuum")
   try:
     mainLoop(ip, gripper_type)
   except rospy.ROSInterruptException: pass

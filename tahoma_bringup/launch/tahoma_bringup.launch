@@ -44,20 +44,21 @@
       <param name="state" value="1.0" />
     </node> -->
 
-    <arg name="gripper_type" default="vacuum" />
+    <!-- <arg name="gripper_type" default="vacuum" />
     <include file="$(find robotiq_2f_gripper_control)/launch/robotiq_2f_gripper_socket.launch">
       <arg name="gripper_type" default="$(arg gripper_type)" />
     </include>
     <include file="$(find robotiq_2f_gripper_action_server)/launch/robotiq_2f_gripper_socket_action_server.launch">
       <arg name="gripper_type" default="$(arg gripper_type)" />
-    </include>
+    </include> -->
 
-    <!-- <include file="$(find vacuum_gripper_control)/launch/vacuum_gripper_socket.launch">
+    <arg name="gripper_type" default="vacuum" />
+    <include file="$(find vacuum_gripper_control)/launch/vacuum_gripper_socket.launch">
       <arg name="gripper_type" default="$(arg gripper_type)" />
     </include>
     <include file="$(find vacuum_gripper_action_server)/launch/vacuum_gripper_socket_action_server.launch">
       <arg name="gripper_type" default="$(arg gripper_type)" />
-    </include> -->
+    </include>
 
     <node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" />
 
