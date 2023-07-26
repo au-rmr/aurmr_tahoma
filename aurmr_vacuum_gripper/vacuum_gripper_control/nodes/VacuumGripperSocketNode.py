@@ -22,7 +22,7 @@ VALVE_ONE = None
 DEVICE_STATUS = 10 # UINT8 Length 1 byte ro
 EJECTOR_STATUS = 11 # UINT8 Length 16 bytes ro
 SUPPLY_PRESSURE = 12 # UINT8 Length 1 rw
-EJECTOR_CONTROL = 13 # UINT8 Length 16 rw
+EJECTOR_CONTROL = 13 # UINT8 Length 16 rw, Controlling ejector 13
 SUPPLY_VOLTAGE = 66
 SETPOINT_H1 = 100 # UINT16 Length 16 x 2 rw
 HYSTERESIS_h1 = 101 # UINT16 Lenth 16 x 2 rw
@@ -162,24 +162,57 @@ class VacuumGripper:
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=DEVICE_STATUS, attribute=5)
         return USINT.decode(msg.value)
     
-    #TODO Is a list comprehension correct?
+    #TODO Is a list comprehension correct? <<
     def get_ejector_status(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=EJECTOR_STATUS, attribute=5)
         status = [USINT.decode(msg) for ejector in msg]
         return status 
-
+    def get_ejector_control(self):
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5)
+        status = [USINT.decode(msg) for ejector in msg]
+        return status 
     def get_supply_pressure(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SUPPLY_PRESSURE, attribute=5)
         return USINT.decode(msg)
     
     def get_leakage_rate(self):
-        pass
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=LEAKAGE_RATE, attribute=5)
+        return USINT.decode(msg)
     def get_system_vacuum(self):
-        pass
-    def get_max_vacuum_range():
-        pass
-    def get_free_flow_vacuum():
-        pass
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SYSTEM_VACUUM, attribute=5)
+        return USINT.decode(msg)
+    
+    # CHECK: Does this set the vacuum range and correctly? 
+    def set_vacuum_range(self, pressure):
+        if (pressure > 998):
+            print("Pressure amount too high")
+        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5, request_Data = pressure)
+        hysteresis1 = 10
+        defaultDifference = 600
+        # when the value of H1 subtracted by the default difference (default H1 = 750, default h1 = 150)
+        # is greater than the minimum value of 10 set the pressure, or else set it to the lowest possible
+        if ((pressure - defaultDifference) > 10):
+            hysteresis1 = pressure - defaultDifference
+            msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5, request_Data = pressure - 600)
+        else:
+            msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5, request_Data = 10)
+        setpoint2 = pressure - hysteresis1
+        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H2, attribute=5, request_Data = pressure - hysteresis1)
+        hysteresis2 = setpoint2 - 2
+        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h2, attribute=5, request_Data = hysteresis2)
+        
+        # Extra check to make sure the values are within the range:
+        if (pressure < (setpoint2 + hysteresis1) or setpoint2 > (pressure - hysteresis1)): 
+            print("Issue with setting the points for pressure change")
+        if ((pressure - setpoint2) < hysteresis1 or (setpoint2 - 2) < hysteresis2):
+            print("Issye with the hysteresis value")
+    
+    def get_max_vacuum_range(self):
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=MAX_VACUUM_REACHED, attribute=5)
+        return USINT.decode(msg)
+    def get_free_flow_vacuum(self):
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=FREE_FLOW_VACUUM, attribute=5)
+        return USINT.decode(msg)
     def get_supply_voltage(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SUPPLY_VOLTAGE, attribute=1)
         return UINT.decode(msg[0:3])/10
