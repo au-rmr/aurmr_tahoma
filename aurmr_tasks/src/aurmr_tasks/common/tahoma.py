@@ -134,7 +134,7 @@ class Tahoma:
         self.commander = moveit_commander.RobotCommander()
         self.scene = moveit_commander.PlanningSceneInterface(synchronous=True)
         self.move_group = moveit_commander.MoveGroupCommander(ARM_GROUP_NAME)
-        self.MAX_VEL_FACTOR = .2
+        self.MAX_VEL_FACTOR = .75
         self.MAX_ACC_FACTOR = .5
         self.move_group.set_max_velocity_scaling_factor(self.MAX_VEL_FACTOR)
         self.move_group.set_max_acceleration_scaling_factor(self.MAX_ACC_FACTOR)
@@ -349,8 +349,11 @@ class Tahoma:
         self.move_group.set_planning_time(allowed_planning_time)
 
         joint_values = joints
+
+        print("######################################",joint_values)
         if isinstance(joints, str):
             joint_values = self.get_joint_values_for_name(joints)
+            print(joint_values)
             self.move_group.set_named_target(joints)
         else:
             self.move_group.set_joint_value_target(joints)
@@ -465,7 +468,7 @@ class Tahoma:
         (plan, fraction) = self.move_group.compute_cartesian_path(
             waypoints, ee_step, jump_threshold, avoid_collisions
         )
-        plan = self.move_group.retime_trajectory(self.move_group.get_current_state(), plan, velocity_scaling_factor=.05, acceleration_scaling_factor=.05)
+        plan = self.move_group.retime_trajectory(self.move_group.get_current_state(), plan, velocity_scaling_factor=.075, acceleration_scaling_factor=.05)
         if fraction < .9:
             rospy.logwarn(f"Not moving in cartesian path. Only {fraction} waypoints reached")
             # return False

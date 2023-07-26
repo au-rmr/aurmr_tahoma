@@ -65,7 +65,7 @@ def all_close(goal, actual, tolerance):
 
     elif type(goal) is geometry_msgs.msg.PoseStamped:
         assert (goal.header.frame_id == actual.header.frame_id)
-        print("This is posestamped")
+        #print("This is posestamped")
         return all_close(goal.pose, actual.pose, tolerance)
 
     elif type(goal) is geometry_msgs.msg.Pose:

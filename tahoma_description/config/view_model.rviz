@@ -6,12 +6,10 @@ Panels:
       Expanded:
         - /Tahoma1
         - /Pod1
-        - /PointCloud21
-        - /TF1/Frames1
         - /Pose1
         - /Pose2
       Splitter Ratio: 0.3637469708919525
-    Tree Height: 510
+    Tree Height: 871
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -28,7 +26,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud2
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -54,7 +52,7 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: true
-    - Alpha: 0.20000000298023224
+    - Alpha: 1
       Class: rviz/RobotModel
       Collision Enabled: false
       Enabled: true
@@ -144,17 +142,30 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        camera_bottom_screw_frame:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        camera_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         camera_lower_left_mount:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
+        camera_lower_mount:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
         camera_lower_right_mount:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        camera_upper_mount:
+        camera_secondary_upper_mount:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -168,6 +179,10 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        cantilever_camera_upper_mount:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
         control_box:
           Alpha: 1
           Show Axes: false
@@ -213,6 +228,11 @@ Visualization Manager:
           Show Trail: false
           Value: true
         left_light_panel_emitter:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        realsense_back_gripper_mount:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -268,7 +288,7 @@ Visualization Manager:
         {}
       Update Interval: 0
       Value: false
-    - Alpha: 0.20000000298023224
+    - Alpha: 0.4000000059604645
       Class: rviz/RobotModel
       Collision Enabled: false
       Enabled: true
@@ -2144,7 +2164,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: RGB8
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -2152,17 +2172,17 @@ Visualization Manager:
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
-      Size (Pixels): 3
+      Size (Pixels): 1
       Size (m): 0.009999999776482582
-      Style: Flat Squares
+      Style: Points
       Topic: /camera_lower_right/points2
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Acceleration_Scaling_Factor: 0.1
       Class: moveit_rviz_plugin/MotionPlanning
-      Enabled: true
+      Enabled: false
       Move Group Namespace: ""
       MoveIt_Allow_Approximate_IK: false
       MoveIt_Allow_External_Program: false
@@ -2191,189 +2211,6 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          arm_base:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          arm_base_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          arm_base_link_inertia:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_flange:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          arm_forearm_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_shoulder_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_tool0:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          arm_upper_arm_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_wrist_1_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_wrist_2_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_wrist_3_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          back_left_caster:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          back_right_caster:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          base_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          camera_base:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_beam_lower:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_body:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_lower_left_mount:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_lower_right_mount:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_upper_mount:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          camera_visor:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          cantilever:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          control_box:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          control_box_mount:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          coupling:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          epick_end_effector:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          front_left_caster:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          front_right_caster:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          gripper_base_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          gripper_equilibrium_grasp:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          left_light_panel:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          left_light_panel_emitter:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          right_light_panel:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          right_light_panel_emitter:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          robot_plate:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          stand:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          stand_brace:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          stand_upright:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
         Loop Animation: false
         Robot Alpha: 0.5
         Robot Color: 150; 50; 150
@@ -2419,193 +2256,10 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          arm_base:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          arm_base_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          arm_base_link_inertia:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_flange:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          arm_forearm_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_shoulder_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_tool0:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          arm_upper_arm_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_wrist_1_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_wrist_2_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_wrist_3_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          back_left_caster:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          back_right_caster:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          base_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          camera_base:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_beam_lower:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_body:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_lower_left_mount:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_lower_right_mount:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_upper_mount:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          camera_visor:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          cantilever:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          control_box:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          control_box_mount:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          coupling:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          epick_end_effector:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          front_left_caster:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          front_right_caster:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          gripper_base_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          gripper_equilibrium_grasp:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          left_light_panel:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          left_light_panel_emitter:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          right_light_panel:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          right_light_panel_emitter:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          robot_plate:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          stand:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          stand_brace:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          stand_upright:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
         Robot Alpha: 1
         Show Robot Collision: false
         Show Robot Visual: true
-      Value: true
+      Value: false
       Velocity_Scaling_Factor: 0.1
     - Class: rviz/TF
       Enabled: true
@@ -2648,15 +2302,23 @@ Visualization Manager:
           Value: false
         camera_body:
           Value: false
+        camera_bottom_screw_frame:
+          Value: false
+        camera_link:
+          Value: false
         camera_lower_left_mount:
+          Value: false
+        camera_lower_mount:
           Value: false
         camera_lower_right_mount:
           Value: false
-        camera_upper_mount:
+        camera_secondary_upper_mount:
           Value: false
         camera_visor:
           Value: false
         cantilever:
+          Value: false
+        cantilever_camera_upper_mount:
           Value: false
         control_box:
           Value: false
@@ -2664,8 +2326,6 @@ Visualization Manager:
           Value: false
         coupling:
           Value: false
-        depth_camera_link:
-          Value: true
         epick_end_effector:
           Value: false
         front_left_caster:
@@ -2676,8 +2336,6 @@ Visualization Manager:
           Value: false
         gripper_equilibrium_grasp:
           Value: false
-        imu_link:
-          Value: true
         left_light_panel:
           Value: false
         left_light_panel_emitter:
@@ -3442,9 +3100,7 @@ Visualization Manager:
           Value: false
         pod_shelf_m:
           Value: false
-        rgb_camera_link:
-          Value: true
-        rgb_camera_link_offset:
+        realsense_back_gripper_mount:
           Value: true
         right_light_panel:
           Value: false
@@ -3473,12 +3129,6 @@ Visualization Manager:
               {}
             camera_visor:
               {}
-            depth_camera_link:
-              imu_link:
-                {}
-              rgb_camera_link:
-                rgb_camera_link_offset:
-                  {}
           pod_base_link:
             pod_brace:
               pod_fabric_base:
@@ -4187,7 +3837,7 @@ Visualization Manager:
                 camera_lower_right_mount:
                   {}
               cantilever:
-                camera_upper_mount:
+                cantilever_camera_upper_mount:
                   {}
                 robot_plate:
                   arm_base_link:
@@ -4203,6 +3853,14 @@ Visualization Manager:
                                   arm_flange:
                                     arm_tool0:
                                       coupling:
+                                        camera_bottom_screw_frame:
+                                          camera_link:
+                                            realsense_back_gripper_mount:
+                                              {}
+                                          camera_lower_mount:
+                                            {}
+                                          camera_secondary_upper_mount:
+                                            {}
                                         gripper_base_link:
                                           epick_end_effector:
                                             gripper_equilibrium_grasp:
@@ -4273,7 +3931,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 4.0478034019470215
+      Distance: 2.232743740081787
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -4281,29 +3939,29 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.22131577134132385
-        Y: -0.44486159086227417
-        Z: 1.0347380638122559
+        X: 0.6067287921905518
+        Y: -0.35294345021247864
+        Z: 1.0819571018218994
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: -0.04520302638411522
+      Pitch: 0.35979682207107544
       Target Frame: <Fixed Frame>
-      Yaw: 1.9591466188430786
+      Yaw: 1.9223288297653198
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 1043
+  Height: 1016
   Hide Left Dock: false
   Hide Right Dock: false
   MotionPlanning:
     collapsed: false
   MotionPlanning - Trajectory Slider:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd000000040000000000000338000003bdfc020000000efb000000100044006900730070006c006100790073010000003b00000239000000c700fffffffb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c006900640065007202000000000000000000000280000001e0fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067010000027a0000017e0000016900fffffffb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000001600000016fb0000002600480061006e0064004500790065002000430061006c006900620072006100740069006f006e0100000124000002b90000000000000000fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670000000269000001740000000000000000000000010000010f000002b4fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003b000002b4000000a000fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000738000000e3fc0100000002fb0000000a0049006d0061006700650000000000000007380000000000000000fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004b00000003efc0100000002fb0000000800540069006d00650000000000000004b00000042700fffffffb0000000800540069006d0065010000000000000450000000000000000000000442000003bd00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd000000040000000000000338000003a2fc020000000ffb000000100044006900730070006c006100790073010000003b000003a2000000c700fffffffb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c006900640065007202000000000000000000000280000001e0fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e006700000001b2000001690000016900fffffffb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000001600000016fb0000002600480061006e0064004500790065002000430061006c006900620072006100740069006f006e0100000124000002b90000000000000000fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670000000269000001740000000000000000fb0000000a0049006d00610067006500000002a5000001380000000000000000000000010000010f000002b4fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003b000002b4000000a000fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000738000000e3fc0100000002fb0000000a0049006d0061006700650000000000000007380000000000000000fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004b00000003efc0100000002fb0000000800540069006d00650000000000000004b00000042700fffffffb0000000800540069006d00650100000000000004500000000000000000000003fa000003a200000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -4312,6 +3970,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: false
-  Width: 1920
-  X: 1920
-  Y: 0
+  Width: 1848
+  X: 72
+  Y: 27
