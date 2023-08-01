@@ -180,28 +180,28 @@ class VacuumGripper:
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SYSTEM_VACUUM, attribute=5)
         return USINT.decode(msg)
     
-    def get_SetPointH1(self):
-        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5) 
-        # if set at default, this returns --> /xee/x02 ..repeated 16 times to fill 32 bytes
-        #/x02ee = 750 which is the H1 default value
-        #0b11101110 = 0xee and 0b00000010 = 0x02
-        #value[1]<<8 | value[0]
-        #1000000000 | 11101110 = 1011101110
-        setPointH1 = (msg.value[1] << 8) | msg.value[0]
-        return setPointH1
-    def get_Hysteresis_h1(self):
-        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5)
-        hysteresis_h1 = (msg.value[1] << 8) | msg.value[0]
-        return hysteresis_h1
+    # def get_SetPointH1(self):
+    #     msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5) 
+    #     # if set at default, this returns --> /xee/x02 ..repeated 16 times to fill 32 bytes
+    #     #/x02ee = 750 which is the H1 default value
+    #     #0b11101110 = 0xee and 0b00000010 = 0x02
+    #     #value[1]<<8 | value[0]
+    #     #1000000000 | 11101110 = 1011101110
+    #     setPointH1 = (msg.value[1] << 8) | msg.value[0]
+    #     return setPointH1
+    # def get_Hysteresis_h1(self):
+    #     msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5)
+    #     hysteresis_h1 = (msg.value[1] << 8) | msg.value[0]
+    #     return hysteresis_h1
     
-    def set_SetPointH1(self, value):
-        # value = 750
-        # in hex: 0x02ee
-        # in binary: 1011101110
-        # hex(value >> 8) --> 1011101110 >> 8 --> 0000000010 --> 0x02
-        # hex(value & 0xFF) --> 1011101110 & 11111111 --> 11101110 --> 0xee
-        new = bytearray([hex(value & 0xFF), hex(value >> 8)] * 16)
-        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5, request_data = new)
+    # def set_SetPointH1(self, value):
+    #     # value = 750
+    #     # in hex: 0x02ee
+    #     # in binary: 1011101110
+    #     # hex(value >> 8) --> 1011101110 >> 8 --> 0000000010 --> 0x02
+    #     # hex(value & 0xFF) --> 1011101110 & 11111111 --> 11101110 --> 0xee
+    #     new = bytearray([hex(value & 0xFF), hex(value >> 8)] * 16)
+    #     msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5, request_data = new)
 
     
     # CHECK: Does this set the vacuum range and correctly? 
