@@ -54,8 +54,6 @@ class GripperActionServer(object):
         print(command)
         self.command_pub.publish(command)
         
-        # test
-
         # TODO(Jack, 6/21): Find a better way around the sleep to check when the gripper has actually recieved the command
         rospy.sleep(1)
 
