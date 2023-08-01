@@ -148,7 +148,7 @@ class VacuumGripper:
         ejectors[number - 1] = 1
         SINT[None].encode(ejectors)
         try:
-            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000001] + [0b00000001]*15))
+            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000001] + [0b00000000]*15))
         except exceptions.CommError:
             if not self.open_connection():
                 raise exceptions.CommError
@@ -183,7 +183,7 @@ class VacuumGripper:
     def set_vacuum_range(self, pressure):
         if (pressure > 998):
             print("Pressure amount too high")
-        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5, request_Data = pressure)
+        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5, request_Data = pressure) #request Data is request_data and it can't take int form
         hysteresis1 = 10
         defaultDifference = 600
         # when the value of H1 subtracted by the default difference (default H1 = 750, default h1 = 150)

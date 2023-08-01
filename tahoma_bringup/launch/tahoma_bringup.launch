@@ -12,7 +12,16 @@
         <arg name="controller_config_file" default="$(find tahoma_bringup)/config/controllers.yaml" />
         <arg name="kinematics_config" value="$(find tahoma_description)/config/arm_calibration.yaml" />
         <arg name="use_tool_communication" value="true" />
-        <arg name="tool_voltage" value="24" />
+        <arg name="tool_voltage" value="12" />
+        <!-- Tool parity: 0: none, 1: odd, 2: even -->
+        <arg name="tool_parity" value="0" />
+        <arg name="tool_baud_rate" value="115200" />
+        <arg name="tool_stop_bits" value="1" />
+        <arg name="tool_rx_idle_chars" value="1.5" />
+        <arg name="tool_tx_idle_chars" value="3.5" />
+        <!-- <arg name="tool_device_name" value="/tmp/ttyUR" /> -->
+        <arg name="tool_tcp_port" default="54321" doc="Port on which the robot controller publishes the tool comm interface. Only used, when `use_tool_communication` is set to true."/>
+        
     </include>
 
     <!-- MoveIt -->
@@ -51,7 +60,7 @@
     <include file="$(find robotiq_2f_gripper_action_server)/launch/robotiq_2f_gripper_socket_action_server.launch">
       <arg name="gripper_type" default="$(arg gripper_type)" />
     </include> -->
-
+    
     <arg name="gripper_type" default="vacuum" />
     <include file="$(find vacuum_gripper_control)/launch/vacuum_gripper_socket.launch">
       <arg name="gripper_type" default="$(arg gripper_type)" />
