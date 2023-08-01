@@ -127,7 +127,6 @@ class VacuumGripper:
             self.open_valve(1)
         else:
             self.close_valve(1)
-        
 
 # request = cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=13, attribute=5, request_data=bytearray([0b00000011] * 16))
 # request = cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=13, attribute=5, request_data=bytearray([0x00] * 16))
@@ -181,30 +180,54 @@ class VacuumGripper:
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SYSTEM_VACUUM, attribute=5)
         return USINT.decode(msg)
     
+    def get_SetPointH1(self):
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5) 
+        # if set at default, this returns --> /xee/x02 ..repeated 16 times to fill 32 bytes
+        #/x02ee = 750 which is the H1 default value
+        #0b11101110 = 0xee and 0b00000010 = 0x02
+        #value[1]<<8 | value[0]
+        #1000000000 | 11101110 = 1011101110
+        setPointH1 = (msg.value[1] << 8) | msg.value[0]
+        return setPointH1
+    def get_Hysteresis_h1(self):
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5)
+        hysteresis_h1 = (msg.value[1] << 8) | msg.value[0]
+        return hysteresis_h1
+    
+    def set_SetPointH1(self, value):
+        # value = 750
+        # in hex: 0x02ee
+        # in binary: 1011101110
+        # hex(value >> 8) --> 1011101110 >> 8 --> 0000000010 --> 0x02
+        # hex(value & 0xFF) --> 1011101110 & 11111111 --> 11101110 --> 0xee
+        new = bytearray([hex(value & 0xFF), hex(value >> 8)] * 16)
+        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5, request_data = new)
+
+    
     # CHECK: Does this set the vacuum range and correctly? 
-    def set_vacuum_range(self, pressure):
-        if (pressure > 998):
-            print("Pressure amount too high")
-        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5, request_Data = pressure) #request Data is request_data and it can't take int form
-        hysteresis1 = 10
-        defaultDifference = 600
-        # when the value of H1 subtracted by the default difference (default H1 = 750, default h1 = 150)
-        # is greater than the minimum value of 10 set the pressure, or else set it to the lowest possible
-        if ((pressure - defaultDifference) > 10):
-            hysteresis1 = pressure - defaultDifference
-            msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5, request_Data = pressure - 600)
-        else:
-            msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5, request_Data = 10)
-        setpoint2 = pressure - hysteresis1
-        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H2, attribute=5, request_Data = pressure - hysteresis1)
-        hysteresis2 = setpoint2 - 2
-        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h2, attribute=5, request_Data = hysteresis2)
+    # def set_vacuum_range(self, pressure):
+    #     if (pressure > 998):
+    #         print("Pressure amount too high")
+    #     msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5, request_Data = pressure) #request Data is request_data and it can't take int form
+    #     hysteresis1 = 10
+    #     defaultDifference = 600
+    #     # when the value of H1 subtracted by the default difference (default H1 = 750, default h1 = 150)
+    #     # is greater than the minimum value of 10 set the pressure, or else set it to the lowest possible
+    #     if ((pressure - defaultDifference) > 10):
+    #         hysteresis1 = pressure - defaultDifference
+    #         msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5, request_Data = pressure - 600)
+    #     else:
+    #         msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5, request_Data = 10)
+    #     setpoint2 = pressure - hysteresis1
+    #     msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H2, attribute=5, request_Data = pressure - hysteresis1)
+    #     hysteresis2 = setpoint2 - 2
+    #     msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h2, attribute=5, request_Data = hysteresis2)
         
-        # Extra check to make sure the values are within the range:
-        if (pressure < (setpoint2 + hysteresis1) or setpoint2 > (pressure - hysteresis1)): 
-            print("Issue with setting the points for pressure change")
-        if ((pressure - setpoint2) < hysteresis1 or (setpoint2 - 2) < hysteresis2):
-            print("Issue with the hysteresis value")
+    #     # Extra check to make sure the values are within the range:
+    #     if (pressure < (setpoint2 + hysteresis1) or setpoint2 > (pressure - hysteresis1)): 
+    #         print("Issue with setting the points for pressure change")
+    #     if ((pressure - setpoint2) < hysteresis1 or (setpoint2 - 2) < hysteresis2):
+    #         print("Issye with the hysteresis value")
     
     def get_max_vacuum_range(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=MAX_VACUUM_REACHED, attribute=5)
