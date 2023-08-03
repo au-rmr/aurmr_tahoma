@@ -230,9 +230,12 @@ class VacuumGripper:
     def get_max_vacuum_range(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=MAX_VACUUM_REACHED, attribute=5)
         return USINT.decode(msg)
-    def get_free_flow_vacuum(self):
+    
+    def get_free_flow_vacuum(self): # use free flow vacuum for object_detected
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=FREE_FLOW_VACUUM, attribute=5)
-        return USINT.decode(msg)
+        flow_amount = (msg.value[1] << 8) | msg.value[0] #or are the values flipped, value[0] and then value[1]? 
+        return flow_amount
+    
     def get_supply_voltage(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SUPPLY_VOLTAGE, attribute=1)
         return UINT.decode(msg[0:3])/10
