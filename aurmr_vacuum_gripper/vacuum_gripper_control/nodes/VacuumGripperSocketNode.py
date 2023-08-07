@@ -187,9 +187,9 @@ class VacuumGripper:
     
     #TODO: need to find a way to return the errors
     def control_unit_errors(self): 
-        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=EJECTOR_STATUS, attribute=5)
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=CU_ERRORS, attribute=5)
         status = [USINT.decode(msg.value) for error in msg]  
-
+    #TODO: check the ones using .decode
     def get_supply_pressure(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SUPPLY_PRESSURE, attribute=5)
         return USINT.decode(msg.value) #need to check with decode, make sure it doesn't return 238 
@@ -204,11 +204,6 @@ class VacuumGripper:
     
     def get_SetPointH1(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5) 
-        # if set at default, this returns --> /xee/x02 ..repeated 16 times to fill 32 bytes
-        #/x02ee = 750 which is the H1 default value
-        #0b11101110 = 0xee and 0b00000010 = 0x02
-        #value[1]<<8 | value[0]
-        #1000000000 | 11101110 = 1011101110
         setPointH1 = (msg.value[1] << 8) | msg.value[0]
         return setPointH1
         
@@ -219,11 +214,6 @@ class VacuumGripper:
 
     def get_SetPointH2(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SETPOINT_H2, attribute=5) 
-        # if set at default, this returns --> /xee/x02 ..repeated 16 times to fill 32 bytes
-        #/x02ee = 750 which is the H1 default value
-        #0b11101110 = 0xee and 0b00000010 = 0x02
-        #value[1]<<8 | value[0]
-        #1000000000 | 11101110 = 1011101110
         setPointH2 = (msg.value[1] << 8) | msg.value[0]
         return setPointH2 #returns a decimal value
     
@@ -233,11 +223,6 @@ class VacuumGripper:
         return hysteresis_h2
     
     def set_SetPointH1(self, value):
-        # value = 750
-        # in hex: 0x02ee
-        # in binary: 1011101110
-        # hex(value >> 8) --> 1011101110 >> 8 --> 0000000010 --> 0x02
-        # hex(value & 0xFF) --> 1011101110 & 11111111 --> 11101110 --> 0xee
         new = bytearray([hex(value & 0xFF), hex(value >> 8)] * 16)
         msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5, request_data = new)
 
@@ -269,19 +254,18 @@ class VacuumGripper:
     
     def get_max_vacuum_range(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=MAX_VACUUM_REACHED, attribute=5)
-        return USINT.decode(msg.value) # should it decode msg.value? 
+        return USINT.decode(msg.value) 
     
     def get_free_flow_vacuum(self): # use free flow vacuum for object_detected
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=FREE_FLOW_VACUUM, attribute=5)
-        flow_amount = (msg.value[1] << 8) | msg.value[0] #or are the values flipped, value[0] and then value[1]? 
+        flow_amount = (msg.value[1] << 8) | msg.value[0] # or are the values flipped, value[0] and then value[1]? 
         return flow_amount # not returned as a uint16, rather as an int --> will this be ok? 
     
-    ##
+    #CHECK
     def get_supply_voltage(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SUPPLY_VOLTAGE, attribute=1)
         return UINT.decode(msg[0:3])/10 # doesn't seem right? is it UINT.decode(msg.value[0:3]) / 10 = 23.8?  just msg.value = b '\xee\x00\xed'
                                         # UINT decode is defaulting 238 even though the value is different, this value was also returned with the H1
-
 
 def mainLoop(ur_address, gripper_type):
   # Gripper is a C-Model that is connected to a UR controller with the Robotiq URCap installed. 
