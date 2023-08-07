@@ -176,7 +176,7 @@ class Tahoma:
 
     def gripper_status_cb(self, msg: VacuumGripperStatus):
         #self.object_detected = (msg.gPO < 95) 
-        self.object_detected = msg.FREE_FLOW_VACUUM < 950 # because it is in mbar
+        self.object_detected = msg.FREE_FLOW_VACUUM < 950 # because it is in mbar and is returned as an int
 
     def goal_status_cb(self, msg: GoalStatusArray):
         latest_time = 0
