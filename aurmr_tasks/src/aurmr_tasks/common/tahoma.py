@@ -252,6 +252,14 @@ class Tahoma:
 
     def check_gripper_item(self):
         return self.object_detected 
+    
+    def blow_off_gripper(self):
+        goal = GripperCommandGoal()
+        goal.command.position = 0
+        goal.command.max_effort = 1
+        self._gripper_client.send_goal(goal)
+        if not return_before_done:
+            self._gripper_client.wait_for_result() 
 
     def close_gripper(self, return_before_done=False):
         goal = GripperCommandGoal()

@@ -202,7 +202,7 @@ class VacuumGripper:
         if (pressure < (setpoint2 + hysteresis1) or setpoint2 > (pressure - hysteresis1)): 
             print("Issue with setting the points for pressure change")
         if ((pressure - setpoint2) < hysteresis1 or (setpoint2 - 2) < hysteresis2):
-            print("Issye with the hysteresis value")
+            print("Issue with the hysteresis value")
     
     def get_max_vacuum_range(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=MAX_VACUUM_REACHED, attribute=5)
@@ -219,7 +219,6 @@ def mainLoop(ur_address, gripper_type):
   # Gripper is a C-Model that is connected to a UR controller with the Robotiq URCap installed. 
   # Commands are published to port 63352 as ASCII strings.
   gripper = VacuumGripper('192.168.137.2', gripper_type)
-
   gripper.open_connection()
   # The Gripper status
   if gripper_type == 'vacuum':

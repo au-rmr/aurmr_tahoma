@@ -477,6 +477,16 @@ class ReleaseGripperIfNoItem(State):
         if not self.robot.check_gripper_item():
             self.robot.open_gripper(return_before_done=True)
         return 'succeeded'
+    
+class GripperBlowOff(State):
+    def __init__(self, robot):
+        State.__init__(self, input_keys=[], output_keys=[], outcomes=['succeeded'])
+        self.robot = robot
+
+    def execute(self, ud):
+        if not self.robot.check_gripper_item():
+            self.robot.blow_off_gripper(return_before_done=True)
+        return 'succeeded'
 
 class ClearCollisionGeometry(State):
     def __init__(self, robot):
