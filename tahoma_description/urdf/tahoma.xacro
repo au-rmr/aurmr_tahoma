@@ -204,7 +204,7 @@
         <parent link="base_link"/>
         <child link="camera_base"/>
         <!-- Link is centered on the optical frames. Slight offset in Y direction to compensate -->
-        <origin xyz="-0.260 0.0 1.465" rpy="3.13764 3.12912 -3.12899" />
+        <origin xyz="-0.2426 -0.0264 1.4078" rpy="3.14 3.14 -3.14" />
       </joint>
     </xacro:if>
 
