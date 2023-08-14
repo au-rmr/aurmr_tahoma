@@ -31,8 +31,8 @@ LEAKAGE_RATE = 160 # UINT16 Length 16 x 2 ro
 FREE_FLOW_VACUUM = 161 # UINT16 Length 16 x 2 ro
 MAX_VACUUM_REACHED = 164 # UINT16 Length 16 x 2 ro
 SYSTEM_VACUUM = 515 # UINT16 Length 16 x 2 ro
-
-
+EJECTOR_ONE_EXTENDED = 11000 # UINT16, Note that
+CU_ERRORS = 130
 
 class VacuumGripper:
     def __init__(self, ip = '192.168.137.2', gripper_type = "vacuum"):
@@ -125,7 +125,6 @@ class VacuumGripper:
             self.open_valve(1)
         else:
             self.close_valve(1)
-        
 
 # request = cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=13, attribute=5, request_data=bytearray([0b00000011] * 16))
 # request = cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=13, attribute=5, request_data=bytearray([0x00] * 16))
@@ -157,63 +156,116 @@ class VacuumGripper:
 
     def get_device_status(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=DEVICE_STATUS, attribute=5)
-        return USINT.decode(msg.value)
+        return USINT.decode(msg.value) 
     
     #TODO Is a list comprehension correct? <<
     def get_ejector_status(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=EJECTOR_STATUS, attribute=5)
-        status = [USINT.decode(msg) for ejector in msg]
+        status = [USINT.decode(msg.value) for ejector in msg] #change to msg.value --> returns [_, _, _, _] _ being a 0 or a 1
         return status 
+    
     def get_ejector_control(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5)
-        status = [USINT.decode(msg) for ejector in msg]
+        status = [USINT.decode(msg.value) for ejector in msg] # for every ejector in msg? 
         return status 
+    
+    def get_extendedValuesEjectorOne(self):
+        #11000 to 11015, 11000 is first ejector
+        #Byte 0:1: System vacuum (in mbar)
+        #Byte 2:3: Air consumption (in l/min)
+        #Byte 4:5: Leakage of last cycle (in mbar/s) Byte 6:7: Evacuation time T1 (in ms)
+        #Byte 8:9: Last free flow vacuum (in mbar)
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=EJECTOR_ONE_EXTENDED, attribute=5)
+        extended_values_dict = {
+            "system_vacuum" : (msg.value[1] << 8) | msg.value[0],
+            "air_consumption" : (msg.value[3] << 8) | msg.value[2],
+            "last_leakage" : (msg.value[5] << 8) | msg.value[4],
+            "evacuation_time" : (msg.value[7] << 8) | msg.value[6],
+            "last_free_flow" : (msg.value[9] << 8) | msg.value[8]
+        }
+        return extended_values_dict
+    
+    #TODO: need to find a way to return the errors
+    def control_unit_errors(self): 
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=CU_ERRORS, attribute=5)
+        status = [USINT.decode(msg.value) for error in msg]  
+    #TODO: check the ones using .decode
     def get_supply_pressure(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SUPPLY_PRESSURE, attribute=5)
-        return USINT.decode(msg)
+        return USINT.decode(msg.value) #need to check with decode, make sure it doesn't return 238 
     
     def get_leakage_rate(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=LEAKAGE_RATE, attribute=5)
-        return USINT.decode(msg)
+        return USINT.decode(msg.value)
+    
     def get_system_vacuum(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SYSTEM_VACUUM, attribute=5)
-        return USINT.decode(msg)
+        return USINT.decode(msg.value)
+    
+    def get_SetPointH1(self):
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5) 
+        setPointH1 = (msg.value[1] << 8) | msg.value[0]
+        return setPointH1
+        
+    def get_Hysteresis_h1(self):
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5)
+        hysteresis_h1 = (msg.value[1] << 8) | msg.value[0]
+        return hysteresis_h1
+
+    def get_SetPointH2(self):
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SETPOINT_H2, attribute=5) 
+        setPointH2 = (msg.value[1] << 8) | msg.value[0]
+        return setPointH2 #returns a decimal value
+    
+    def get_Hysteresis_h2(self):
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=HYSTERESIS_h2, attribute=5)
+        hysteresis_h2 = (msg.value[1] << 8) | msg.value[0]
+        return hysteresis_h2
+    
+    def set_SetPointH1(self, value):
+        new = bytearray([hex(value & 0xFF), hex(value >> 8)] * 16)
+        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5, request_data = new)
+
     
     # CHECK: Does this set the vacuum range and correctly? 
-    def set_vacuum_range(self, pressure):
-        if (pressure > 998):
-            print("Pressure amount too high")
-        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5, request_Data = pressure) #request Data is request_data and it can't take int form
-        hysteresis1 = 10
-        defaultDifference = 600
-        # when the value of H1 subtracted by the default difference (default H1 = 750, default h1 = 150)
-        # is greater than the minimum value of 10 set the pressure, or else set it to the lowest possible
-        if ((pressure - defaultDifference) > 10):
-            hysteresis1 = pressure - defaultDifference
-            msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5, request_Data = pressure - 600)
-        else:
-            msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5, request_Data = 10)
-        setpoint2 = pressure - hysteresis1
-        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H2, attribute=5, request_Data = pressure - hysteresis1)
-        hysteresis2 = setpoint2 - 2
-        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h2, attribute=5, request_Data = hysteresis2)
+    # def set_vacuum_range(self, pressure):
+    #     if (pressure > 998):
+    #         print("Pressure amount too high")
+    #     msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5, request_Data = pressure) #request Data is request_data and it can't take int form
+    #     hysteresis1 = 10
+    #     defaultDifference = 600
+    #     # when the value of H1 subtracted by the default difference (default H1 = 750, default h1 = 150)
+    #     # is greater than the minimum value of 10 set the pressure, or else set it to the lowest possible
+    #     if ((pressure - defaultDifference) > 10):
+    #         hysteresis1 = pressure - defaultDifference
+    #         msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5, request_Data = pressure - 600)
+    #     else:
+    #         msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5, request_Data = 10)
+    #     setpoint2 = pressure - hysteresis1
+    #     msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H2, attribute=5, request_Data = pressure - hysteresis1)
+    #     hysteresis2 = setpoint2 - 28lll'
+    #     msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h2, attribute=5, request_Data = hysteresis2)
         
-        # Extra check to make sure the values are within the range:
-        if (pressure < (setpoint2 + hysteresis1) or setpoint2 > (pressure - hysteresis1)): 
-            print("Issue with setting the points for pressure change")
-        if ((pressure - setpoint2) < hysteresis1 or (setpoint2 - 2) < hysteresis2):
-            print("Issue with the hysteresis value")
+    #     # Extra check to make sure the values are within the range:
+    #     if (pressure < (setpoint2 + hysteresis1) or setpoint2 > (pressure - hysteresis1)): 
+    #         print("Issue with setting the points for pressure change")
+    #     if ((pressure - setpoint2) < hysteresis1 or (setpoint2 - 2) < hysteresis2):
+    #         print("Issye with the hysteresis value")
     
     def get_max_vacuum_range(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=MAX_VACUUM_REACHED, attribute=5)
-        return USINT.decode(msg)
-    def get_free_flow_vacuum(self):
+        return USINT.decode(msg.value) 
+    
+    def get_free_flow_vacuum(self): # use free flow vacuum for object_detected
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=FREE_FLOW_VACUUM, attribute=5)
-        return USINT.decode(msg)
+        flow_amount = (msg.value[1] << 8) | msg.value[0] # or are the values flipped, value[0] and then value[1]? 
+        return flow_amount # not returned as a uint16, rather as an int --> will this be ok? 
+    
+    #CHECK
     def get_supply_voltage(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SUPPLY_VOLTAGE, attribute=1)
-        return UINT.decode(msg[0:3])/10
-
+        return UINT.decode(msg[0:3])/10 # doesn't seem right? is it UINT.decode(msg.value[0:3]) / 10 = 23.8?  just msg.value = b '\xee\x00\xed'
+                                        # UINT decode is defaulting 238 even though the value is different, this value was also returned with the H1
 
 def mainLoop(ur_address, gripper_type):
   # Gripper is a C-Model that is connected to a UR controller with the Robotiq URCap installed. 

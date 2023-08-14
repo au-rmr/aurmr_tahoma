@@ -20,7 +20,7 @@ import rospy
 
 from tf2_geometry_msgs import from_msg_msg
 from geometry_msgs.msg import PoseStamped, WrenchStamped
-from robotiq_2f_gripper_control.msg import vacuum_gripper_input as VacuumGripperStatus
+from robotiq_2f_gripper_control.msg import vacuum_gripper_input as VacuumGripperStatus # does this need to be changed to the vacuum_gripper_contol.msg, do we need "as"
 from aurmr_tasks.util import all_close, pose_dist
 from moveit_msgs.msg import MoveItErrorCodes, MoveGroupAction, DisplayTrajectory
 from moveit_msgs.srv import GetPositionIK, GetPositionIKRequest
@@ -175,7 +175,8 @@ class Tahoma:
         self.torque_mag = math.sqrt(msg.wrench.torque.x**2 + msg.wrench.torque.y**2+ msg.wrench.torque.z**2)
 
     def gripper_status_cb(self, msg: VacuumGripperStatus):
-        self.object_detected = (msg.gPO < 95)
+        #self.object_detected = (msg.gPO < 95) 
+        self.object_detected = msg.FREE_FLOW_VACUUM < 950 # because it is in mbar and is returned as an int
 
     def goal_status_cb(self, msg: GoalStatusArray):
         latest_time = 0
