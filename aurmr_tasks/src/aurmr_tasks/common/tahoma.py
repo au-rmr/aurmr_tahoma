@@ -158,7 +158,8 @@ class Tahoma:
         group_names = self.commander.get_group_names()
 
         self.wrench_listener = rospy.Subscriber("/wrench", WrenchStamped, self.wrench_cb)
-        self.gripper_status_listener = rospy.Subscriber("/vacuum_gripper_control/status", vacuum_gripper_input, self.gripper_status_cb)
+        self.gripper_status_listener = rospy.Subscriber("/gripper_control/status", vacuum_gripper_input, self.gripper_status_cb)
+        self.custom_gripper_status_listener = rospy.Subscriber("/vacuum_gripper_control/status", vacuum_gripper_input, self.custom_gripper_status_cb)
         self.traj_status_listener = rospy.Subscriber("/scaled_pos_joint_traj_controller/follow_joint_trajectory/status", GoalStatusArray, self.goal_status_cb)
         self.force_mag = 0
         self.torque_mag = 0
@@ -178,8 +179,9 @@ class Tahoma:
         self.torque_mag = math.sqrt(msg.wrench.torque.x**2 + msg.wrench.torque.y**2+ msg.wrench.torque.z**2)
 
     def gripper_status_cb(self, msg: vacuum_gripper_input):
-        #self.object_detected = (msg.gPO < 95) 
-        print('/////////////////////////////////////////////', msg)
+        self.object_detected = (msg.gPO < 95) 
+
+    def custom_gripper_status_cb(self, msg: vacuum_gripper_input):
         self.object_detected = msg.SYSTEM_VACUUM > 500 # because it is in mbar and is returned as an int
 
     def goal_status_cb(self, msg: GoalStatusArray):
