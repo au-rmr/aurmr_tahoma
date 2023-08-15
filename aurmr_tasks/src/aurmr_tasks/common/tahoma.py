@@ -21,6 +21,7 @@ import rospy
 from tf2_geometry_msgs import from_msg_msg
 from geometry_msgs.msg import PoseStamped, WrenchStamped
 from robotiq_2f_gripper_control.msg import vacuum_gripper_input as VacuumGripperStatus # does this need to be changed to the vacuum_gripper_contol.msg, do we need "as"
+from vacuum_gripper_control.msg import vacuum_gripper_input, vacuum_gripper_output
 from aurmr_tasks.util import all_close, pose_dist
 from moveit_msgs.msg import MoveItErrorCodes, MoveGroupAction, DisplayTrajectory
 from moveit_msgs.srv import GetPositionIK, GetPositionIKRequest
@@ -155,7 +156,7 @@ class Tahoma:
         group_names = self.commander.get_group_names()
 
         self.wrench_listener = rospy.Subscriber("/wrench", WrenchStamped, self.wrench_cb)
-        self.gripper_status_listener = rospy.Subscriber("/gripper_control/status", VacuumGripperStatus, self.gripper_status_cb)
+        self.gripper_status_listener = rospy.Subscriber("/vacuum_gripper_control/status", vacuum_gripper_input, self.gripper_status_cb)
         self.traj_status_listener = rospy.Subscriber("/scaled_pos_joint_traj_controller/follow_joint_trajectory/status", GoalStatusArray, self.goal_status_cb)
         self.force_mag = 0
         self.torque_mag = 0
@@ -174,9 +175,10 @@ class Tahoma:
         self.force_mag = math.sqrt(msg.wrench.force.x**2 + msg.wrench.force.y**2+ msg.wrench.force.z**2)
         self.torque_mag = math.sqrt(msg.wrench.torque.x**2 + msg.wrench.torque.y**2+ msg.wrench.torque.z**2)
 
-    def gripper_status_cb(self, msg: VacuumGripperStatus):
+    def gripper_status_cb(self, msg: vacuum_gripper_input):
         #self.object_detected = (msg.gPO < 95) 
-        self.object_detected = msg.FREE_FLOW_VACUUM < 950 # because it is in mbar and is returned as an int
+        print('/////////////////////////////////////////////', msg)
+        self.object_detected = msg.SYSTEM_VACUUM > 500 # because it is in mbar and is returned as an int
 
     def goal_status_cb(self, msg: GoalStatusArray):
         latest_time = 0
@@ -254,17 +256,21 @@ class Tahoma:
     def check_gripper_item(self):
         return self.object_detected 
     
-    def blow_off_gripper(self):
+    def blow_off_gripper(self, return_before_done=False):
         goal = GripperCommandGoal()
-        goal.command.position = 0
+        goal.command.position = 2
         goal.command.max_effort = 1
         self._gripper_client.send_goal(goal)
         if not return_before_done:
-            self._gripper_client.wait_for_result() 
+            self._gripper_client.wait_for_result()
+        rospy.sleep(3)
+
+        self.open_gripper()
+        return 
 
     def close_gripper(self, return_before_done=False):
         goal = GripperCommandGoal()
-        goal.command.position = 0.83
+        goal.command.position = 1
         goal.command.max_effort = 1
         self._gripper_client.send_goal(goal)
         rospy.loginfo("Waiting for gripper" + str(return_before_done))

@@ -47,11 +47,12 @@ class GripperActionServer(object):
         if self.gripper_type == "vacuum":
             command = self.output_msg()
             print(goal.command.position)
-            if goal.command.position != 0:
-                command.EJECTOR_CONTROL = 1
-            else:
+            if goal.command.position == 0:
                 command.EJECTOR_CONTROL = 0
-        print(command)
+            elif goal.command.position == 1:
+                command.EJECTOR_CONTROL = 1
+            elif goal.command.position == 2:
+                command.EJECTOR_CONTROL = 2
         self.command_pub.publish(command)
         
         # TODO(Jack, 6/21): Find a better way around the sleep to check when the gripper has actually recieved the command
