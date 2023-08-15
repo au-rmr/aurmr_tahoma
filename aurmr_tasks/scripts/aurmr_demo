@@ -153,9 +153,8 @@ def main():
     # stows = [["3f", "mouthwash"], ['3f', 'lysol'], ['2f', 'box']]
     # picks = [["3f", "lysol"], ['2f', 'box'], ['3f', 'mouthwash']]
 
-
     with demo_sm:
-
+        
         with pick_sm:
             StateMachine.add_auto("RECORD_TIME", RecordTime(), ["succeeded"])
             cf.splat_auto("SPLAT_PICK", "request", ["target_bin_id", "target_object_id", "target_object_asin"])
@@ -191,8 +190,8 @@ def main():
                             {"succeeded": "USER_PROMPT_FOR_RETRY", "aborted": "USER_PROMPT_FOR_RETRY", "preempted": "USER_PROMPT_FOR_RETRY"})
             StateMachine.add('USER_PROMPT_FOR_RETRY', UserPromptForRetry(robot.tf2_buffer, timeout_connection_secs=10.0), {'retry': 'CLEAR_SCENE_PREMOVE', 'continue': 'PUBLISH_PICK_STATUS'})
             StateMachine.add_auto("PUBLISH_PICK_STATUS", PublishStatus(status_pub), ["succeeded"])
-            StateMachine.add("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot, return_before_done=True), {"succeeded": "done", "aborted": "done", "preempted": "done"})
-
+            StateMachine.add("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot, return_before_done=True), {"succeeded": "BLOW_OFF_GRIPPER", "aborted": "BLOW_OFF_GRIPPER", "preempted": "BLOW_OFF_GRIPPER"})
+            StateMachine.add("BLOW_OFF_GRIPPER", motion.BlowOffGripper(robot, return_before_done=True), {"succeeded": "done", "aborted": "done", "preempted": "done"})
 
         with stow_sm:
             cf.splat_auto("SPLAT_STOW", "request", ["target_bin_id", "target_object_id", "target_object_asin"])

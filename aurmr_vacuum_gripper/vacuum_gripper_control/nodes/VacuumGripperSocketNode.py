@@ -39,14 +39,14 @@ class VacuumGripper:
         self.ip = ip
         self.gripper_type = gripper_type
 
-        if os.path.exists(LOG_FILE_PATH):
-            configure_default_logger(level=LOG_LEVEL, filename=LOG_FILE_PATH)
-        else:
-            f = open(LOG_FILE_PATH, "x")
-            f.write("\n")
-            f.close()
-            print("Created new log file ", LOG_FILE_PATH)
-            configure_default_logger(level=LOG_LEVEL, filename=LOG_FILE_PATH)
+        # if os.path.exists(LOG_FILE_PATH):
+        #     configure_default_logger(level=LOG_LEVEL, filename=LOG_FILE_PATH)
+        # else:
+        #     f = open(LOG_FILE_PATH, "x")
+        #     f.write("\n")
+        #     f.close()
+        #     print("Created new log file ", LOG_FILE_PATH)
+        #     configure_default_logger(level=LOG_LEVEL, filename=LOG_FILE_PATH)
 
     def set_ip(self, ip):
         self.ip = ip
@@ -69,17 +69,18 @@ class VacuumGripper:
     def getStatus(self):
         if self.gripper_type == "vacuum":
             # TODO
+            
             message = vacuum_gripper_input()
-            pass
-            # #Assign the values to their respective variables
+            
+            #Assign the values to their respective variables
             # message.DEVICE_STATUS = self.get_device_status()
             # message.EJECTOR_STATUS = self.get_ejector_status()
             # message.SUPPLY_VOLTAGE = self.get_supply_voltage()
             # message.LEAKAGE_RATE = self.get_leakage_rate() # what is the leakage rate supposed to give
             # message.FREE_FLOW_VACUUM = self.get_free_flow_vacuum() #what is the free flow supposed to give
             # message.MAX_VACUUM_REACHED = self.get_max_vacuum_range() # what is this max vacuum supposed to give
-            # message.SYSTEM_VACUUM = self.get_system_vacuum()
-            
+            message.SYSTEM_VACUUM = self.get_system_vacuum()
+            print('HERE', message.SYSTEM_VACUUM)
         else:
             raise RuntimeError(f"Unknown gripper type requested: {self.gripper_type}")
         return message
@@ -125,9 +126,10 @@ class VacuumGripper:
         # }
         if command.EJECTOR_CONTROL == 1:
             self.open_valve(1)
-        else:
+        elif command.EJECTOR_CONTROL == 0:
             self.close_valve(1)
-
+        elif command.EJECTOR_CONTROL == 2:
+            self.blow_off(1)
 # request = cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=13, attribute=5, request_data=bytearray([0b00000011] * 16))
 # request = cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=13, attribute=5, request_data=bytearray([0x00] * 16))
 
@@ -150,6 +152,15 @@ class VacuumGripper:
         SINT[None].encode(ejectors)
         try:
             self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000001] + [0b00000000]*15))
+        except exceptions.CommError:
+            if not self.open_connection():
+                raise exceptions.CommError
+        except AttributeError:
+            print('No such attribute found. You may need to open a connection first.') 
+
+    def blow_off(self, number):
+        try:
+            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000010] + [0b00000000]*15))
         except exceptions.CommError:
             if not self.open_connection():
                 raise exceptions.CommError
@@ -202,7 +213,7 @@ class VacuumGripper:
     
     def get_system_vacuum(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SYSTEM_VACUUM, attribute=5)
-        return USINT.decode(msg.value)
+        return UINT.decode(msg.value[0:2])
     
     def get_SetPointH1(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5) 
@@ -268,6 +279,7 @@ class VacuumGripper:
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SUPPLY_VOLTAGE, attribute=1)
         return UINT.decode(msg[0:3])/10 # doesn't seem right? is it UINT.decode(msg.value[0:3]) / 10 = 23.8?  just msg.value = b '\xee\x00\xed'
                                         # UINT decode is defaulting 238 even though the value is different, this value was also returned with the H1
+
 
 def mainLoop(ur_address, gripper_type):
   # Gripper is a C-Model that is connected to a UR controller with the Robotiq URCap installed. 
