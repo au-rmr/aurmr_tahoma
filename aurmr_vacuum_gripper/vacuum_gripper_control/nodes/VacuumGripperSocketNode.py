@@ -170,6 +170,15 @@ class VacuumGripper:
         except AttributeError:
             print('No such attribute found. You may need to open a connection first.') 
 
+    def blow_off(self, number):
+        try:
+            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000010] + [0b00000000]*15))
+        except exceptions.CommError:
+            if not self.open_connection():
+                raise exceptions.CommError
+        except AttributeError:
+            print('No such attribute found. You may need to open a connection first.') 
+
     def get_device_status(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=DEVICE_STATUS, attribute=5)
         return USINT.decode(msg.value) 
