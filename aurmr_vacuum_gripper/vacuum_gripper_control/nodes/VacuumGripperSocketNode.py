@@ -80,7 +80,6 @@ class VacuumGripper:
             # message.FREE_FLOW_VACUUM = self.get_free_flow_vacuum() #what is the free flow supposed to give
             # message.MAX_VACUUM_REACHED = self.get_max_vacuum_range() # what is this max vacuum supposed to give
             message.SYSTEM_VACUUM = self.get_system_vacuum()
-            print('HERE', message.SYSTEM_VACUUM)
         else:
             raise RuntimeError(f"Unknown gripper type requested: {self.gripper_type}")
         return message
@@ -211,6 +210,9 @@ class VacuumGripper:
     
     def get_system_vacuum(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SYSTEM_VACUUM, attribute=5)
+        print('HERE*************')
+        print(type(msg.value))
+        print(msg)
         return UINT.decode(msg.value[0:2])
     
     def get_SetPointH1(self):
