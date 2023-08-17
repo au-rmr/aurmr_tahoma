@@ -46,7 +46,7 @@ def main(TEST_MODE:int,
          pod_id:int,
          BIN_POSE_RAND_N:int, 
          dRoll:float, dPitch:float, dYaw:float, 
-         SSL:int, vis_path:bool, 
+         SSL:int, vis_path:bool,  vis_pose:bool,
          planning_attempts:int, 
          planning_time:float, 
          replan_attempts:int, 
@@ -58,7 +58,7 @@ def main(TEST_MODE:int,
     # print('\n--------')
     # print(robot.scene.get_known_object_names())
     # print(robot.scene.get_object_poses(['back_frame']))
-    # print('---------\n')
+    # print('---------\n') roslaunch fc.launch x_start:=970 x_stop:=971 x_step:=1 y_start:=360 y_stop:=411 y_step:=10 bin_randN:=1 pod_id:=1
 
     # for creating histogram to manually set manipulability threshold 
     # file = open("manipData.txt", "w")
@@ -70,6 +70,7 @@ def main(TEST_MODE:int,
     # dRoll = dRoll/2 if dRoll != 0 else 0.001
     # # Redefine dRoll to use sampling weight function (sigmoids)
     # dPitch = dPitch/2 if dPitch != 0 else 0.001
+    # pod_id = int(pod_id[0])
     POD_BIN_HEIGHTS = robot.pod_sizes[f"pod{pod_id}_bin_heights"]
     POD_BIN_FLAP_HEIGHT = robot.pod_sizes[f"pod{pod_id}_bin_flap_height"]
     POD_BIN_WIDTH = robot.pod_sizes[f"pod{pod_id}_bin_width"]
@@ -78,6 +79,8 @@ def main(TEST_MODE:int,
     POD_BIN_LENGTH = robot.pod_sizes[f"pod{pod_id}_bin_depth"]
     POD_BRACE_FRAME_WIDTH = robot.pod_sizes[f"pod{pod_id}_brace_frame_width"]
     NUM_COLUMNS = math.ceil(robot.pod_sizes[f"pod{pod_id}_brace_width"] / POD_BIN_WIDTH)
+    LOW_ROW = 4 if pod_id == 1 else 3
+    UP_ROW = 8 if pod_id == 1 else 6
     BIN_IDS = BIN_IDS_1 if pod_id == 1 else BIN_IDS_2
     pod_bin_row_id = 0
 
@@ -214,8 +217,8 @@ def main(TEST_MODE:int,
     if (reachability):
         print("\nDetermining reachable bins...\n")
 
-        for i, pose in enumerate(BIN_INNER_POSES[4*NUM_COLUMNS*BIN_POSE_RAND_N : 8*NUM_COLUMNS*BIN_POSE_RAND_N]):
-            row_id = i // (NUM_COLUMNS * BIN_POSE_RAND_N) + 1 + 4
+        for i, pose in enumerate(BIN_INNER_POSES[LOW_ROW*NUM_COLUMNS*BIN_POSE_RAND_N : UP_ROW*NUM_COLUMNS*BIN_POSE_RAND_N]):
+            row_id = i // (NUM_COLUMNS * BIN_POSE_RAND_N) + 1 + LOW_ROW
             column_id = (i // BIN_POSE_RAND_N) % NUM_COLUMNS + 1
             rand_id = i % BIN_POSE_RAND_N + 1
             # solution = robot.compute_ik(pose, rospy.Duration(0))
@@ -244,12 +247,14 @@ def main(TEST_MODE:int,
                 gripper_color = (1, 0, 0, 1)
             marker_colors.append(gripper_color)
 
-        print(f"#Reachable: {len(REACHABLE_BIN_APPROACHES)} / {len(BIN_INNER_POSES[4*NUM_COLUMNS*BIN_POSE_RAND_N : 8*NUM_COLUMNS*BIN_POSE_RAND_N])}")
+        print(f"#Reachable: {len(REACHABLE_BIN_APPROACHES)} / {len(BIN_INNER_POSES[LOW_ROW*NUM_COLUMNS*BIN_POSE_RAND_N : UP_ROW*NUM_COLUMNS*BIN_POSE_RAND_N])}")
 
-        ratio = len(REACHABLE_BIN_APPROACHES)/len(BIN_INNER_POSES[4*NUM_COLUMNS*BIN_POSE_RAND_N : 8*NUM_COLUMNS*BIN_POSE_RAND_N])
+        ratio = len(REACHABLE_BIN_APPROACHES)/len(BIN_INNER_POSES[LOW_ROW*NUM_COLUMNS*BIN_POSE_RAND_N : UP_ROW*NUM_COLUMNS*BIN_POSE_RAND_N])
         print("Reachability Score: " + str(ratio * 100))
 
-        reachability_pub.publish(create_gripper_pose_markers(BIN_INNER_POSES[4*NUM_COLUMNS*BIN_POSE_RAND_N : 8*NUM_COLUMNS*BIN_POSE_RAND_N], marker_colors))
+        reachability_pub.publish(create_gripper_pose_markers(BIN_INNER_POSES[LOW_ROW*NUM_COLUMNS*BIN_POSE_RAND_N : UP_ROW*NUM_COLUMNS*BIN_POSE_RAND_N], marker_colors))
+        if vis_pose:
+            rospy.spin() 
         return (ratio * 100)
 
     # manipulability test for bin approach poses
@@ -352,12 +357,12 @@ def pod_pose_sub_callback(TFmessage):
     return transform"""
 
 
-def spawn_model(model_name='pod', x=0.832, y=0.4125, pod_id=1):
+def spawn_model(model_name:str='pod', x:float=0.832, y:float=0.4125, pod_id:int=1):
     # load xacro file and parse it
     rospack = rospkg.RosPack()
     xacro_path = os.path.join(rospack.get_path('aurmr_gazebo'), 'robots', f'pod{pod_id}.gazebo.xacro')
     doc = xacro.parse(open(xacro_path))
-    xacro.process_doc(doc, in_order=True, params={'id': str(pod_id)})
+    xacro.process_doc(doc, in_order=True, params={'id': pod_id})
     model_description = doc.toprettyxml(indent='  ')
 
     try:    
@@ -448,7 +453,7 @@ if __name__ == '__main__':
     SSL = rospy.get_param("~ssl", False) 
     
     planning_attempts = rospy.get_param("~planning_attempts", 10) # Number of planning attempts for each pre-graps pose joint configuration
-    planning_time = rospy.get_param("~planning_time", 10.0) # Allowed planning time, in seconds
+    planning_time = rospy.get_param("~planning_timfalsee", 10.0) # Allowed planning time, in seconds
     replan_attempts = rospy.get_param("~replan_attempts", 5) # Number of attempts to compute joint configuration (IK) for each pre-graps pose
     joint_tolerance = rospy.get_param("~joint_tolerance", 0.001) # Target pose joint values tolerance, in ?
     position_tolerance = rospy.get_param("~position_tolerance", 0.001) # Target pose position values tolerance, in meters
@@ -458,8 +463,9 @@ if __name__ == '__main__':
     #             'joint' - MoveIt would try to compute path for given joint configuration (collision avoidance guaranteed)
     goal_type = rospy.get_param("~goal_type", 'pose') 
     vis_path = rospy.get_param("~vis_path", False) # vis_path = True: Visualize path from 'home' pose to pre-grasp pose. 'home' - gripped object drop pose
+    vis_pose = rospy.get_param("~vis_pose", False)
 
-    pod_id = rospy.get_param("~pod_id", 1)
+    pod_id = rospy.get_param("~pod_id", '1A')
     # Pod positon in centimeters
     xStart = rospy.get_param("~x_start", 60)
     xStop = rospy.get_param("~x_stop", 70)
@@ -484,7 +490,7 @@ if __name__ == '__main__':
                                  pod_id=pod_id,
                                  BIN_POSE_RAND_N=bin_pose_randN, 
                                  dRoll=dRoll, dPitch=dPitch, dYaw=dYaw, 
-                                 SSL=int(SSL), vis_path=vis_path, 
+                                 SSL=int(SSL), vis_path=vis_path, vis_pose=vis_pose,
                                  planning_attempts=planning_attempts, 
                                  planning_time=planning_time, 
                                  replan_attempts=replan_attempts, 
