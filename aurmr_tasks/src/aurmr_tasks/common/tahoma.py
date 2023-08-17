@@ -87,7 +87,7 @@ def requires_controller(named):
             if not self.is_controller_active(named):
                 activated = self.activate_controller(named)
                 if not activated:
-                    return Falsecen
+                    return False
             return function(self, *args, **kwargs)
         return wrapper
     return decorator
