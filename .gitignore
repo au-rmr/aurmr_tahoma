@@ -61,3 +61,18 @@ qtcreator-*
 
 _build
 _autosummary
+# reachability test result files
+aurmr_tasks/scripts/successScores_970-970_360-410.txt
+aurmr_tasks/scripts/successScores1_832-832_412-412_0.txt
+aurmr_tasks/scripts/successScores1_832-832_412-412.txt
+aurmr_tasks/scripts/successScores1_old_720-960-10_360-580-10.txt
+aurmr_tasks/scripts/successScores2_832-832_412-412_0.txt
+aurmr_tasks/scripts/successScores2_832-832_412-412.txt
+aurmr_tasks/scripts/successScores24_720-960-10_360-580-10.txt
+aurmr_tasks/scripts/successScores24_780-930-10_360-580-10.txt
+# reachability test result plots
+aurmr_tasks/scripts/pod1_reach_brg.png
+aurmr_tasks/scripts/pod1_reach_rainbow.png
+aurmr_tasks/scripts/pod2_reach_brg.png
+aurmr_tasks/scripts/pod2_reach_rainbow.png
+aurmr_tasks/scripts/1.py

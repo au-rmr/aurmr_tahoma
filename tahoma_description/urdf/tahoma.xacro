@@ -4,7 +4,7 @@
   <xacro:include filename="$(find tahoma_description)/urdf/stand.xacro" />
   <xacro:include filename="$(find robotiq_epick_visualization)/urdf/robotiq_epick_model_macro.xacro" />
 
-  <xacro:include filename="$(find tahoma_description)/urdf/l515.xacro" />
+  <!-- <xacro:include filename="$(find tahoma_description)/urdf/l515.xacro" /> -->
   <xacro:macro name="tahoma" params="realsense:=true
                                      use_nominal_camera_extrinsics:=false
                                      camera_arrangement:='manual'
