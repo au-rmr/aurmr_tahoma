@@ -7,7 +7,7 @@ find_package(catkin REQUIRED COMPONENTS
         actionlib_msgs
         geometry_msgs
         message_generation
-        moveit_servo
+	#moveit_servo
         std_srvs
 )
 
@@ -25,7 +25,7 @@ catkin_package(INCLUDE_DIRS include
         actionlib_msgs
         geometry_msgs
         message_runtime
-moveit_servo
+	#moveit_servo
         std_srvs)
 
 include_directories(include)
@@ -34,14 +34,14 @@ include_directories(SYSTEM
         )
 
 
-add_executable(servo_server
-  src/servo_server.cpp
-        src/pose_tracking.cpp
-)
-add_dependencies(servo_server ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(servo_server
-  ${catkin_LIBRARIES}
-)
+#add_executable(servo_server
+#  src/servo_server.cpp
+#        src/pose_tracking.cpp
+#)
+#add_dependencies(servo_server ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+#target_link_libraries(servo_server
+#  ${catkin_LIBRARIES}
+#)
 
 if (CATKIN_ENABLE_TESTING)
   find_package(roslaunch REQUIRED)
