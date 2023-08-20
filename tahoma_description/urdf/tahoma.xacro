@@ -9,7 +9,6 @@
                                      use_nominal_camera_extrinsics:=false
                                      camera_baseline:=.5
                                      camera_focal_depth:=1.4
-                                     gripper_transmission_hw_interface:='hardware_interface/EffortJointInterface'
                                      joint_limits_parameters_file:='$(find ur_description)/config/ur16e/joint_limits.yaml'
                                      kinematics_parameters_file:='$(find tahoma_description)/config/arm_calibration.yaml'
                                      physical_parameters_file:='$(find ur_description)/config/ur16e/physical_parameters.yaml'

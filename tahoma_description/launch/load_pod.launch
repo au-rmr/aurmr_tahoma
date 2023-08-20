@@ -2,7 +2,7 @@
 <launch>
     <arg name="id" default="1" doc="ID number for pod to load" />
 
-    <param name="pod_description" command="xacro $(find tahoma_description)/robots/pod.xacro" />
+    <param name="pod_description" command="xacro $(find tahoma_description)/robots/pod$(arg id).xacro" />
     <node name="pod_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
         <remap from="robot_description" to="pod_description"/>
         <remap from="joint_states" to="/dev/null" />

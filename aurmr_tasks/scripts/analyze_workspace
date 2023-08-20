@@ -1,24 +1,17 @@
 #!/usr/bin/env python
 
+import os
 import sys
-"""
-If not added to sys.path, then 
-"from aurmr_tasks.common.tahoma import Tahoma", 
-"from aurmr_perception.visualization import create_gripper_pose_markers", 
-"from aurmr_tasks.pod import BIN_IDS"
-will not be compiled 
-"""
-sys.path.append('/home/patorrad/aurmr_ws/src/aurmr_tahoma')
-print("\n-------------------")
-print(sys.path)
-print("-------------------\n")
+import rospkg
+
+# print("\n-------------------")
+# print(F"[ANALYZE_WORKSPACE] {sys.path}")
+# print("-------------------\n")
 
 import math
 import random
 import std_msgs
 import rospy
-import os
-import rospkg
 import xacro
 import copy
 import numpy as np
@@ -32,13 +25,13 @@ from tf_conversions import transformations
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, TransformStamped
 from tf2_msgs.msg import TFMessage
 
-from aurmr_tasks.src.aurmr_tasks.common.tahoma import Tahoma
+from aurmr_tasks.common.tahoma import Tahoma
 # from aurmr_tasks.common.tahoma import Tahoma
 
-from aurmr_perception.src.aurmr_perception.visualization import create_gripper_pose_markers
+from aurmr_perception.visualization import create_gripper_pose_markers
 # from aurmr_perception.visualization import create_gripper_pose_markers
 
-from aurmr_tasks.src.aurmr_tasks.pod import BIN_IDS_1, BIN_IDS_2
+from aurmr_tasks.pod import BIN_IDS_1, BIN_IDS_2
 # from aurmr_tasks.pod import BIN_IDS_1, BIN_IDS_2
 
 
@@ -381,9 +374,9 @@ def spawn_model(model_name:str='pod', x:float=0.832, y:float=0.4125, pod_id:int=
 
         response = spawn_model_prox(model_name, model_description, 'aurmr_gazebo', pose, 'world')
         if response.success:
-            print(f"Successfully spawned model {model_name}")
+            print(f"[ANALYZE_WORKSPACE] Successfully spawned model {model_name}")
         else:
-            print(f"Failed to spawn model {model_name}: {response.status_message}")
+            print(f"[ANALYZE_WORKSPACE] Failed to spawn model {model_name}: {response.status_message}")
 
     # ServiceException (unavailable service, communication erros)
     # ROSSerializationException (invalid model name)
@@ -417,30 +410,30 @@ def delete_model(model_name='pod'):
         delete_model_prox = rospy.ServiceProxy('gazebo/delete_model', DeleteModel)
         response = delete_model_prox(model_name)
         if response.success:
-            print(f"Successfully deleted model {model_name}")
+            print(f"[ANALYZE_WORKSPACE] Successfully deleted model {model_name}")
         else:
-            print(f"Failed to delete model {model_name}: {response.status_message}")
+            print(f"[ANALYZE_WORKSPACE] Failed to delete model {model_name}: {response.status_message}")
 
     # ServiceException (unavailable service, communication erros)
     # ROSSerializationException (invalid model name)
     # Gazebo errors (delete model that doesn't exist or has already been deleted)
     except rospy.service.ServiceException as e: 
-        print(f"Service call failed: {e}")
+        print(f"[ANALYZE_WORKSPACE] Service call failed: {e}")
     except Exception as e: # General exceptions, such as ROSInterruptException when the node is shut down while waiting for the service
-        print(f"An unexpected error occurred: {e}")
+        print(f"[ANALYZE_WORKSPACE] An unexpected error occurred: {e}")
 
 
 # robot position relative to bin gets hardcoded in fc.launch file
 if __name__ == '__main__':
     rospy.init_node("analyze_workspace")
-    rospy.loginfo('Getting robot resources')
+    rospy.loginfo("[ANALYZE_WORKSPACE] Getting robot resources")
     simulation = rospy.get_param("/use_sim_time", False)
     State.simulation = simulation
     robot = Tahoma(simulation)
     pod_pose_sub = rospy.Subscriber('/tf_static', TFMessage, pod_pose_sub_callback)
 
 
-    print("Getting parameters(test_mode, random_pose_number, RPY, ssl)...")
+    print("[ANALYZE_WORKSPACE]  Getting parameters(test_mode, random_pose_number, RPY, ssl)...")
     test_mode = rospy.get_param("~test_mode", 0) # test_mode = 0: Reachibility | test_mode = 1: Manipulability
     bin_pose_randN = rospy.get_param("~bin_pose_randN", 2) # Number of random pre-grasp poses for each bin
     dRoll = rospy.get_param("~dRoll", 8) # Roll change (overall) in random pre-grasp pose generation (degrees)
@@ -465,7 +458,7 @@ if __name__ == '__main__':
     vis_path = rospy.get_param("~vis_path", False) # vis_path = True: Visualize path from 'home' pose to pre-grasp pose. 'home' - gripped object drop pose
     vis_pose = rospy.get_param("~vis_pose", False)
 
-    pod_id = rospy.get_param("~pod_id", '1A')
+    pod_id = rospy.get_param("~pod_id", 1)
     # Pod positon in centimeters
     xStart = rospy.get_param("~x_start", 60)
     xStop = rospy.get_param("~x_stop", 70)
@@ -480,7 +473,7 @@ if __name__ == '__main__':
         with open(file_path, 'w') as file:
             for pod_x in range(xStart, xStop, xStep):
                 for pod_y in range(yStart, yStop, yStep):
-                    print("Spawning model...")
+                    print("[ANALYZE_WORKSPACE] Spawning model...")
                     spawn_model(model_name='pod', x=pod_x/1000, y=pod_y/1000, pod_id=pod_id)
                     rospy.sleep(1)
                     robot.add_pod_collision_geometry(pod_id=pod_id)
@@ -502,10 +495,10 @@ if __name__ == '__main__':
                     file.flush()  # Ensure the data is written to the file
                     os.fsync(file.fileno()) # Ensure the data is flushed to disk
 
-                    print("Deleting model...")
+                    print("[ANALYZE_WORKSPACE] Deleting model...")
                     delete_model(model_name='pod')
                     rospy.sleep(1)
     except Exception as e:
-        print(f"Failed to write to file: {e}")
+        print(f"[ANALYZE_WORKSPACE] Failed to write to file: {e}")
 
     rospy.signal_shutdown('Shut down all nodes to stop launch file execution')
