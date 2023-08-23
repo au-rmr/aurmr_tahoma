@@ -48,13 +48,13 @@
 
       <link name="base_link" />
 
-      <joint name="base_link-stand_joint" type="fixed">
+      <joint name="base_link__stand__joint" type="fixed">
         <origin rpy="0 0 0" xyz="0 0 0.15"/>
         <parent link="base_link"/>
         <child link="stand"/>
       </joint>
 
-      <joint name="robot_plate-arm_base_link_joint" type="fixed">
+      <joint name="robot_plate__arm_base_link__joint" type="fixed">
         <parent link="robot_plate" />
         <child link="arm_base_link" />
         <origin rpy="0 ${pi} ${1.5 * pi}" xyz="0 0.00175 -0.00885" />
@@ -96,20 +96,20 @@
         </collision>
       </link>
 
-      <joint name="coupling-connector_cover_joint" type="fixed">
+      <joint name="coupling__connector_cover__joint" type="fixed">
         <origin xyz="${coupling_flat_edge_X_offset} 0 ${coupling_flat_edge_Z_offset}" rpy="0 0 0" />
         <parent link="coupling" />
         <child link="connector_cover"/>
       </joint>
 
-      <joint name="coupling-gripper_base_link_joint" type="fixed">
-        <origin xyz="0 0 ${coupling_H - coupling_h}" rpy="0 0 0" />
+      <joint name="coupling__gripper_base_link__joint" type="fixed">
+        <origin xyz="0 0 ${coupling_H - coupling_h}" rpy="0 0 ${0.5 * pi}" />
         <parent link="coupling" />
         <child link="gripper_base_link" />
       </joint>
 
       <!-- Coupling edge height = 0.003. Rotate -90(270)deg around z to align with the robot's wrist electric connection -->
-      <joint name="arm_tool0-coupling_joint" type="fixed">
+      <joint name="arm_tool0__coupling___joint" type="fixed">
         <origin xyz="0 0 ${-coupling_h}" rpy="0 0 ${1.5 * pi}" />
         <parent link="arm_tool0" />
         <child link="coupling" />

@@ -1,0 +1,15 @@
+{
+  robotiq_epick_dimX: 0.0750,
+  robotiq_epick_dimY: 0.0830,
+  robotiq_epick_dimZ: 0.1047,
+  robotiq_epick_finH: 0.0024,
+  robotiq_epick_earH: 0.0125,
+  robotiq_epick_earR: 0.0059,
+  epick_cylinder_H: 0.0900,
+  epick_cylinder_R: 0.0059,
+  epick_end_effect_H: 0.0100,
+  epick_end_effect_R: 0.0225,
+  coupling_D: 0.0700,
+  coupling_H: 0.0200,
+  coupling_h: 0.0030,
+}

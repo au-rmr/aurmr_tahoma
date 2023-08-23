@@ -105,6 +105,10 @@ def moveit_error_string(val):
 
 class Tahoma:
     def __init__(self, in_sim=False):
+        import yaml
+        import os
+        import rospkg
+
         self.in_sim = in_sim
         self.joint_state = None
         self.point_cloud = None
@@ -171,69 +175,15 @@ class Tahoma:
         self.active_controllers = None
         self.update_running_controllers()
 
-        # Wrong pod1_bin_heights_inch! Where did you get them??? 
-        # Official Amazon recipe has different numbers (in mm)!!!
-        # pod1_bin_heights_inch = [8.75, 5.5, 7.5, 6, 4.5, 8.75, 5, 6, 5, 8.75, 5, 6, 11]
+        rospack = rospkg.RosPack()
+        yaml_path = os.path.join(rospack.get_path('tahoma_description'), 'config/pod_sizes.yaml')
+        with open(yaml_path, 'r') as pod_sizes_file:
+            self.pod_sizes = yaml.safe_load(pod_sizes_file)
+
+        yaml_path = os.path.join(rospack.get_path('tahoma_description'), 'config/end_effector_sizes.yaml')
+        with open(yaml_path, 'r') as end_effector_sizes_file:
+            self.end_effector = yaml.safe_load(end_effector_sizes_file)
         
-        # pod1_bin_heights_m are from pod1_recipe_790-00265-021_2.txt "bindDimensions" : A1-A13
-        # "ligHeight" : 26, but in reality 32
-        pod1_bin_heights_m = [0.223, 0.146, 0.197, 0.146, 0.121, 0.223, 0.121, 0.146, 0.121, 0.223, 0.121, 0.146, 0.261]
-
-        # pod2_bin_heights_m are from pod2_recipe_790-00265-022_2.txt "bindDimensions" : A1-A8
-        # Original Values (mm): [346, 295, 244, 219, 244, 269, 320, 257]
-        # with minor updates to correspond the reality
-        # "ligHeight" : 26, but in reality 32
-        pod2_bin_heights_m = [0.346, 0.295, 0.250, 0.225, 0.250, 0.275, 0.325, 0.275]
-
-        self.pod_sizes = dict(
-            pod1_brace_frame_width = 0.033,
-            pod1_base_frame_width = 0.041,
-            pod1_base_to_brace_XY_offset = 0.010,
-            pod1_base_width = 0.9398,
-            pod1_brace_width = 0.9188,
-            pod1_base_height  = 0.295, # Real value 0.257
-            pod1_brace_height  = 2.311,
-            pod1_brace_frame_thickness = 0.005,
-            pod1_bin_heights = pod1_bin_heights_m,
-            pod1_bin_depth = 0.152,
-            pod1_bin_width = 0.9188 / 4,
-            pod1_bin_wall_thickness = 0.002,
-            pod1_bin_bottom_thickness = 0.007, # 5mm + 2mm
-            pod1_bin_flap_height = 0.032,
-
-            pod2_brace_frame_width = 0.033,
-            pod2_base_frame_width = 0.041,
-            pod2_base_to_brace_XY_offset = 0.010,
-            pod2_base_width = 0.9398,
-            pod2_brace_width = 0.9188,
-            pod2_base_height  = 0.295, # Real value 0.257
-            pod2_brace_height  = 2.311,
-            pod2_brace_frame_thickness = 0.005,
-            pod2_bin_heights = pod2_bin_heights_m,
-            pod2_bin_depth = 0.356,
-            pod2_bin_width = 0.9188 / 3,
-            pod2_bin_wall_thickness = 0.002,
-            pod2_bin_bottom_thickness = 0.009, # 7mm + 2mm
-            pod2_bin_flap_height = 0.032
-            )
-        
-        self.end_effector = dict(
-            robotiq_epick_dimX = 0.0750,
-            robotiq_epick_dimY = 0.0830,
-            robotiq_epick_dimZ = 0.1047,
-            robotiq_epick_finH = 0.0024,
-            robotiq_epick_earH = 0.0125,
-            robotiq_epick_earR = 0.0059,
-            epick_cylinder_H   = 0.0900,
-            epick_cylinder_R   = 0.0059,
-            epick_end_effect_H = 0.0100,
-            epick_end_effect_R = 0.0225,
-            coupling_D         = 0.0700,
-            coupling_H         = 0.0200,
-            coupling_h         = 0.0030
-            )
-        
-
         # self.move_to_joint_angles(joints='tote_approach', startpoint='current')
 
         # result is the same as for self.commander.get_current_state(), which is more correct because 
@@ -908,77 +858,164 @@ class Tahoma:
     def remove_pod_collision_geometry(self):
         # self.scene.remove_world_object() # if no name is provided, then all objects are removed from the scene
         self.scene.clear() # There is no such function as moveit_commander.planning_scene_interface.PlanningSceneInterface.clear() aka scene.clear(), but this function works!
+        
 
+    def add_pod_collision_geometry(self, pod_id: str='1A', include_backwall: bool=False, include_flaps: bool=True):
+        '''
+        Adds collision boxes for each bin into MoveIt planning scene depending on pod's id
+        
+        pod_id = 1A: pod of 13x4 small bins, the current
+        pod_id = 1B: pod of 8x2 large bins, to the right of the current
+        pod_id = 1C: pod of 12x4 small bins, opposite to the current
+        pod_id = 1D: pod of 7x2 large bins, to the left of the current
+        
+        pod_id = 2A: pod of 8x3 large bins, used by Henry
+        pod_id = 2B: pod of 8x1 large bins, used by Varad and Michael
+        pod_id = 2C: pod of 8x3 large bins, opposite to the one used by Henry
+        pod_id = 2B: pod of 7x1 large bins, opposite to the one used by Varad and Michael
+        '''
+        POD_BRACE_WIDTH           = self.pod_sizes["general"]["brace_width"]
+        POD_BRACE_FRAME_WIDTH     = self.pod_sizes["general"]["brace_frame_width"]
+        POD_BRACE_FRAME_THICKNESS = self.pod_sizes["general"]["brace_frame_thickness"]
+        POD_BIN_FLAP_HEIGHT       = self.pod_sizes["general"]["bin_flap_height"]
+        POD_BIN_WALL_THICKNESS    = self.pod_sizes["general"]["bin_wall_thickness"]
+        
+        POD_BIN_HEIGHTS          = self.pod_sizes[pod_id]["bin_heights"]
+        POD_BIN_WIDTH            = self.pod_sizes[pod_id]["bin_width"]
+        POD_BOTTOM_BIN_WIDTH     = self.pod_sizes[pod_id]["bottom_bin_width"]
+        POD_BIN_DEPTH            = self.pod_sizes[pod_id]["bin_depth"]
+        POD_TOP_BIN_DEPTH        = self.pod_sizes[pod_id]["top_bin_depth"]
+        POD_BIN_BOTTOM_THICKNESS = self.pod_sizes[pod_id]["bin_bottom_thickness"]
 
-    def add_pod_collision_geometry(self, pod_id=1):
-        '''
-        Includes collision boxes for each bin into MoveIt planning scene depending on pod's ID
-        pod_id = 1: pod of 13x4 small bins
-        pod_id = 2: pod of 8x3 large bins
-        '''
-        POD_BRACE_WIDTH = self.pod_sizes[f"pod{pod_id}_brace_width"]
-        POD_BIN_WIDTH = self.pod_sizes[f"pod{pod_id}_bin_width"]
-        POD_BINS_HEIGHT = sum(self.pod_sizes[f"pod{pod_id}_bin_heights"])
-        POD_BRACE_FRAME_WIDTH = self.pod_sizes[f"pod{pod_id}_brace_frame_width"]
-        POD_BRACE_FRAME_THICKNESS = self.pod_sizes[f"pod{pod_id}_brace_frame_thickness"]
-        POD_BIN_DEPTH = self.pod_sizes[f"pod{pod_id}_bin_depth"]
-        POD_BIN_WALL_THICKNESS = self.pod_sizes[f"pod{pod_id}_bin_wall_thickness"]
-        POD_BIN_BOTTOM_THICKNESS = self.pod_sizes[f"pod{pod_id}_bin_bottom_thickness"]
-        POD_BIN_FLAP_HEIGHT = self.pod_sizes[f"pod{pod_id}_bin_flap_height"]
-        NUM_COLUMNS = math.ceil(POD_BRACE_WIDTH / POD_BIN_WIDTH)
+        NUM_ROWS = len(POD_BIN_HEIGHTS)
+        if pod_id[1] == 'B' or pod_id[1] == 'D':
+            if pod_id[0] == '1':
+                X_OFFSET = POD_BRACE_WIDTH/2 - POD_BIN_WIDTH
+            elif pod_id[0] == '2':
+                X_OFFSET = (POD_BRACE_WIDTH - POD_BIN_WIDTH)/2
+                NUM_COLUMNS = 1 
+        elif pod_id[1] == 'A' or pod_id[1] == 'C':
+            X_OFFSET = 0
+            if pod_id[0] == '1':
+                NUM_COLUMNS = 4
+            elif pod_id[0] == '2':
+                NUM_COLUMNS = 3
 
         X_AXIS_QUAT = Quaternion(x=0, y=0, z=0, w=1)
-
 
         # Clear the scene from collision boxes
         self.remove_pod_collision_geometry()
 
         # SETUP POD BIN'S COLLISION BOXES
-        # COLUMNS
-        for i in range(NUM_COLUMNS + 1):
-            self.scene.add_box(f"col_{i+1:02d}", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_fabric_base"),
-                                                 pose=Pose(position=Point(x=i*POD_BIN_WIDTH, 
-                                                                          y=1/2*POD_BIN_DEPTH, 
-                                                                          z=1/2*POD_BINS_HEIGHT), orientation=X_AXIS_QUAT)), 
-                                                 (POD_BIN_WALL_THICKNESS, POD_BIN_DEPTH, POD_BINS_HEIGHT))
-        # ROWS
-        POD_BIN_Z_OFFSET_LIST = [0.0] + self.pod_sizes[f"pod{pod_id}_bin_heights"]
-        POD_BIN_NUM = len(POD_BIN_Z_OFFSET_LIST)
-        POD_BIN_Z_OFFSET = 0
-        for POD_BIN_ID, POD_BIN_HEIGHT in enumerate(POD_BIN_Z_OFFSET_LIST, start=1):
-            POD_BIN_Z_OFFSET += POD_BIN_HEIGHT
-            if POD_BIN_ID != POD_BIN_NUM:
-                self.scene.add_box(f"row_{POD_BIN_ID:02d}", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_fabric_base"),
-                                                            pose=Pose(position=Point(x=1/2*POD_BRACE_WIDTH, 
-                                                                                    y=1/2*POD_BIN_DEPTH, 
-                                                                                    z=POD_BIN_Z_OFFSET), orientation=X_AXIS_QUAT)), 
-                                                            (POD_BRACE_WIDTH, POD_BIN_DEPTH, POD_BIN_BOTTOM_THICKNESS))
-                # FLAPS
-                self.scene.add_box(f"flap_{POD_BIN_ID:02d}", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_fabric_base"),
-                                                            pose=Pose(position=Point(x=1/2*POD_BRACE_WIDTH, 
-                                                                                     y=0, 
-                                                                                     z=POD_BIN_Z_OFFSET+1/2*POD_BIN_FLAP_HEIGHT), orientation=X_AXIS_QUAT)), 
-                                                            (POD_BRACE_WIDTH, POD_BIN_WALL_THICKNESS, POD_BIN_FLAP_HEIGHT))
-            else:
-                self.scene.add_box(f"row_{POD_BIN_ID:02d}", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_fabric_base"),
-                                                            pose=Pose(position=Point(x=1/2*POD_BRACE_WIDTH, 
-                                                                                    y=1/2*POD_BIN_DEPTH, 
-                                                                                    z=POD_BIN_Z_OFFSET), orientation=X_AXIS_QUAT)), 
-                                                            (POD_BRACE_WIDTH, POD_BIN_DEPTH, POD_BIN_WALL_THICKNESS))                
+        Z_OFFSET = 0
+        for row_id in range(NUM_ROWS):
+            if pod_id[1] == 'B' or pod_id[1] == 'D':
+                BIN_DEPTH = POD_TOP_BIN_DEPTH if row_id == (NUM_ROWS - 1) else POD_BIN_DEPTH
+                if pod_id[0] == '1' and row_id == 0:
+                    BIN_WIDTH = POD_BOTTOM_BIN_WIDTH
+                    NUM_COLUMNS = 1
+                else:
+                    BIN_WIDTH = POD_BIN_WIDTH
+                    if pod_id[0] == '1':
+                        NUM_COLUMNS = 2
+                    elif pod_id[0] == '2':
+                        NUM_COLUMNS = 1            
+            elif pod_id[1] == 'A' or pod_id[1] == 'C':
+                BIN_WIDTH = POD_BIN_WIDTH
+                BIN_DEPTH = POD_BIN_DEPTH
+                if pod_id[0] == '1':
+                    NUM_COLUMNS = 4 
+                elif pod_id[0] == '2':
+                    NUM_COLUMNS = 3
 
-        self.scene.add_box(f"back_wall", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_fabric_base"),
-                                                     pose=Pose(position=Point(x=1/2*POD_BRACE_WIDTH, 
-                                                                              y=POD_BIN_DEPTH, 
-                                                                              z=1/2*POD_BINS_HEIGHT), orientation=X_AXIS_QUAT)), 
-                                                     (POD_BRACE_WIDTH, POD_BIN_WALL_THICKNESS, POD_BINS_HEIGHT))
+            # LEFT & RIGHT MARGINS (Applicable to B and C faces of pods)
+            if X_OFFSET != 0:
+                self.scene.add_box(name=f"left_margin_row{row_id+1:02d}", 
+                                   pose=PoseStamped(header=std_msgs.msg.Header(frame_id="pod_fabric_base"),
+                                                    pose=Pose(position=Point(x=X_OFFSET/2, 
+                                                                             y=POD_BIN_WALL_THICKNESS/2, 
+                                                                             z=Z_OFFSET + POD_BIN_HEIGHTS[row_id]/2), orientation=X_AXIS_QUAT)
+                                                    ), 
+                                   size=(X_OFFSET, POD_BIN_WALL_THICKNESS, POD_BIN_HEIGHTS[row_id]))
+                self.scene.add_box(name=f"right_margin_row{row_id+1:02d}", 
+                                   pose=PoseStamped(header=std_msgs.msg.Header(frame_id="pod_fabric_base"),
+                                                    pose=Pose(position=Point(x=POD_BRACE_WIDTH - X_OFFSET/2, 
+                                                                             y=POD_BIN_WALL_THICKNESS/2, 
+                                                                             z=Z_OFFSET + POD_BIN_HEIGHTS[row_id]/2), orientation=X_AXIS_QUAT)
+                                                    ), 
+                                   size=(X_OFFSET, POD_BIN_WALL_THICKNESS, POD_BIN_HEIGHTS[row_id]))
+                    
+            for col_id in range(NUM_COLUMNS):
+                # LEFT WALL
+                self.scene.add_box(name=f"left_wall_row{row_id+1:02d}_col{col_id+1:1d}", 
+                                   pose=PoseStamped(header=std_msgs.msg.Header(frame_id="pod_fabric_base"),
+                                                    pose=Pose(position=Point(x=X_OFFSET + col_id * BIN_WIDTH + POD_BIN_WALL_THICKNESS/2, 
+                                                                             y=BIN_DEPTH/2, 
+                                                                             z=Z_OFFSET + POD_BIN_HEIGHTS[row_id]/2), orientation=X_AXIS_QUAT)
+                                                    ), 
+                                   size=(POD_BIN_WALL_THICKNESS, BIN_DEPTH, POD_BIN_HEIGHTS[row_id]))
+                # RIGHT WALL
+                if col_id == NUM_COLUMNS - 1:
+                    self.scene.add_box(name=f"right_wall_row{row_id+1:02d}_col{col_id+1:1d}", 
+                                       pose=PoseStamped(header=std_msgs.msg.Header(frame_id="pod_fabric_base"),
+                                                        pose=Pose(position=Point(x=X_OFFSET + (col_id + 1) * BIN_WIDTH - POD_BIN_WALL_THICKNESS/2, 
+                                                                                 y=BIN_DEPTH/2, 
+                                                                                 z=Z_OFFSET + POD_BIN_HEIGHTS[row_id]/2), orientation=X_AXIS_QUAT)
+                                                        ), 
+                                       size=(POD_BIN_WALL_THICKNESS, BIN_DEPTH, POD_BIN_HEIGHTS[row_id]))
+                # BOTTOM
+                self.scene.add_box(name=f"bottom_row{row_id+1:02d}_col{col_id+1:1d}", 
+                                   pose=PoseStamped(header=std_msgs.msg.Header(frame_id="pod_fabric_base"),
+                                                    pose=Pose(position=Point(x=X_OFFSET + (2*col_id + 1) * BIN_WIDTH/2, 
+                                                                             y=BIN_DEPTH/2, 
+                                                                             z=Z_OFFSET + POD_BIN_BOTTOM_THICKNESS/2), orientation=X_AXIS_QUAT)
+                                                    ), 
+                                   size=(BIN_WIDTH, BIN_DEPTH, POD_BIN_BOTTOM_THICKNESS))
+                # TOP
+                self.scene.add_box(name=f"top_row{row_id+1:02d}_col{col_id+1:1d}", 
+                                   pose=PoseStamped(header=std_msgs.msg.Header(frame_id="pod_fabric_base"),
+                                                    pose=Pose(position=Point(x=X_OFFSET + (2*col_id + 1) * BIN_WIDTH/2, 
+                                                                             y=BIN_DEPTH/2, 
+                                                                             z=Z_OFFSET + POD_BIN_HEIGHTS[row_id] - POD_BIN_WALL_THICKNESS/2), orientation=X_AXIS_QUAT)
+                                                    ), 
+                                   size=(BIN_WIDTH, BIN_DEPTH, POD_BIN_WALL_THICKNESS))
+                # BACK WALL
+                if include_backwall:
+                    self.scene.add_box(name=f"back_wall_row{row_id+1:02d}_col{col_id+1:1d}", 
+                                       pose=PoseStamped(header=std_msgs.msg.Header(frame_id="pod_fabric_base"),
+                                                        pose=Pose(position=Point(x=X_OFFSET + (2*col_id + 1) * BIN_WIDTH/2, 
+                                                                                 y=BIN_DEPTH - POD_BIN_WALL_THICKNESS/2, 
+                                                                                 z=Z_OFFSET + POD_BIN_HEIGHTS[row_id]/2), orientation=X_AXIS_QUAT)
+                                                        ), 
+                                       size=(BIN_WIDTH, POD_BIN_WALL_THICKNESS, POD_BIN_HEIGHTS[row_id]))
+                # FLAPS
+                if include_flaps:
+                    self.scene.add_box(name=f"flap_row{row_id+1:02d}_col{col_id+1:1d}", 
+                                       pose=PoseStamped(header=std_msgs.msg.Header(frame_id="pod_fabric_base"),
+                                                        pose=Pose(position=Point(x=X_OFFSET + (2*col_id + 1) * BIN_WIDTH/2, 
+                                                                                 y=POD_BIN_WALL_THICKNESS/2, 
+                                                                                 z=Z_OFFSET + POD_BIN_FLAP_HEIGHT/2), orientation=X_AXIS_QUAT)
+                                                        ), 
+                                       size=(BIN_WIDTH, POD_BIN_WALL_THICKNESS, POD_BIN_FLAP_HEIGHT))
+                    
+            Z_OFFSET += POD_BIN_HEIGHTS[row_id]    
+        
+        # LEFTSIDE BRACE FRAME
+        self.scene.add_box(name=f"brace_leftside_frame", 
+                           pose=PoseStamped(header=std_msgs.msg.Header(frame_id="pod_fabric_base"),
+                                            pose=Pose(position=Point(x=1/2 * POD_BRACE_FRAME_WIDTH, 
+                                                                     y=1/2 * POD_BRACE_FRAME_THICKNESS, 
+                                                                     z=1/2 * sum(POD_BIN_HEIGHTS)), orientation=X_AXIS_QUAT)
+                                            ), 
+                           size=(POD_BRACE_FRAME_WIDTH, POD_BRACE_FRAME_THICKNESS, sum(POD_BIN_HEIGHTS)))
+        # RIGHTSIDE BRACE FRAME  
+        self.scene.add_box(name=f"brace_side_frame", 
+                           pose=PoseStamped(header=std_msgs.msg.Header(frame_id="pod_fabric_base"),
+                                            pose=Pose(position=Point(x=POD_BRACE_WIDTH - 1/2 * POD_BRACE_FRAME_WIDTH, 
+                                                                     y=1/2 * POD_BRACE_FRAME_THICKNESS, 
+                                                                     z=1/2 * sum(POD_BIN_HEIGHTS)), orientation=X_AXIS_QUAT)
+                                            ), 
+                           size=(POD_BRACE_FRAME_WIDTH, POD_BRACE_FRAME_THICKNESS, sum(POD_BIN_HEIGHTS))) 
+
                                 
-        self.scene.add_box(f"pod_brace_leftside_frame", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_fabric_base"),
-                                                        pose=Pose(position=Point(x=1/2*POD_BRACE_FRAME_WIDTH, 
-                                                                                 y=1/2*POD_BRACE_FRAME_THICKNESS, 
-                                                                                 z=1/2*POD_BINS_HEIGHT), orientation=X_AXIS_QUAT)), 
-                                                        (POD_BRACE_FRAME_WIDTH, POD_BRACE_FRAME_THICKNESS, POD_BINS_HEIGHT))      
-        self.scene.add_box(f"pod_brace_rightside_frame", PoseStamped(header=std_msgs.msg.Header(frame_id="pod_fabric_base"),
-                                                         pose=Pose(position=Point(x=POD_BRACE_WIDTH-1/2*POD_BRACE_FRAME_WIDTH, 
-                                                                                  y=1/2*POD_BRACE_FRAME_THICKNESS, 
-                                                                                  z=1/2*POD_BINS_HEIGHT), orientation=X_AXIS_QUAT)), 
-                                                         (POD_BRACE_FRAME_WIDTH, POD_BRACE_FRAME_THICKNESS, POD_BINS_HEIGHT)) 
+        

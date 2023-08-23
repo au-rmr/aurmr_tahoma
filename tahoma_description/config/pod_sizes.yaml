@@ -1,0 +1,88 @@
+{
+    general: { # Universal pod sizes, in reality
+        brace_frame_thickness: 0.005,
+        brace_frame_width: 0.033,
+        base_frame_width: 0.041,
+        base_width: 0.9400, # In .stl file: 0.9398
+        brace_width: 0.9390, # In .stl file: 0.9188
+        base_height: 0.265, # In .stl file: 0.295
+        brace_height: 2.308, # In .stl file: 2.311
+        brace_to_fabric_XY_offset: 0.004, # In .stl file: 0.010
+        bin_flap_height: 0.032, # In recipe: 0.026 or 0.022
+        bin_wall_thickness: 0.002,
+    },
+
+    1A: { # (13x4) Ref. -> pod1_recipe_790-00265-021.txt "bindDimensions" : A1-A13. corresponds to reality. Current face
+        bin_heights: [0.223, 0.146, 0.197, 0.146, 0.121, 0.223, 0.121, 0.146, 0.121, 0.223, 0.121, 0.146, 0.261],
+        bin_bottom_thickness: 0.005,
+        bin_width: 0.234,
+        bottom_bin_width: 0.000,
+        bin_depth: 0.152, 
+        top_bin_depth: 0.000,
+        brace_to_fabric_z_offset: 0.085,
+    },
+    1B: { # (8x2) Ref. -> pod1_recipe_790-00265-021.txt "bindDimensions" : B1-B8. corresponds to reality
+        bin_heights: [0.346, 0.244, 0.219, 0.295, 0.219, 0.320, 0.244, 0.308],
+        bin_bottom_thickness: 0.007,
+        bin_width: 0.316,
+        bottom_bin_width: 0.633,
+        bin_depth: 0.470, 
+        top_bin_depth: 0.368,
+        brace_to_fabric_z_offset: 0.085,
+    },
+    1C: { # (12x4) Ref. -> pod1_recipe_790-00265-021.txt "bindDimensions" : C1-C12. haven't been measured in reality
+        bin_heights: [0.223, 0.146, 0.223, 0.146, 0.197, 0.146, 0.121, 0.223, 0.146, 0.223, 0.146, 0.261],
+        bin_bottom_thickness: 0.005,
+        bin_width: 0.234,
+        bottom_bin_width: 0.000,
+        bin_depth: 0.152, 
+        top_bin_depth: 0.000,
+        brace_to_fabric_z_offset: 0.085,
+    },
+    1D: { # (7x2) Ref. -> pod1_recipe_790-00265-021.txt "bindDimensions" : D1-D7. corresponds to reality
+        bin_heights: [0.346, 0.320, 0.320, 0.269, 0.320, 0.320, 0.308],
+        bin_bottom_thickness: 0.007,
+        bin_width: 0.316,
+        bottom_bin_width: 0.633,
+        bin_depth: 0.470, 
+        top_bin_depth: 0.368,
+        brace_to_fabric_z_offset: 0.085,
+    },
+
+    2A: { # (8x3) Ref. -> pod2_recipe_790-00265-022.txt "bindDimensions" : A1-A8 with minor changes corresponding to reality. Henry using face
+        bin_heights: [0.346, 0.295, 0.250, 0.225, 0.250, 0.275, 0.325, 0.275], # In recipe: [0.346, 0.295, 0.244, 0.219, 0.244, 0.269, 0.320, 0.257]
+        bin_bottom_thickness: 0.007,
+        bin_width: 0.313,
+        bottom_bin_width: 0.000,
+        bin_depth: 0.356, 
+        top_bin_depth: 0.000,
+        brace_to_fabric_z_offset: 0.035,
+    },
+    2B: { # (8x1) Ref. -> pod2_recipe_790-00265-022.txt "bindDimensions" : B1-B8. haven't been measured in reality
+        bin_heights: [0.346, 0.244, 0.219, 0.295, 0.219, 0.320, 0.244, 0.308],
+        bin_bottom_thickness: 0.007,
+        bin_width: 0.229,
+        bottom_bin_width: 0.000,
+        bin_depth: 0.470, 
+        top_bin_depth: 0.368,
+        brace_to_fabric_z_offset: 0.035,
+    },
+    2C: { # (8x3) Ref. -> pod2_recipe_790-00265-022.txt "bindDimensions" : C1-C8. haven't been measured in reality
+        bin_heights: [0.320, 0.295, 0.244, 0.219, 0.295, 0.269, 0.295, 0.257],
+        bin_bottom_thickness: 0.007,
+        bin_width: 0.313,
+        bottom_bin_width: 0.000,
+        bin_depth: 0.356, 
+        top_bin_depth: 0.000,
+        brace_to_fabric_z_offset: 0.035,
+    },
+    2D: { # (7x1) Ref. -> pod2_recipe_790-00265-022.txt "bindDimensions" : D1-D7. haven't been measured in reality
+        bin_heights: [0.346, 0.320, 0.320, 0.269, 0.320, 0.320, 0.308],
+        bin_bottom_thickness: 0.007,
+        bin_width: 0.229,
+        bottom_bin_width: 0.000,
+        bin_depth: 0.470, 
+        top_bin_depth: 0.368,
+        brace_to_fabric_z_offset: 0.035,
+    },
+}

@@ -12,7 +12,6 @@ import math
 import random
 import std_msgs
 import rospy
-import xacro
 import copy
 import numpy as np
 
@@ -36,7 +35,7 @@ from aurmr_tasks.pod import BIN_IDS_1, BIN_IDS_2
 
 
 def main(TEST_MODE:int, 
-         pod_id:int,
+         pod_id:str,
          BIN_POSE_RAND_N:int, 
          dRoll:float, dPitch:float, dYaw:float, 
          SSL:int, vis_path:bool,  vis_pose:bool,
@@ -63,7 +62,7 @@ def main(TEST_MODE:int,
     # dRoll = dRoll/2 if dRoll != 0 else 0.001
     # # Redefine dRoll to use sampling weight function (sigmoids)
     # dPitch = dPitch/2 if dPitch != 0 else 0.001
-    # pod_id = int(pod_id[0])
+    pod_id = int(pod_id[0])
     POD_BIN_HEIGHTS = robot.pod_sizes[f"pod{pod_id}_bin_heights"]
     POD_BIN_FLAP_HEIGHT = robot.pod_sizes[f"pod{pod_id}_bin_flap_height"]
     POD_BIN_WIDTH = robot.pod_sizes[f"pod{pod_id}_bin_width"]
@@ -209,7 +208,7 @@ def main(TEST_MODE:int,
     #reachability test for bin inner poses
     if (reachability):
         print("\nDetermining reachable bins...\n")
-
+        input()
         for i, pose in enumerate(BIN_INNER_POSES[LOW_ROW*NUM_COLUMNS*BIN_POSE_RAND_N : UP_ROW*NUM_COLUMNS*BIN_POSE_RAND_N]):
             row_id = i // (NUM_COLUMNS * BIN_POSE_RAND_N) + 1 + LOW_ROW
             column_id = (i // BIN_POSE_RAND_N) % NUM_COLUMNS + 1
@@ -350,13 +349,17 @@ def pod_pose_sub_callback(TFmessage):
     return transform"""
 
 
-def spawn_model(model_name:str='pod', x:float=0.832, y:float=0.4125, pod_id:int=1):
-    # load xacro file and parse it
+def spawn_model(model_name: str='pod', x: float=0.832, y: float=0.4125, podface_id: str='1A', include_flaps: str="true"):
+    import subprocess
+    # load xacro file and parse it to create urdf file
     rospack = rospkg.RosPack()
-    xacro_path = os.path.join(rospack.get_path('aurmr_gazebo'), 'robots', f'pod{pod_id}.gazebo.xacro')
-    doc = xacro.parse(open(xacro_path))
-    xacro.process_doc(doc, in_order=True, params={'id': pod_id})
-    model_description = doc.toprettyxml(indent='  ')
+    xacro_path = os.path.join(rospack.get_path('aurmr_gazebo'), 'robots/pod.gazebo.xacro')
+    
+    xacro_args = f"id:={podface_id} include_flaps:={include_flaps}"
+    command = f"xacro {xacro_path} {xacro_args}"
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
+    model_description, err = process.communicate()
+    model_description = model_description.decode('utf-8')
 
     try:    
         # spawn model in gazebo
@@ -433,7 +436,7 @@ if __name__ == '__main__':
     pod_pose_sub = rospy.Subscriber('/tf_static', TFMessage, pod_pose_sub_callback)
 
 
-    print("[ANALYZE_WORKSPACE]  Getting parameters(test_mode, random_pose_number, RPY, ssl)...")
+    print("[ANALYZE_WORKSPACE] Getting parameters(test_mode, random_pose_number, RPY, ssl)...")
     test_mode = rospy.get_param("~test_mode", 0) # test_mode = 0: Reachibility | test_mode = 1: Manipulability
     bin_pose_randN = rospy.get_param("~bin_pose_randN", 2) # Number of random pre-grasp poses for each bin
     dRoll = rospy.get_param("~dRoll", 8) # Roll change (overall) in random pre-grasp pose generation (degrees)
@@ -458,7 +461,8 @@ if __name__ == '__main__':
     vis_path = rospy.get_param("~vis_path", False) # vis_path = True: Visualize path from 'home' pose to pre-grasp pose. 'home' - gripped object drop pose
     vis_pose = rospy.get_param("~vis_pose", False)
 
-    pod_id = rospy.get_param("~pod_id", 1)
+    podface_id = rospy.get_param("~podface_id", '1A')
+    include_flaps = rospy.get_param("~include_flaps", '1A')
     # Pod positon in centimeters
     xStart = rospy.get_param("~x_start", 60)
     xStop = rospy.get_param("~x_stop", 70)
@@ -474,13 +478,13 @@ if __name__ == '__main__':
             for pod_x in range(xStart, xStop, xStep):
                 for pod_y in range(yStart, yStop, yStep):
                     print("[ANALYZE_WORKSPACE] Spawning model...")
-                    spawn_model(model_name='pod', x=pod_x/1000, y=pod_y/1000, pod_id=pod_id)
+                    spawn_model(model_name='pod', x=pod_x/1000, y=pod_y/1000, podface_id=podface_id, include_flaps=include_flaps)
                     rospy.sleep(1)
-                    robot.add_pod_collision_geometry(pod_id=pod_id)
+                    robot.add_pod_collision_geometry(podface_id, include_backwall=False, include_flaps=False)
+                    input()
                     robot.move_to_joint_angles(joints=robot.home_state.joint_state, startpoint='current')
-                
                     score = main(TEST_MODE=test_mode,
-                                 pod_id=pod_id,
+                                 pod_id=podface_id,
                                  BIN_POSE_RAND_N=bin_pose_randN, 
                                  dRoll=dRoll, dPitch=dPitch, dYaw=dYaw, 
                                  SSL=int(SSL), vis_path=vis_path, vis_pose=vis_pose,
