@@ -1,0 +1,148 @@
+                 <?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="shelf_stack">
+  <xacro:include filename="$(find tahoma_description)/urdf/shifted_box.xacro"/>
+  <xacro:macro name="shelf_stack" params="prefix:=pod_
+                                       BIN_WALL_THICKNESS:=0.002
+                                       BIN_FLAP_HEIGHT:=0.032
+                                       shelf_depths
+                                       BIN_BOTTOM_THICKNESS:=0.007
+                                       bin_heights
+                                       num_columns
+                                       shelf_width
+                                       ">
+    <xacro:property name="alphabet" value="abcdefghijklmnopqrstuvwxyz"/>
+
+    <xacro:macro name="bin" params="prefix colrow_id width depth height right_wall:=true top_wall:=true">
+      <xacro:property name="bin_name" value="${prefix}bin_${colrow_id}"/>
+      <link name="${bin_name}"/>
+
+      <xacro:shifted_box name="${bin_name}_bottom" x_len="${width}" y_len="${depth}" z_len="${BIN_BOTTOM_THICKNESS}"/>
+      <joint name="${bin_name}_${bin_name}_bottom" type="fixed">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="${bin_name}"/>
+        <child link="${bin_name}_bottom"/>
+      </joint>
+
+      <xacro:shifted_box name="${bin_name}_left" x_len="${BIN_WALL_THICKNESS}" y_len="${depth}" z_len="${height}"/>
+      <joint name="${bin_name}_${bin_name}_left" type="fixed">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="${bin_name}"/>
+        <child link="${bin_name}_left"/>
+      </joint>
+
+      <xacro:shifted_box name="${bin_name}_back" x_len="${width}" y_len="${BIN_WALL_THICKNESS}" z_len="${height}"/>
+      <joint name="${bin_name}_${bin_name}_back" type="fixed">
+        <origin xyz="0 ${depth} 0" rpy="0 0 0"/>
+        <parent link="${bin_name}"/>
+        <child link="${bin_name}_back"/>
+      </joint>
+
+      <xacro:shifted_box name="${bin_name}_flap" x_len="${width}" y_len="${BIN_WALL_THICKNESS}"
+                         z_len="${BIN_FLAP_HEIGHT}"/>
+      <joint name="${bin_name}_${bin_name}_flap" type="fixed">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="${bin_name}"/>
+        <child link="${bin_name}_flap"/>
+      </joint>
+
+      <xacro:if value="${right_wall}">
+        <xacro:shifted_box name="${bin_name}_right" x_len="${BIN_WALL_THICKNESS}" y_len="${depth}" z_len="${height}"/>
+        <joint name="${bin_name}_${bin_name}_right" type="fixed">
+          <origin xyz="${width} 0 0" rpy="0 0 0"/>
+          <parent link="${bin_name}"/>
+          <child link="${bin_name}_right"/>
+        </joint>
+      </xacro:if>
+
+      <xacro:if value="${top_wall}">
+        <xacro:shifted_box name="${bin_name}_top" x_len="${width}" y_len="${depth}" z_len="${BIN_WALL_THICKNESS}"/>
+        <joint name="${bin_name}_${bin_name}_top" type="fixed">
+          <origin xyz="0 0 ${height}" rpy="0 0 0"/>
+          <parent link="${bin_name}"/>
+          <child link="${bin_name}_top"/>
+        </joint>
+      </xacro:if>
+    </xacro:macro>
+
+
+    <xacro:macro name="bin_row"
+                 params="prefix row_id bin_row_base sections bin_width bin_depth bin_height i:=0 top_shelf:=false">
+      <xacro:property name="bin_name" value="${prefix}bin_${i+1}${row_id}"/>
+
+      <xacro:if value="${sections == 1}">
+        <xacro:property name="rightmost" value="true"/>
+      </xacro:if>
+      <xacro:unless value="${sections == 1}">
+        <xacro:property name="rightmost" value="false"/>
+      </xacro:unless>
+      <xacro:bin prefix="${prefix}" colrow_id="${i+1}${row_id}" right_wall="${rightmost}" top_wall="${top_shelf}"
+                 width="${bin_width}" depth="${bin_depth}" height="${bin_height}"/>
+
+      <joint name="${bin_row_base}_${bin_name}_joint" type="fixed">
+        <origin xyz="${bin_width * i} 0 0"/>
+        <parent link="${bin_row_base}"/>
+        <child link="${bin_name}"/>
+      </joint>
+
+      <xacro:if value="${sections > 1}"><!-- recurse for the remaining bins -->
+        <xacro:bin_row prefix="${prefix}" row_id="${row_id}" bin_row_base="${bin_row_base}" sections="${sections-1}"
+                       i="${i+1}" top_shelf="${top_shelf}"
+                       bin_width="${bin_width}" bin_depth="${bin_depth}"
+                       bin_height="${bin_height}"/><!-- no prefix passing -->
+      </xacro:if>
+    </xacro:macro>
+
+
+    <xacro:macro name="shelf" params="prefix row_id bin_width shelf_depth shelf_height sections:=4 top_shelf:=false">
+      <xacro:property name="shelf_name" value="${prefix}shelf_${row_id}"/>
+
+      <link name="${shelf_name}"/>
+      <xacro:bin_row prefix="${prefix}" row_id="${row_id}" bin_row_base="${shelf_name}" sections="${sections}"
+                     top_shelf="${top_shelf}"
+                     bin_width="${bin_width}" bin_depth="${shelf_depth}"
+                     bin_height="${shelf_height}"/><!-- no prefix passing -->
+
+    </xacro:macro>
+
+
+    <xacro:macro name="shelf_stack_impl" params="prefix
+    shelf_stack_base
+    shelf_heights
+    shelf_width
+    shelf_depths
+    num_columns
+    z_offset:=0
+    i:=0">
+      <xacro:property name="shelf_height" value="${shelf_heights[0]}"/>
+      <xacro:property name="shelf_name" value="${prefix}shelf_${alphabet[i]}"/>
+
+      <xacro:if value="${len(shelf_heights) == 1}">
+        <xacro:property name="top_shelf" value="true"/>
+      </xacro:if>
+      <xacro:unless value="${len(shelf_heights) == 1}">
+        <xacro:property name="top_shelf" value="false"/>
+      </xacro:unless>
+
+      <xacro:shelf prefix="${prefix}" row_id="${alphabet[i]}" sections="${num_columns[0]}"
+                   bin_width="${shelf_width / num_columns[0]}" shelf_depth="${shelf_depths[0]}"
+                   shelf_height="${shelf_height}" top_shelf="${top_shelf}"/>
+
+      <joint name="${shelf_stack_base}_${shelf_name}_joint" type="fixed">
+        <origin xyz="0 0 ${z_offset}"/>
+        <parent link="${shelf_stack_base}"/>
+        <child link="${shelf_name}"/>
+      </joint>
+
+      <xacro:if value="${len(shelf_heights) > 1}"><!-- recurse for the remaining shelves-->
+        <xacro:shelf_stack_impl prefix="${prefix}" shelf_stack_base="${shelf_stack_base}"
+                                shelf_heights="${shelf_heights[1:]}" shelf_width="${shelf_width}"
+                                shelf_depths="${shelf_depths[1:]}" num_columns="${num_columns[1:]}"
+                                z_offset="${z_offset + shelf_heights[0]}" i="${i+1}"/><!-- no prefix passing -->
+      </xacro:if>
+    </xacro:macro>
+
+    <xacro:shelf_stack_impl prefix="${prefix}" shelf_stack_base="${prefix}fabric_base" shelf_heights="${bin_heights}"
+                            shelf_width="${shelf_width}" shelf_depths="${shelf_depths}" num_columns="${num_columns}"/>
+    <!-- Frame is at the front bottom left corner of each bin -->
+  </xacro:macro>
+</robot>

@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="pod_frame">
+  <xacro:macro name="pod_frame" params="prefix:=pod_
+                                       BASE_WIDTH:=0.9400
+                                       BASE_HEIGHT:=0.265
+                                       BRACE_WIDTH:=0.9390
+                                       BRACE_HEIGHT:=2.308
+                                       ">
+    <!-- Pod's frame sizes (meters), universal for all pods in the Robotics Lab -->
+    <!-- BASE_WIDTH: 0.9398 in .stl file, but in reality - 0.9400 -->
+    <!-- BASE_HEIGHT: 0.295 in .stl file, but in reality - 0.265 -->
+    <!-- BRACE_WIDTH: 0.9188 in .stl file, but in reality - 0.9390 -->
+    <!-- BRACE_HEIGHT: 2.311 in .stl file, but in reality 2.308 -->
+
+    <material name="aluminum">
+      <color rgba=".6 .6 .6 1"/>
+    </material>
+
+
+    <link name="${prefix}base_link">
+      <inertial>
+        <mass value="30.0"/>
+        <inertia ixx="0.0002835" ixy="0.0" ixz="0.0" iyy="0.0002835" iyz="0.0" izz="0.000324"/>
+      </inertial>
+      <visual>
+        <origin rpy="0 0 0" xyz="${BASE_WIDTH / 2} ${BASE_WIDTH / 2} ${(BRACE_HEIGHT + BASE_HEIGHT) / 2}"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/pod/pod_frame.stl"/>
+        </geometry>
+        <material name="aluminum"/>
+      </visual>
+      <collision>
+        <origin rpy="0 0 0" xyz="${BASE_WIDTH / 2} ${BASE_WIDTH / 2} ${(BRACE_HEIGHT + BASE_HEIGHT) / 2}"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/pod/pod_frame.stl"/>
+        </geometry>
+      </collision>
+    </link>
+
+
+    <link name="${prefix}brace"/>
+    <joint name="${prefix}base_link_${prefix}brace_joint" type="fixed">
+      <origin xyz="0 0 ${BASE_HEIGHT}"/>
+      <parent link="${prefix}base_link"/>
+      <child link="${prefix}brace"/>
+    </joint>
+
+  </xacro:macro>
+</robot>
