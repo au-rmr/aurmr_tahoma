@@ -1,3 +1,4 @@
+import os
 from operator import truediv
 import numpy as np
 import torch
@@ -20,12 +21,21 @@ import time
 from aurmr_unseen_object_clustering.srv import GetSegmentationUOIS
 import rospy
 import imutils
+import pickle
 
-import os
 
 rectangle = None
 
-UOC_PATH = '/home/aurmr/workspaces/uois_soofiyan_ws/src/aurmr_tahoma/aurmr_unseen_object_clustering/src/aurmr_unseen_object_clustering/'
+import os
+
+workspace_name = os.environ.get('WORKSPACE_NAME', None)
+if not workspace_name:
+    print("ERROR. Unableto get workspace name.")
+    sys.exit(1)
+
+workspace_path = os.path.expanduser(f'~/workspaces/{workspace_name}/')
+
+UOC_PATH = f'{workspace_path}/src/aurmr_tahoma/aurmr_unseen_object_clustering/src/aurmr_unseen_object_clustering/'
 
 NO_OBJ_STORED = 1
 UNDERSEGMENTATION = 2
@@ -49,62 +59,28 @@ PIXEL_MEANS = np.array([[[102.9801, 115.9465, 122.7717]]])
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning) 
 
-# bin bounds {'item': min_image_height, max_image_height, min_image_width, max_width}
-
-# bin_bounds = {'3fold':[780, 1010, 1070, 1320],
-#           '3d':[2300, 2600, 2150, 2630],
-#           '3f':[1600, 2000, 2130, 2630],
-#           '3d_small':[1150,1300,1070,1320],
-#           '2f_old':[780, 1010, 830, 1080],
-#           '2f':[1580, 2000, 1650, 2140],
-#           '2d':[2300, 2600, 1650, 2150],
-#           '2h':[1050, 1280, 1660, 2130]}
-
-# not reachable: 1d, 
-#317 296 407 353
-#1268 1184 1628 1412
+with open('/tmp/calibration_pixel_coords_pod_a.pkl', 'rb') as f:
+    loaded_pixel_coords = pickle.load(f)
 
 bin_bounds = {
-          '1H':[297*4, 353*4, 315*4, 406*4],
-          '2H':[300*4, 355*4, 409*4, 514*4],
-          '3H':[303*4, 356*4, 515*4, 620*4],
-          '4H':[302*4, 355*4, 619*4, 711*4],
-          '1G':[365*4, 409*4, 315*4, 405*4],
-          '2G':[367*4, 407*4, 407*4, 512*4],
-          '3G':[370*4, 411*4, 513*4, 619*4],
-          '4G':[371*4, 412*4, 619*4, 711*4],
-          '1F':[420*4, 514*4, 314*4, 405*4],
-          '2F':[424*4, 511*4, 407*4, 512*4],
-          '3F':[425*4, 515*4, 515*4, 620*4],    
-          '4F':[426*4, 514*4, 621*4, 714*4],
-          '1E':[527*4, 572*4, 311*4, 405*4],
-          '2E':[529*4, 571*4, 407*4, 513*4],
-          '3E':[527*4, 574*4, 515*4, 620*4],
-          '4E':[531*4, 574*4, 622*4, 714*4],
+          '1H':loaded_pixel_coords['1H'],
+          '2H':loaded_pixel_coords['2H'],
+          '3H':loaded_pixel_coords['3H'],
+          '4H':loaded_pixel_coords['4H'],
+          '1G':loaded_pixel_coords['1G'],
+          '2G':loaded_pixel_coords['2G'],
+          '3G':loaded_pixel_coords['3G'],
+          '4G':loaded_pixel_coords['4G'],
+          '1F':loaded_pixel_coords['1F'],
+          '2F':loaded_pixel_coords['2F'],
+          '3F':loaded_pixel_coords['3F'],    
+          '4F':loaded_pixel_coords['4F'],
+          '1E':loaded_pixel_coords['1E'],
+          '2E':loaded_pixel_coords['2E'],
+          '3E':loaded_pixel_coords['3E'],
+          '4E':loaded_pixel_coords['4E'],
             }
-
-# bin_bounds = {
-#           '1H':[1187, 1409, 1292, 1649],
-#           '2H':[1203, 1403, 1659, 2075],
-#           '3H':[1203, 1405, 2081, 2498],
-#           '4H':[1203, 1403, 2504, 2872],
-#           '1G':[1469, 1632, 1291, 1641],
-#           '2G':[1477, 1619, 1657, 2068],
-#           '3G':[1475, 1628, 2077, 2502],
-#           '4G':[1482, 1625, 2502, 2874],
-#           '1F':[1700, 2046, 1280, 1638],
-#           '2F':[1712, 2028, 1652, 2070],
-#           '3F':[1704, 2043, 2072, 2496],    
-#           '4F':[1702, 2040, 2506, 2880],
-#           '1E':[2119, 2278, 1275, 1639],
-#           '2E':[2122, 2259, 1647, 2079],
-#           '3E':[2107, 2270, 2078, 2503],
-#           '4E':[2116, 2271, 2510, 2886],
-#           '1D':[412*4, 451*4, 295*4, 380*4],
-#           '2D':[412*4, 451*4, 395*4, 480*4],
-#           '3D':[412*4, 451*4, 495*4, 580*4],
-#           '4D':[412*4, 451*4, 595*4, 680*4],
-#             }
+print(bin_bounds)
 
 def_config = {
     # Model Parameters
@@ -358,8 +334,10 @@ class SegNet:
         #     bg_mask_now = cv2.resize(bin.bg_mask.astype(np.uint8), (256, 256), interpolation=cv2.INTER_AREA)
 
         rgb_segment = rgb.astype(np.uint8)
-
-        path = "/home/aurmr/workspaces/uois_multi_frame_ws/src/uois_service_multi_demo/dataset/"+bin_id+"/"
+        
+        path = f"{workspace_path}/src/uois_service_multi_demo/dataset/{bin_id}"
+        os.makedirs(path, exist_ok=True)
+        #path = "/home/aurmr/workspaces/uois_multi_frame_ws/src/uois_service_multi_demo/dataset/"+bin_id+"/"
         files = os.listdir(path)
         indices = [int(f.split('_')[-1].split('.')[0]) for f in files if f.startswith('color_') and f.endswith('.npy')]
         if indices:
@@ -383,9 +361,12 @@ class SegNet:
         # mask, embed = self.uois_segmentation(reshaped_img, rgb_segment.shape[0], rgb_segment.shape[1])
         mask, embed = self.uois_segmentation(bin_id)
 
-        mask = np.asarray(mask).astype(np.uint8).reshape(rgb_segment.shape[0], rgb_segment.shape[1])
+        try:
+            mask = np.asarray(mask).astype(np.uint8).reshape(rgb_segment.shape[0], rgb_segment.shape[1])
+        except:
+            mask = np.zeros((rgb_segment.shape[0], rgb_segment.shape[1]), dtype = np.uint8)
         embed = np.asarray(embed).astype(np.float64)
-        print(embed)
+        # print(embed)
         if(np.max(mask) > 0):
             embed = embed.reshape(int(len(embed)/256), 256)
         
@@ -462,7 +443,7 @@ class SegNet:
                     mask_recs[i, j] = score
                 except:
                     print(np.max(mask1), np.max(mask2))
-                    print(embed1, embed2)
+                    # print(embed1, embed2)
                     print(score)
                 if(score > max_score):
                     max_score = score
@@ -796,9 +777,9 @@ class SegNet:
         # Find the recommended matches between the two frames
         if bin.last['mask'] is not None:
             recs, match_failed, row_recs = self.match_masks_using_embeddings(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop, bin.last['embeddings'], embeddings)
-            recs_, sift_failed_, row_recs_ = self.match_masks_using_sift(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
+            # recs_, sift_failed_, row_recs_ = self.match_masks_using_sift(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
 
-            print("matching method embeddings and sift", recs, recs_)
+            # print("matching method embeddings and sift", recs, recs_)
 
             if(match_failed):
                 print(f"WARNING: Embeddings Matching Failure on bin {bin_id}. But not Appending to bad bins yet.")
@@ -913,8 +894,8 @@ class SegNet:
 
         # Find object correspondence between scenes
         recs, match_failed, row_recs = self.match_masks_using_embeddings(bin.last['rgb'],bin.current['rgb'], old_mask, mask_crop, old_embeddings, embeddings)
-        recs_, sift_failed_, row_recs_ = self.match_masks_using_sift(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
-        print("matching method embeddings and sift", recs, recs_)
+        # recs_, sift_failed_, row_recs_ = self.match_masks_using_sift(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
+        # print("matching method embeddings and sift", recs, recs_)
         
         if(match_failed):
             print(f"WARNING: Embeddings Matching Failure on bin {bin_id}. But not Appending to bad bins yet.")
@@ -995,8 +976,8 @@ class SegNet:
         # Find the recommended matches between the two frames
         if bin.last['mask'] is not None:
             recs, match_failed, row_recs = self.match_masks_using_embeddings(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop, bin.last['embeddings'], embeddings)
-            recs_, sift_failed_, row_recs_ = self.match_masks_using_sift(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
-            print("matching method embeddings and sift", recs, recs_)
+            # recs_, sift_failed_, row_recs_ = self.match_masks_using_sift(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
+            # print("matching method embeddings and sift", recs, recs_)
 
             if(match_failed):
                 print(f"WARNING: Embeddings Matching Failure on bin {bin_id}. But not Appending to bad bins yet.")
