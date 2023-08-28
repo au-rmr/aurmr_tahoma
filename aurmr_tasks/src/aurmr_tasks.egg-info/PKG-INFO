@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: aurmr-tasks
+Version: 1.0.0
+Summary: State machines for tasks
+Author: AURMR Contributors
+Author-email: amazon-manipulation@cs.washington.edu
+Maintainer: AURMR Contributors
+Maintainer-email: amazon-manipulation@cs.washington.edu
+License: MIT
