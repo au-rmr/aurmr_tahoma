@@ -1,3 +1,5 @@
+import os
+
 import struct
 import numpy as np
 import torch
@@ -34,6 +36,8 @@ hyperparams = {
 import cv2
 
 # Change to reflect the path to the UOC directory
+
+
 UOC_PATH = '/home/aurmr/workspaces/uois_soofiyan_ws/src/aurmr_tahoma/aurmr_unseen_object_clustering/src/aurmr_unseen_object_clustering/'
 class clustering_network:
     def __init__(self, bin='3f', camera='azure', dir=UOC_PATH, model='std_200_24_checkpoint.pth'):
