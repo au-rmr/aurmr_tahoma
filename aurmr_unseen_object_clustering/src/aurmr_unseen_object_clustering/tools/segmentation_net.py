@@ -23,18 +23,13 @@ import rospy
 import imutils
 import pickle
 
+from aurmr_setup.utils.workspace_utils import get_active_workspace_path
+
 
 rectangle = None
 
-import os
 
-workspace_name = os.environ.get('WORKSPACE_NAME', None)
-if not workspace_name:
-    print("ERROR. Unableto get workspace name.")
-    sys.exit(1)
-
-workspace_path = os.path.expanduser(f'~/workspaces/{workspace_name}/')
-
+workspace_path = get_active_workspace_path()
 UOC_PATH = f'{workspace_path}/src/aurmr_tahoma/aurmr_unseen_object_clustering/src/aurmr_unseen_object_clustering/'
 
 NO_OBJ_STORED = 1
