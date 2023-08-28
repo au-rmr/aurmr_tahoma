@@ -18,6 +18,7 @@ add_service_files(
   GetObjectPoints.srv
   ResetBin.srv
   DetectGraspPoses.srv
+  LoadDataset.srv
 )
 
 generate_messages(

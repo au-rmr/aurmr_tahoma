@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="camera_mount_tilted">
+  <xacro:macro name="camera_mount_tilted" params="prefix side rotated:=1">
+    <xacro:if value="${rotated == 1}">
+      <!-- Center of the middle column of holes (front plane) -->
+      <!-- Note that this for the main holes, excluding the extra hole at the bottom of the
+               of the column which is to allow mounting a D415/35-->
+      <xacro:property name="attach_x" value=".016136"/>
+      <xacro:property name="attach_y" value=".002845"/>
+      <xacro:property name="attach_z" value=".062438"/>
+    </xacro:if>
+    <xacro:if value="${rotated == 0}">
+      <!-- Center of the top row of holes (front plane) -->
+      <xacro:property name="attach_x" value=".021235"/>
+      <xacro:property name="attach_y" value=".003744"/>
+      <xacro:property name="attach_z" value=".081759"/>
+    </xacro:if>
+    <xacro:if value="${side == 'left'}">
+      <xacro:property name="mount_yaw" value="${-radians(10)}"/>
+      <!-- Sadly the mount isn't symmetric about all axes -->
+      <xacro:if value="${rotated == 1}">
+        <xacro:property name="attach_y" value="-.002845"/>
+      </xacro:if>
+      <xacro:if value="${rotated == 0}">
+        <xacro:property name="attach_y" value="-.003744"/>
+      </xacro:if>
+    </xacro:if>
+    <xacro:if value="${side == 'right'}">
+      <xacro:property name="mount_yaw" value="${radians(10)}"/>
+    </xacro:if>
+    <link name="${prefix}mount">
+      <inertial>
+        <mass value="0.05"/>
+        <inertia ixx="0.0002835" ixy="0.0" ixz="0.0" iyy="0.0002835" iyz="0.0" izz="0.0002835"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/camera_mount_tilted_${side}.stl"/>
+        </geometry>
+        <material name="white_plastic">
+          <color rgba=".8 .8 .8 1"/>
+        </material>
+      </visual>
+            <collision>
+        <origin  xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.03 0.11 0.03"/>
+        </geometry>
+      </collision>
+      <collision>
+        <origin  xyz="0.01 0 0.06" rpy="0 ${radians(15)} ${mount_yaw}"/>
+        <geometry>
+          <box size="0.02 0.08 0.11"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="${prefix}mount_attach_point"/>
+    <joint name="${prefix}mount-${prefix}mount_attach_point" type="fixed">
+      <parent link="${prefix}mount"/>
+      <child link="${prefix}mount_attach_point"/>
+      <origin xyz="${attach_x} ${attach_y} ${attach_z}" rpy="${(pi / 2.) * rotated} ${radians(15)} ${mount_yaw}"/>
+    </joint>
+  </xacro:macro>
+</robot>

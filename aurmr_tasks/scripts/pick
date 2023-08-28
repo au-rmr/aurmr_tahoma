@@ -56,7 +56,7 @@ def main():
         StateMachine.add_auto("OPEN_BEFORE_GRASP", motion.OpenGripper(robot), ["succeeded"])
         StateMachine.add_auto("MOVE_TO_GRASP", robust_move_to_offset(robot, (0, 0, 0.170)), ["succeeded", "aborted"])
         StateMachine.add_auto("GRASP", motion.CloseGripper(robot), ["succeeded"])
-        StateMachine.add_auto("LIFT_OBJ", robust_move_to_offset(robot, (0, 0, 0.03), 'base_link'), ["succeeded", "aborted"])
+        StateMachine.add_auto("LIFT_OBJ", robust_move_to_offset(robot, (0, 0, 0.04), 'base_link'), ["succeeded", "aborted"])
 
         StateMachine.add_auto("RETRACT_ARM", robust_move_to_offset(robot, (0, 0, -0.25)), ["succeeded", "aborted"])
         StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX", motion.AddInHandCollisionGeometry(robot), ["succeeded"])

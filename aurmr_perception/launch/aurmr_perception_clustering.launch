@@ -2,17 +2,29 @@
 
   <arg name="camera" default="camera_lower_right" />
   <arg name="viz" default="true" />
-  <arg name="grasp_detector" default="contact_graspnet" />
+  <!-- <arg name="grasp_detector" default="vacuum_heuristic" /> -->
+  <arg name="grasp_detector" default="vacuum_heuristic" />
   <arg name="segmentation_method" default="clustering" />
+  <arg name="camera_type" default="azure_kinect" />
+  <!-- normal or centroid for grasp type -->
+  <arg name="grasp_type" default="normal" />
+
+
+
 
   <node name="aurmr_perception" pkg="aurmr_perception" type="aurmr_perception" output="screen">
     <param name="camera_name"                   value="$(arg camera)" />
     <param name="viz"                   value="$(arg viz)" />
     <param name="segmentation_method"                   value="$(arg segmentation_method)" />
+    <param name="camera_type" value="$(arg camera_type)"/>
   </node>
+  
+  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="rgb_camera_link_offset_broadcaster" args="-0.032 0 0.004 0 0 0 1 rgb_camera_link rgb_camera_link_offset" /> -->
+  <node pkg="tf2_ros" type="static_transform_publisher" name="rgb_camera_link_offset_broadcaster" args="-0.01 0 0 0 0 0 1 rgb_camera_link rgb_camera_link_offset" />
 
+  <param name="grasp_detector" value="$(arg grasp_detector)" />
+  <param name="grasp_detection_method" type="str" value="$(arg grasp_type)" />
   <node name="grasp_detection" pkg="aurmr_perception" type="grasp_detection_server" output="screen">
-    <param name="grasp_detector"                   value="$(arg grasp_detector)" />
   </node>
 
 </launch>
