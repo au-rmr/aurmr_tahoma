@@ -216,7 +216,7 @@ class OpenGripperStorm(State):
         self.open_gripper(return_before_done=self.return_before_done)
         return "succeeded"
 
-class AdjustJointPositionsIfBin1F4H4F(State):
+class MoveToBinHome(State):
     def __init__(self, robot):
         State.__init__(self, input_keys=["target_bin_id"], outcomes=['succeeded', 'aborted', 'pass'])
         self.robot = robot
@@ -257,6 +257,8 @@ class MoveToJointAngles(State):
             return "succeeded"
         else:
             return "aborted"
+
+
 
 
 class MoveEndEffectorToPose(State):
