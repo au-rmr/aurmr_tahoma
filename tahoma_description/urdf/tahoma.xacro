@@ -203,10 +203,10 @@
         <parent link="base_link"/>
         <child link="camera_base"/>
         <!-- Link is centered on the optical frames. Slight offset in Y direction to compensate -->
-        <origin xyz="-0.260 0.0 1.465" rpy="3.13764 3.12912 -3.12899" />
+        <origin xyz="-0.256 -0.0277 1.4245" rpy="3.14 3.14 -3.14" />
+        <!-- <origin xyz="-0.2426 -0.0277 1.4078" rpy="3.14 3.14 -3.14" /> -->
       </joint>
     </xacro:if>
-
 
     <xacro:arg name="use_nominal_extrinsics" default="false"/>
     <xacro:arg name="add_plug" default="false" />
