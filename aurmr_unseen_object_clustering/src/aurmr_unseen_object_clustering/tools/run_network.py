@@ -37,8 +37,11 @@ import cv2
 
 # Change to reflect the path to the UOC directory
 
+from aurmr_setup.utils.workspace_utils import get_active_workspace_path
+workspace_path = get_active_workspace_path()
 
-UOC_PATH = '/home/aurmr/workspaces/uois_soofiyan_ws/src/aurmr_tahoma/aurmr_unseen_object_clustering/src/aurmr_unseen_object_clustering/'
+
+UOC_PATH = f'{workspace_path}/src/aurmr_tahoma/aurmr_unseen_object_clustering/src/aurmr_unseen_object_clustering/'
 class clustering_network:
     def __init__(self, bin='3f', camera='azure', dir=UOC_PATH, model='std_200_24_checkpoint.pth'):
         # This dictionary contains all of the relevant arguments for the script
