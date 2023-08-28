@@ -220,14 +220,14 @@ class AdjustJointPositionsIfBin1F4H4F(State):
     def __init__(self, robot):
         State.__init__(self, input_keys=["target_bin_id"], outcomes=['succeeded', 'aborted', 'pass'])
         self.robot = robot
-        # self.join_config_1f = 'pre_bin_1f'
+        self.join_config_1f = 'pre_bin_1f'
         self.join_config_4h = 'pre_bin_4h'
         self.join_config_4f = 'pre_bin_4f'
 
     def execute(self, ud):
-        # if ud['target_bin_id'] == '1F':
-        #     success = self.robot.move_to_joint_angles(self.join_config_1f)
-        #     return 'succeeded' if success else 'aborted'
+        if ud['target_bin_id'] == '1F':
+            success = self.robot.move_to_joint_angles(self.join_config_1f)
+            return 'succeeded' if success else 'aborted'
         if ud['target_bin_id'] == '4H':
             success = self.robot.move_to_joint_angles(self.join_config_4h)
             return 'succeeded' if success else 'aborted'
@@ -278,10 +278,10 @@ class MoveEndEffectorToPose(State):
                           pose,
                           allowed_planning_time=15.0,
                           execution_timeout=15.0,
-                          num_planning_attempts=50,
+                          num_planning_attempts=20,
                           orientation_constraint=None,
                           replan=True,
-                          replan_attempts=20,
+                          replan_attempts=8,
                           tolerance=0.01)
         # input('check planning frame!!!!!!!!!!!!!!')
         if success:

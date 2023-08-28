@@ -33,7 +33,7 @@ bin_bounds = {
     '4G':[371*4, 412*4, 619*4, 711*4],
     '1F':[420*4, 514*4, 314*4, 405*4],
     '2F':[424*4, 511*4, 407*4, 512*4],
-    '3F':[425*4, 515*4, 515*4, 620*4],    
+    '3F':[425*4, 515*4, 515*4, 620*4],
     '4F':[426*4, 514*4, 621*4, 714*4],
     '1E':[527*4, 572*4, 311*4, 405*4],
     '2E':[529*4, 571*4, 407*4, 513*4],
@@ -97,7 +97,7 @@ class UserPromptForRetry(State):
         width = int(rgb_image.shape[1] * scale_percent / 100)
         height = int(rgb_image.shape[0] * scale_percent / 100)
         dim = (width, height)
-        
+
         # resize image
         resized = cv2.resize(rgb_image, dim, interpolation = cv2.INTER_AREA)
         cv2.imshow('rgb_image', resized)
@@ -138,7 +138,7 @@ class UserPromptForRetry(State):
         marker.lifetime = rospy.rostime.Duration()
 
         self.marker_publisher.publish(marker)
-    
+
     def visualize_point_marker(self, point, frame_id):
         marker2 = Marker()
         # marker2.header.frame_id = self.camera_model.tfFrame()
@@ -255,9 +255,31 @@ class UserPromptForRetry(State):
         grasp_pose = self.tf_buffer.transform(grasp_pose, "base_link")
         grasp_pose.pose.orientation = quaternion
 
-        POD_OFFSET = 0.025 #-0.1
-        transform = self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
+        POD_OFFSET = 0.02
+        RGB_TO_DEPTH_FRAME_OFFSET = -0.032
+        DEPTH_TILT = 3*np.pi/180
+        transform= self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
+        grasp_pose.pose.position.z += grasp_pose.pose.position.x*np.sin(DEPTH_TILT)
+        grasp_pose.pose.position.y -= RGB_TO_DEPTH_FRAME_OFFSET
         grasp_pose.pose.position.x = transform.transform.translation.x - POD_OFFSET
+
+        def visualize(pose, frame='base_link'):
+            self.visualize_point_marker([
+                pose.position.x,
+                pose.position.y,
+                pose.position.z
+            ], frame)
+
+        # visualize(grasp_pose.pose)
+        # import pdb; pdb.set_trace()
+
+        # visualize()
+
+        # import pdb; pdb.set_trace()
+
+        # NOTE: No extra filtering or ranking on our part. Just take the first one
+        # As the arm_tool0 is 20cm in length w.r.t tip of suction cup thus adding 0.2m offset
+        # grasp_pose = self.add_offset(-0.22, grasp_pose)
 
         userdata['human_grasp_pose'] = grasp_pose
 
