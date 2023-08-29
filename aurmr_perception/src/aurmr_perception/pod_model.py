@@ -14,11 +14,16 @@ import tf2_ros
 import matplotlib.pyplot as plt
 from collections import defaultdict
 from sensor_msgs.msg import Image, CameraInfo, PointField, PointCloud2
-from std_msgs.msg import Header
+from std_msgs.msg import Header, Int16
 from std_srvs.srv import Trigger
 # from aurmr_unseen_object_clustering.tools.run_network import clustering_network
 # from aurmr_unseen_object_clustering.tools.match_masks import match_masks
 from aurmr_unseen_object_clustering.tools.segmentation_net import SegNet, NO_OBJ_STORED, UNDERSEGMENTATION, OBJ_NOT_FOUND, MATCH_FAILED, IN_BAD_BINS
+from cv_bridge import CvBridge
+from sensor_msgs.msg import Image
+
+
+rectangle = None
 
 class PodPerceptionROS:
     def __init__(self, model, camera_name, visualize, camera_type):
@@ -52,7 +57,12 @@ class PodPerceptionROS:
         else:
             raise RuntimeError(f"Unknown camera type requested: {camera_type}")
         
-        self.points_sub = rospy.Subscriber(f'/{self.camera_name}/points2', PointCloud2, self.points_cb)
+        self.camera_depth_subscriber = message_filters.Subscriber(f'/camera/aligned_depth_to_color/image_raw', Image)
+        self.camera_rgb_subscriber = message_filters.Subscriber(f'/camera/color/image_raw', Image)
+        self.camera_info_subscriber = message_filters.Subscriber(f'/camera/color/camera_info', CameraInfo)
+        self.camera_frame = "camera_color_optical_frame"
+
+        self.points_sub = rospy.Subscriber(f'/camera/depth/color/points2', PointCloud2, self.points_cb)
 
         self.camera_synchronizer = message_filters.ApproximateTimeSynchronizer([
             self.camera_depth_subscriber, self.camera_rgb_subscriber, self.camera_info_subscriber], 10, 1)
@@ -93,6 +103,7 @@ class PodPerceptionROS:
         if self.points_msg is None:
             rospy.loginfo("Points Found")
         self.points_msg = request
+        # print(self.points_msg)
 
     def empty_pod_callback(self, request):
         import os
@@ -118,21 +129,24 @@ class PodPerceptionROS:
         if not request.object_id or not request.frame_id:
             return False, "object_id and frame_id are required", None, None
 
-        result, message = self.model.get_object(request.bin_id, request.object_id, self.points_msg, self.depth_image.shape)
+        result, message = self.model.get_object(request.bin_id, str(request.object_id), self.points_msg, self.depth_image.shape)
         print(f"Get Object Callback MSG: {message}")
         if not result:
             return result, message, None, None, None
 
-        bin_id, points, mask = result
+        bin_id, points, mask, mask_all = result
 
         mask = ros_numpy.msgify(Image, mask.astype(np.uint8), encoding="mono8")
+        mask_all = ros_numpy.msgify(Image, mask_all.astype(np.uint8), encoding="mono8")
 
         if request.mask_only:
             return True,\
                f"Mask successfully retrieved for object {request.object_id} in bin {bin_id}",\
                bin_id,\
                None,\
-               mask
+               mask,\
+               mask_all,\
+               request.object_id
 
         if request.frame_id != self.camera_points_frame:
             # Transform points to requested frame_id
@@ -177,7 +191,10 @@ class PodPerceptionROS:
                f"Points and mask successfully retrieved for object {request.object_id} in bin {bin_id}",\
                bin_id,\
                pointcloud,\
-               mask
+               mask, \
+               mask_all,\
+               request.object_id
+               
 
     def pick_object_callback(self, request):
         if not request.bin_id or not request.object_id:
@@ -264,12 +281,19 @@ class DiffPodModel:
         self.latest_masks = {}
         self.points_table = {}
         self.masks_table = {}
+        self.masks_table_save = {}
         self.occluded_table = {}
         self.object_bin_queues = defaultdict(ObjectBinQueue)
         self.bin_normals = {}
         self.segmentation_method = segmentation_method
         self.net = None
         self.mask_pub = rospy.Publisher("~masks", Image, queue_size=5)
+        self.target_object_id_pub = rospy.Publisher("/target_object_id", Int16, queue_size=1, latch=True)
+        self.data_id = None
+        self.data_id_subscriber = rospy.Subscriber('/data_id_topic', Int16, self.data_id_callback)
+        self.ros_image_pub = rospy.Publisher('/mask_segment', Image, queue_size=10, latch=True)
+        
+        self.bridge = CvBridge()
 
     def numpify_pointcloud(self, points, im_shape):
         final_shape = list(im_shape[0:2])
@@ -288,13 +312,14 @@ class DiffPodModel:
     def mask_pointcloud(self, points, mask):
         points = ros_numpy.numpify(points)
         np.save("/tmp/points1.npy", points)
+        print(mask.shape, points.shape)
         points_seg = points[mask.flatten() > 0]
         points_seg = np.vstack((points_seg['x'],points_seg['y'],points_seg['z']))
         points_seg = points_seg[:, np.invert(np.isnan(points_seg[2, :]))]
         return points_seg
 
     def backproject(self, depth_image, mask, camera_intrinsics):
-        points = rospy.wait_for_message(f'/camera_lower_right/points2', PointCloud2)
+        points = rospy.wait_for_message(f'/camera/depth/color/points2', PointCloud2)
         points = ros_numpy.numpify(points)
         np.save("/tmp/points1.npy", points)
         points_seg = points[mask.flatten() > 0]
@@ -366,16 +391,18 @@ class DiffPodModel:
             mask[np.where(labels != max_area_idx)] = 0.0    
         else:
             raise RuntimeError(f"Unknown segmentation method requested: {self.segmentation_method}")
-        points = rospy.wait_for_message(f'/camera_lower_right/points2', PointCloud2)
+        points = rospy.wait_for_message(f'/camera/depth/color/points2', PointCloud2)
         points = self.mask_pointcloud(points, mask)
 
         if bin_id not in self.points_table:
             self.points_table[bin_id] = {}
             self.masks_table[bin_id] = {}
+            self.masks_table_save[bin_id] = {}
 
         self.points_table[bin_id][object_id] = points
         self.masks_table[bin_id][object_id] = mask
-        self.object_bin_queues[object_id].put(bin_id)
+        for i in range(int(object_id)):
+            self.object_bin_queues[str(i+1)].put(bin_id)
 
         # Matches masks with previous mask labels
         # The (i-1)-th entry of recs is the mask id of the best match for mask i in the second image
@@ -390,7 +417,10 @@ class DiffPodModel:
     def add_object(self, bin_id, object_id, rgb_image, depth_image, camera_intrinsics, points_msg):
         if not bin_id or not object_id:
             return False, "bin_id and object_id are required"
-
+        try:
+            self.net.reset_bin(bin_id)
+        except:
+            print(f"{bin_id} not in bad bins")
         rospy.loginfo(bin_id + str(type(bin_id)))
         # plt.imshow(rgb_image.astype(np.uint8))
         # plt.show()
@@ -411,6 +441,9 @@ class DiffPodModel:
         if status == 1:
             print("No stow occurred. Returning.")
             return True, f"Object {object_id} in bin {bin_id} hasn't been detected.", ros_numpy.msgify(Image, mask.astype(np.uint8), encoding="mono8")
+        
+        print("publishing")
+        self.ros_image_pub.publish(self.bridge.cv2_to_imgmsg(mask.astype(np.uint8), encoding="mono8"))
         # plt.imshow(mask)
         # plt.title(f"get_object all masks for {object_id} in {bin_id}")
         # plt.show()
@@ -425,26 +458,33 @@ class DiffPodModel:
         if bin_id not in self.points_table:
             self.points_table[bin_id] = {}
             self.masks_table[bin_id] = {}
+            self.masks_table_save[bin_id] = {}
+        print("keys are", self.points_table[bin_id].keys())
         if bin_id not in self.net.bad_bins:
             for o_id in self.points_table[bin_id].keys():
-                mask = self.net.get_obj_mask(o_id)
+                mask, mask_save = self.net.get_obj_mask(o_id)
                 self.masks_table[bin_id][o_id] = mask
                 self.points_table[bin_id][o_id] = self.mask_pointcloud(points_msg, mask)
+                self.masks_table_save[bin_id] = mask_save
 
-            mask = self.net.get_obj_mask(object_id)
-            self.masks_table[bin_id][object_id] = mask
-            self.points_table[bin_id][object_id] = self.mask_pointcloud(points_msg, mask)
-            num_points = self.points_table[bin_id][object_id].shape[0]
-            mask_ret = ros_numpy.msgify(Image, mask.astype(np.uint8), encoding="mono8")
-            msg = f"Object {object_id} in bin {bin_id} has been stowed with {num_points} points."
+            for i in range(int(object_id)):
+                mask, mask_save = self.net.get_obj_mask(str(i+1))
+                self.masks_table[bin_id][str(i+1)] = mask
+                self.points_table[bin_id][str(i+1)] = self.mask_pointcloud(points_msg, mask)
+                num_points = self.points_table[bin_id][str(i+1)].shape[0]
+                mask_ret = ros_numpy.msgify(Image, mask.astype(np.uint8), encoding="mono8")
+                msg = f"Object {str(i+1)} in bin {bin_id} has been stowed with {num_points} points."
+                self.masks_table_save[bin_id] = mask_save
             success = True
         else:
             self.masks_table[bin_id][object_id] = None
             self.points_table[bin_id][object_id] = None
+            self.masks_table_save[bin_id] = None
             msg = f"Object {object_id} in bin {bin_id} could not be SIFT matched. Bin state is lost."
             mask_ret = None
             success = False
-        self.object_bin_queues[object_id].put(bin_id)
+        for i in range(int(object_id)):
+            self.object_bin_queues[str(i+1)].put(bin_id)
         self.latest_captures[bin_id] = rgb_image
         self.latest_masks[bin_id] = mask
         # plt.imshow(mask)
@@ -453,6 +493,12 @@ class DiffPodModel:
 
 
         return success, msg, mask_ret
+
+    def data_id_callback(self, data):
+        try:
+            self.data_id = data.data
+        except Exception as e:
+            print(e)
 
     def get_object(self, bin_id, object_id, points_msg, im_shape):
         
@@ -463,6 +509,7 @@ class DiffPodModel:
             return False, f"Object {object_id} in bin {bin_id} was occluded or never stowed and could not be found"
 
         if self.object_bin_queues[object_id].empty():
+            print(self.object_bin_queues)
             return False, f"Object {object_id} was not found"
 
         if bin_id not in self.points_table:
@@ -475,17 +522,58 @@ class DiffPodModel:
         if bin_id in self.net.bad_bins:
             msg = f"Object {object_id} in bin {bin_id} was could not be segmented, but was selected by user"
             return False, msg
-            mask = self.net.get_obj_mask(object_id)
+            mask, _ = self.net.get_obj_mask(object_id)
             self.points_table[bin_id][object_id] = self.mask_pointcloud(points_msg, mask)
         else:
             mask = self.masks_table[bin_id][object_id]
+            mask_save = self.masks_table_save[bin_id]
+            print("mask from get object callback")
+            print(np.unique(mask), mask.shape)
+
+            if(self.data_id != None):
+                np.save(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/real_world_data/segmask_{self.data_id}.npy", mask_save)
+            
+            # self.ros_image_pub.publish(self.bridge.cv2_to_imgmsg(mask_save.astype(np.uint8), encoding="mono8"), latch=True)
+            #plt.imshow(mask_save)
+            #plt.show()
+
+            # def onselect(eclick, erelease):
+            #     global rectangle
+            #     rectangle = (eclick.xdata, eclick.ydata, erelease.xdata, erelease.ydata)
+            #     plt.close()
+
+
+            # from matplotlib.widgets import RectangleSelector
+            # import time
+
+            # global rectangle
+            # rectangle = None
+
+            # while rectangle is None:
+
+            #     fig, ax = plt.subplots(figsize=(8, 6))
+            #     __rs = RectangleSelector(ax, onselect)
+
+            #     ax.set_title('Select a mask')
+            #     ax.imshow(mask_save * 50)
+                
+            #     plt.show()
+                
+            # print(rectangle)
+            # print(rectangle[0])
+            # print(rectangle[0].dtype)
+            # label = mask[int(rectangle[1]), int(rectangle[0])]
+            # print("We think the label is ", label)
+            cv2.imwrite("/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/mask_from_pod_object_callback.png", mask_save)
             msg = f"Object {object_id} in bin {bin_id} was found"
+            self.target_object_id_pub.publish(int(object_id))
 
         points = self.points_table[bin_id][object_id]
+        print(points)
         # plt.imshow(mask)
         # plt.title(f"get_object {object_id} in {bin_id}")
         # plt.show()
-        return (bin_id, points, mask), msg
+        return (bin_id, points, mask, mask_save), msg
 
     def remove_object(self, bin_id, object_id, rgb_image, depth_image, camera_intrinsics, points_msg):
         if not bin_id or not object_id:
@@ -506,9 +594,11 @@ class DiffPodModel:
         self.net.pick(object_id, rgb_image, depth_raw=depth_image, info=intrinsics_3x3)
         if bin_id not in self.net.bad_bins:
             for o_id in self.points_table[bin_id].keys():
-                mask = self.net.get_obj_mask(o_id)
+                mask, mask_save = self.net.get_obj_mask(o_id)
                 self.masks_table[bin_id][o_id] = mask
                 self.points_table[bin_id][o_id] = self.mask_pointcloud(points_msg, mask)
+            
+                self.masks_table_save[bin_id] = mask_save
 
         return True, f"Object {object_id} in bin {bin_id} has been removed"
 
@@ -532,13 +622,14 @@ class DiffPodModel:
         print("DONE UPDATING")
         if bin_id not in self.net.bad_bins:
             for o_id in self.points_table[bin_id].keys():
-                mask = self.net.get_obj_mask(o_id)
+                mask, mask_save = self.net.get_obj_mask(o_id)
                 # plt.imshow(mask)
                 # plt.title("Mask in update")
                 # plt.show()
                 self.masks_table[bin_id][o_id] = mask
                 self.points_table[bin_id][o_id] = self.mask_pointcloud(points_msg, mask)
 
+                self.masks_table_save[bin_id] = mask_save
         return True, f"{bin_id} was updated"
 
     def reset(self, bin_id, rgb_image):

@@ -18,12 +18,23 @@ from visualization_msgs.msg import MarkerArray, Marker
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import sys
-sys.path.append("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/UIE_main/mask2former_frame/")
+sys.path.append("/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/UIE_main/mask2former_frame/")
 from normal_std.inference_grasp_main import run_normal_std
 
 from scipy.spatial.transform import Rotation as R
 from copy import deepcopy
 import geometry_msgs
+from grasp_training.vit_model.inference_script import inference
+
+import matplotlib.pyplot as plt
+from gqcnn.gqcnn_examples.policy_for_training import dexnet3
+from autolab_core import (YamlConfig, Logger, BinaryImage,
+                          CameraIntrinsics, ColorImage, DepthImage, RgbdImage)
+
+from std_msgs.msg import Int16
+import json
+from datetime import datetime
+
 
 class HeuristicGraspDetector:
     def __init__(self, grasp_offset, bin_normal):
@@ -51,6 +62,10 @@ class HeuristicGraspDetector:
         rospy.loginfo(points_lowered.shape)
         center = np.mean(points_lowered, axis=0)
     
+        temp = center
+        center[0] = temp[2]
+        center[1] = temp[0]
+        center[2] = temp[1]
         # stamped_transform = self.tf2_buffer.lookup_transform("base_link", "rgb_camera_link", rospy.Time(0),
         #                                                 rospy.Duration(1))
         # camera_to_target_mat = ros_numpy.numpify(stamped_transform.transform)
@@ -61,11 +76,11 @@ class HeuristicGraspDetector:
         POD_OFFSET = -0.1
         transform= self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
         center[0] = transform.transform.translation.x- POD_OFFSET
-
         # NOTE(nickswalker,4-29-22): Hack to compensate for the chunk of points that don't get observed
         # due to the lip of the bin
         #center[2] -= 0.02
         print(points.shape, center.shape)
+        print("center", center)
         position = self.grasp_offset * self.bin_normal + center
         align_to_bin_orientation = transformations.quaternion_from_euler(math.pi / 2., -math.pi / 2., math.pi / 2.)
 
@@ -84,8 +99,10 @@ class GraspDetectionROS:
         
         self.dections_viz_pub = rospy.Publisher("~detected_grasps", MarkerArray, latch=True, queue_size=1)
         self.points_viz_pub = rospy.Publisher("~detected_pts", PointCloud2, latch=True, queue_size=5)
-        self.camera_depth_subscriber = rospy.Subscriber('/camera_lower_right/depth_to_rgb/image_raw', Image, self.depth_callback)
-        self.camera_rgb_subscriber = rospy.Subscriber('/camera_lower_right/rgb/image_raw', Image, self.rgb_callback)
+        self.camera_depth_subscriber = rospy.Subscriber('/camera/aligned_depth_to_color/image_raw', Image, self.depth_callback)
+        self.camera_rgb_subscriber = rospy.Subscriber('/camera/color/image_raw', Image, self.rgb_callback)
+        self.data_id_subscriber = rospy.Subscriber('/data_id_topic', Int16, self.data_id_callback)
+        self.target_object_id_subscriber = rospy.Subscriber('/target_object_id', Int16, self.target_object_id_callback)
         self.depth_img = []
         self.rgb_img = []
         self.grasp_offset = 0.125
@@ -95,12 +112,23 @@ class GraspDetectionROS:
         self.bridge = CvBridge()
         self.grasp_viz_perception = rospy.Publisher("selected_grasp_pose_perception", geometry_msgs.msg.PoseStamped,
                                         queue_size=1, latch=True)
+        self.time_series_count = 0
+
+    def data_id_callback(self, data):
+        try:
+            self.data_id = data.data
+        except Exception as e:
+            print(e)
+    
+    def target_object_id_callback(self, data):
+        try:
+            self.target_id = data.data
+        except Exception as e:
+            print(e)
 
     def depth_callback(self, data):
         try:
             self.depth_img = self.bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
-            # self.depth_img = np.array(self.depth_img, dtype=np.float32)
-            # self.depth_img = self.depth_img.astype(np.float32)
         except CvBridgeError as e:
             print(e)
     
@@ -163,7 +191,8 @@ class GraspDetectionROS:
 
     def detect_grasps_cb(self, request):
         cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
-        cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
+        
+        # cv2.imwrite("/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
         pts = ros_numpy.numpify(request.points)
         self.points_viz_pub.publish(request.points)
         pts = np.stack([pts['x'],
@@ -182,47 +211,24 @@ class GraspDetectionROS:
 
     def detect_grasps__normal_cb(self, request):
         cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
-        cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
+        mask_all = self.bridge.imgmsg_to_cv2(request.mask_all, desired_encoding='passthrough')
+        print("object id", request.object_id)
+        cv2.imwrite("/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/mask_all.png", mask_all)
         
+        # np.save(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/real_world_data/depth_image_{self.data_id}.npy", self.depth_img)
         # convert point cloud to mask
-        fx, fy = 1940.1367, 1940.1958
-        cx, cy = 2048.7397, 1551.3889
-        width = 4096
-        height = 3072
+        fx, fy = 903.14697265625, 903.5240478515625
+        cx, cy = 640.839599609375, 355.6268310546875
+        width = 1280
+        height = 720
 
         cv_image_new = np.zeros([height, width])
-        cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/zero_cv_image.png", cv_image_new)
+        # cv2.imwrite("/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/zero_cv_image.png", cv_image_new)
         pts = ros_numpy.numpify(request.points)
         pts = np.stack([pts['x'],
                         pts['y'],
                         pts['z']], axis=1)
-        points_sort_z = np.flip(pts[pts[:, 2].argsort()], axis=0)
-        
-        # POINTS_TO_KEEP_FACTOR = .8
-        # keep_idxs = np.arange(int(pts.shape[0]*(1-POINTS_TO_KEEP_FACTOR)), pts.shape[0])
-        # points_lowered = points_sort_z[keep_idxs]
-        points_lowered = pts
-        # center  (2380.0, 1744.5)
-        # 1536.9160707029534 -294.14115334486473
-        # for i in points_lowered:
-        #     # print(i)
-           
-        #     # [-0.246, -0.012, 1.410]
-        #     z = i[0]+0.246
-        #     v = ((-i[1]+0.012)*fx) / z
-        #     u = ((i[2]-1.410)*fy) / z
-
-        #     pixel_pos_x = (int)(u + cx)
-        #     pixel_pos_y = (int)(v + cy)
-        #     cv_image_new[int(cx-pixel_pos_x)][int(cy-pixel_pos_y)] = 1 
-        # print("xyz", i[0],i[1] , i[2])
-        # print("uv ", pixel_pos_x, pixel_pos_y)
-        # cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/new_cv_image_mask.png", cv_image_new)
-        # float z = msg->points[i].z*1000.0;
-        # float u = (msg->points[i].x*1000.0*focal_x) / z;
-        # float v = (msg->points[i].y*1000.0*focal_y) / z;
-        # int pixel_pos_x = (int)(u + centre_x);
-        # int pixel_pos_y = (int)(v + centre_y);
+    
 
         print("rgb shape in grasp", self.rgb_img.shape)
         pts = ros_numpy.numpify(request.points)
@@ -230,60 +236,160 @@ class GraspDetectionROS:
         pts = np.stack([pts['x'],
                         pts['y'],
                         pts['z']], axis=1)
-        detections = self.detector.detect(pts)
-        # if(self.depth_img and self.rgb_img):
-
-        # pts = np.stack([pts['x'],
-        #                 pts['y'],
-        #                 pts['z']], axis=1)
-        # detections = self.detector.detect(pts)
-        # cv_image1 = cv2.resize(cv_image, (1280, 720), interpolation = cv2.INTER_AREA)
-        # cv2.imshow("mask", cv_image1)
-        # cv2.waitkey(0)
-
-        
 
         # transform from base link to rgb camera link
-        inference_object = run_normal_std()
-        point, euler_angles = inference_object.inference(self.rgb_img, self.depth_img, cv_image)
-        print("points", point)
-        # POD_OFFSET = -0.11535
-        # transform= self.tf_buffer.lookup_transform('base_link', 'rgb_camera_link_offset', rospy.Time())
 
-        #transform_via_tf = self.tf_buffer.transform(PointStamped(point=Point(point[0], point[1], point[2])))
-        '''T = np.eye(4)
-        T[:3, 3] = (transform.transform.translation.x, transform.transform.translation.y, transform.transform.translation.z)
-        T[:3, :3] = R.from_quat((transform.transform.rotation.x, transform.transform.rotation.y, transform.transform.rotation.z, transform.transform.rotation.w)).as_matrix()
-        points_in_base_link = np.array((*point, 1)) @ T
-        print(transform.transform.translation)
-        print(T)
-        position = [0.0, 0.0, 0.0]
-        print("pre position", point[2] + transform.transform.translation.x, -point[0] + transform.transform.translation.y, -point[1] + transform.transform.translation.z)
-        position = points_in_base_link'''
+        method = "dexnet"
+        if(method == "vit"):
+            print(self.depth_img.shape, mask_all.shape)
+
+            # np.save(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/real_world_data/depth_image_{self.data_id}.npy", self.depth_img)
+            # np.save(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/real_world_data/rgb_image_{self.data_id}.npy", self.rgb_img)
+            # np.save(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/real_world_data/segmask_{self.data_id}.npy", cv_image)
+
+            depth_image = cv2.resize(self.depth_img, (640, 360),  interpolation = cv2.INTER_NEAREST)
+            segmask_image = cv2.resize(mask_all, (640, 360),  interpolation = cv2.INTER_NEAREST)
+            depth_image = depth_image/1000.0
+            print(np.unique(segmask_image))
+
+            # cv2.imshow("depth", depth_image)
+            # cv2.waitKey(0)
+            # cv2.imshow("segmask", segmask_image*75)
+            # cv2.waitKey(0)
+
+            inference_object = inference()
+            grasp_point_model, centroid_model, output = inference_object.run_model(depth_image, segmask_image, int(request.object_id))
+
+            grasp_point = grasp_point_model + np.array([centroid_model[0],centroid_model[1]])
+            print(grasp_point)
+            grasp_point[0] = grasp_point[0]*2
+            grasp_point[1] = grasp_point[1]*2
+            inference_object = run_normal_std()
+            
+            grasp_3d_point, grasp_euler_angles, center = inference_object.inference(self.rgb_img, self.depth_img, cv_image, grasp_point)
+
+            # json_save = {
+            #     "grasp point": center.tolist(),
+            #     "grasp_3d_point": grasp_3d_point,
+            #     "grasp_angle": grasp_euler_angles,
+            #     "target object id": self.target_id,
+            # }
+            # print("saved this json", json_save)
+            # new_dir_name = str(self.data_id)
+            # data_path = "/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/real_world_data/"
+            # save_dir_json = data_path+"/perception_json_data_"+new_dir_name+"_"+datetime_string+".json"
+            # with open(save_dir_json, 'w') as json_file:
+            #     json.dump(json_save, json_file)
+
+            transform_from_kinect_to_realsense = np.array([0.112, 0.165, 0.49])
+            point = grasp_3d_point + transform_from_kinect_to_realsense
+            euler_angles = grasp_euler_angles
+            print("points", point, euler_angles, transform_from_kinect_to_realsense)
+        elif(method == "rgb_vit"):
+            datetime_string = datetime.now().isoformat().replace(":","")[:-7]
+            print(self.depth_img.shape, cv_image.shape)
+
+            np.save(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/real_world_data/depth_image_{self.data_id}.npy", self.depth_img)
+            np.save(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/real_world_data/rgb_image_{self.data_id}.npy", self.rgb_img)
+            np.save(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/real_world_data/single_object_segmask_{self.data_id}.npy", cv_image)
+
+            depth_image = cv2.resize(self.depth_img, (640, 360),  interpolation = cv2.INTER_NEAREST)
+            rgb_image = cv2.resize(self.rgb_img, (640, 360),  interpolation = cv2.INTER_NEAREST)
+            segmask_image = cv2.resize(cv_image, (640, 360),  interpolation = cv2.INTER_NEAREST)
+            depth_image = depth_image/1000.0
+            print(np.unique(segmask_image))
+
+            inference_object = inference()
+            # grasp_point_model, centroid_model, output = inference_object.run_model(depth_image, segmask_image, 1)
+            grasp_point_model, centroid_model, output = inference_object.run_model_rgb(rgb_image, depth_image, segmask_image, 1)
+
+            grasp_point = grasp_point_model + np.array([centroid_model[0],centroid_model[1]])
+            print(grasp_point)
+            grasp_point[0] = grasp_point[0]*2
+            grasp_point[1] = grasp_point[1]*2
+
+            inference_object = run_normal_std()
+            
+            grasp_3d_point, grasp_euler_angles, center = inference_object.inference(self.rgb_img, self.depth_img, cv_image, grasp_point)
+
+            json_save = {
+                "grasp point": center.tolist(),
+                "grasp_3d_point": grasp_3d_point,
+                "grasp_angle": grasp_euler_angles,
+                "target object id": self.target_id,
+            }
+            print("saved this json", json_save)
+            new_dir_name = str(self.data_id)
+            data_path = "/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/real_world_data/"
+            save_dir_json = data_path+"/perception_json_data_"+new_dir_name+"_"+datetime_string+".json"
+            with open(save_dir_json, 'w') as json_file:
+                json.dump(json_save, json_file)
+
+            transform_from_kinect_to_realsense = np.array([0.16, 0.17, 0.39])
+            point = grasp_3d_point + transform_from_kinect_to_realsense
+            euler_angles = grasp_euler_angles
+            print("points", point, euler_angles)
+
+        elif(method == "dexnet"):
+            print(self.depth_img.shape, cv_image.shape)
+            depth_img = cv2.resize(self.depth_img, (640, 360),  interpolation = cv2.INTER_NEAREST)
+            segmask = cv2.resize(cv_image, (640, 360),  interpolation = cv2.INTER_NEAREST)
+            depth_img = depth_img.astype(np.float32)
+
+            cx = depth_img.shape[1]/2 + 0.839599609375/2
+            cy = depth_img.shape[0]/2 - (10-5.6268310546875)/2
+            fx = 903.14697265625/2
+            fy = 903.5240478515625/2
+            camera_intrinsics_back_cam = CameraIntrinsics(frame="realsense", fx=fx, fy=fy,
+                                                           cx=cx, cy=cy, skew=0.0,
+                                                           height=360, width=640)
+
+            dexnet_object = dexnet3(camera_intrinsics_back_cam)
+            dexnet_object.load_dexnet_model()
+
+            segmask_numpy_temp = np.zeros_like(segmask).astype(np.uint8)
+            segmask_numpy_temp[segmask == 1] = 1
+            depth_img_temp = depth_img*segmask_numpy_temp/1000
+            depth_img_temp[depth_img_temp == 0] = 0.76
+            depth_img_dexnet = DepthImage(depth_img_temp, frame=camera_intrinsics_back_cam.frame)
+            # plt.imshow(depth_img_temp)
+            # plt.show()
+
+            segmask_numpy_temp[segmask == 1] = 255
+            segmask_dexnet = BinaryImage(
+                segmask_numpy_temp, frame=camera_intrinsics_back_cam.frame)
+
+            # plt.imshow(segmask_numpy_temp)
+            # plt.show()
+
+            action, grasps_and_predictions, unsorted_grasps_and_predictions = dexnet_object.inference(depth_img_dexnet, segmask_dexnet, None)
+
+            grasp_point = np.array([grasps_and_predictions[0][0].center.x*2, grasps_and_predictions[0][0].center.y*2])
+            inference_object = run_normal_std()
+            point, euler_angles, center = inference_object.inference(self.rgb_img, self.depth_img, cv_image, grasp_point)
+            point += np.array([0.107, 0.17, 0.49])
+            print("points", point)
         
-        # euler_angles[0] = np.clip(euler_angles[0], -45, 45)
-        # euler_angles[1] = np.clip(euler_angles[1], -45, 45)
-        # if(euler_angles[0] > -5 and euler_angles[0] < 5):
-        #     euler_angles[0] = 0
-        # if(euler_angles[1] > -5 and euler_angles[1] < 5):
-        #     euler_angles[1] = 0
-
-        # position[2] = -points[1] + transform.transform.translation.z
-        # with boling
-        # orientation = transformations.quaternion_from_euler(math.pi/2., -math.pi/2. + euler_angles[1], euler_angles[0] + math.pi/2.)
-        #orientation = transformations.quaternion_from_euler(math.pi/2., -math.pi/2., math.pi/2.)
-        # orientation = transformations.quaternion_from_euler(math.pi/2., -math.pi/2., math.pi/2.)
+        elif(method == "centroid"):
+            inference_object = run_normal_std()
+            point, euler_angles, center = inference_object.inference(self.rgb_img, self.depth_img, cv_image, None)
+            point += np.array([0.107, 0.17, 0.49])
+            print("points", point)
 
 
         # clamp euler englaes within 15 and 45 but if less than 15 it will be 0
         clamped_euler_angles = [0., 0., 0.]
         if(euler_angles[0] < 0):
-            clamped_euler_angles[0] = self.clamp(euler_angles[0], -30.*math.pi/180., -12.*math.pi/180.)
+            clamped_euler_angles[0] = self.clamp(euler_angles[0], -30.*math.pi/180., 0.*math.pi/180.)
         else:
-            clamped_euler_angles[0] = self.clamp(euler_angles[0], 12.*math.pi/180., 30.*math.pi/180.)
+            clamped_euler_angles[0] = self.clamp(euler_angles[0], 0.*math.pi/180., 30.*math.pi/180.)
         if(euler_angles[1] < 0):
-            clamped_euler_angles[1] = self.clamp(euler_angles[1], -30.*math.pi/180., -12.*math.pi/180.)
+            clamped_euler_angles[1] = self.clamp(euler_angles[1], -30.*math.pi/180., 0.*math.pi/180.)
         else:
+            clamped_euler_angles[1] = self.clamp(euler_angles[1], 0.*math.pi/180., 30.*math.pi/180.)
+
+        if(method == "centroid"):
+            clamped_euler_angles[0] = 0.0
             clamped_euler_angles[1] = 0.0
         
         # clamped_euler_angles[1] = 0.0
