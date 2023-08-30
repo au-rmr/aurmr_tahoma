@@ -220,22 +220,77 @@ class AdjustJointPositionsIfBin1F4H4F(State):
     def __init__(self, robot):
         State.__init__(self, input_keys=["target_bin_id"], outcomes=['succeeded', 'aborted', 'pass'])
         self.robot = robot
-        self.join_config_1f = 'pre_bin_1f'
-        self.join_config_4h = 'pre_bin_4h'
-        self.join_config_4f = 'pre_bin_4f'
+        self.join_config_1f = 'home_1f'
+        self.join_config_2f = 'home_2f'
+        self.join_config_3f = 'home_3f'
+        self.join_config_4f = 'home_4f'
+        self.join_config_1g = 'home_1g'
+        self.join_config_2g = 'home_2g'
+        self.join_config_3g = 'home_3g'
+        self.join_config_1h = 'home_1h'
+        self.join_config_2h = 'home_2h'
+        self.join_config_3h = 'home_3h'
+        self.join_config_4h = 'home_4h'
+        self.join_config_4g = 'home_4g'
+        self.join_config_1e = 'home_1e'
+        self.join_config_2e = 'home_2e'
+        self.join_config_3e = 'home_3e'
+        self.join_config_4e = 'home_4e'
+
+
 
     def execute(self, ud):
         if ud['target_bin_id'] == '1F':
             success = self.robot.move_to_joint_angles(self.join_config_1f)
             return 'succeeded' if success else 'aborted'
-        elif ud['target_bin_id'] == '4H':
-            success = self.robot.move_to_joint_angles(self.join_config_4h)
+        elif ud['target_bin_id'] == '2F':
+            success = self.robot.move_to_joint_angles(self.join_config_2f)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '3F':
+            success = self.robot.move_to_joint_angles(self.join_config_3f)
             return 'succeeded' if success else 'aborted'
         elif ud['target_bin_id'] == '4F':
             success = self.robot.move_to_joint_angles(self.join_config_4f)
             return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '1E':
+            success = self.robot.move_to_joint_angles(self.join_config_1e)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '2E':
+            success = self.robot.move_to_joint_angles(self.join_config_2e)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '3E':
+            success = self.robot.move_to_joint_angles(self.join_config_3e)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '4E':
+            success = self.robot.move_to_joint_angles(self.join_config_4e)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '1G':
+            success = self.robot.move_to_joint_angles(self.join_config_1g)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '2G':
+            success = self.robot.move_to_joint_angles(self.join_config_2g)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '3G':
+            success = self.robot.move_to_joint_angles(self.join_config_3g)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '4G':
+            success = self.robot.move_to_joint_angles(self.join_config_4g)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '1H':
+            success = self.robot.move_to_joint_angles(self.join_config_1h)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '2H':
+            success = self.robot.move_to_joint_angles(self.join_config_2h)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '3H':
+            success = self.robot.move_to_joint_angles(self.join_config_3h)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '4H':
+            success = self.robot.move_to_joint_angles(self.join_config_4h)
+            return 'succeeded' if success else 'aborted'
         else:
             return 'pass'
+
             
 class MoveToJointAngles(State):
     def __init__(self, robot, default_position=None):
