@@ -62,11 +62,9 @@ class HeuristicGraspDetector:
 
         POD_OFFSET = 0.02
         RGB_TO_DEPTH_FRAME_OFFSET = -0.032
-        DEPTH_TILT = 4*np.pi/180
+        DEPTH_TILT = 2.5*np.pi/180
         transform= self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
-        print(center, center.shape)
         center[2] += center[0]*np.sin(DEPTH_TILT)
-        print(center, center.shape)
         center[1] -= RGB_TO_DEPTH_FRAME_OFFSET
         center[0] = transform.transform.translation.x - POD_OFFSET
 
