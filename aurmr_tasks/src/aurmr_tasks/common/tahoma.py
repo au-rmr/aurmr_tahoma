@@ -1,8 +1,11 @@
 import copy
+from io import StringIO
+import json
 import math
 import sys
 from functools import wraps
 from turtle import pos
+
 
 from actionlib import SimpleActionClient
 from actionlib_msgs.msg import GoalStatusArray, GoalStatus
@@ -486,12 +489,16 @@ class Tahoma:
         for index in range(3):
             success, plan1, planning_time, error_code = self.move_group.plan()
             if success:
-                end = plan1.getLastWayPoint()
-                Jmg = end.getGroup();
-                print("Var names"+ end.getVariableNames())
-                print("Var pos", end.getVariablePositions())
-                print("Jacobian", end.getJacobian(Jmg))
-                input("waiting")
+                print("=================================================")
+                print (getattr(getattr(plan1,"joint_trajectory"),"points")[-1])
+                print("=================================================")
+
+                # end = plan1.getLastWayPoint()
+                # Jmg = end.getGroup();
+                # print("Var names"+ end.getVariableNames())
+                # print("Var pos", end.getVariablePositions())
+                # print("Jacobian", end.getJacobian(Jmg))
+                # input("waiting")
        
 
         # A `DisplayTrajectory`_ msg has two primary fields, trajectory_start and trajectory.
