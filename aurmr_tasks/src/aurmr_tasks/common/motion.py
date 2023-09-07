@@ -329,7 +329,7 @@ class MoveEndEffectorToPose(State):
             pose = userdata["pose"]
 
         self.target_pose_visualizer.publish(pose)
-        success = self.robot.move_to_pose(
+        success = self.robot.move_to_pose_manipulable(
                           pose,
                           allowed_planning_time=15.0,
                           execution_timeout=15.0,
