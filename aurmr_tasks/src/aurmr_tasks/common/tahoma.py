@@ -1,10 +1,9 @@
 import copy
-from io import StringIO
-import json
 import math
 import sys
 from functools import wraps
 from turtle import pos
+import numpy as np
 
 
 from actionlib import SimpleActionClient
@@ -483,35 +482,37 @@ class Tahoma:
         self.move_group.set_num_planning_attempts(num_planning_attempts)
         self.move_group.allow_replanning(replan)
         self.move_group.set_goal_position_tolerance(tolerance)
-        success, plan, planning_time, error_code = self.move_group.plan()
-        if not success:
-            return False
-        for index in range(3):
-            success, plan1, planning_time, error_code = self.move_group.plan()
-            if success:
-                print("=================================================")
-                print (getattr(getattr(plan1,"joint_trajectory"),"points")[-1])
-                print("=================================================")
+        max_manipulability = 0
 
-                # end = plan1.getLastWayPoint()
-                # Jmg = end.getGroup();
-                # print("Var names"+ end.getVariableNames())
-                # print("Var pos", end.getVariablePositions())
-                # print("Jacobian", end.getJacobian(Jmg))
-                # input("waiting")
-       
+        for index in range(5):
+            success, plan, planning_time, error_code = self.move_group.plan()
+            if not success:
+                return False
+            print("=================================================")
+            m = self.move_group.get_jacobian_matrix(list(getattr(getattr(getattr(plan,"joint_trajectory"),"points")[-1],"positions")))
+            n = np.matmul(np.matrix(m),np.matrix.transpose(np.matrix(m)))
+            manip = math.sqrt(np.linalg.det(n))
+            if(manip>max_manipulability):
+                max_manipulability = manip
+                main_plan = plan
+            print(manip)
+            print("=================================================")
+            input("waiting")
+
+
 
         # A `DisplayTrajectory`_ msg has two primary fields, trajectory_start and trajectory.
         # We populate the trajectory_start with our current robot state to copy over
         # any AttachedCollisionObjects and add our plan to the trajectory.
         display_trajectory = DisplayTrajectory()
         display_trajectory.trajectory_start = self.commander.get_current_state()
-        display_trajectory.trajectory.append(plan)
+        display_trajectory.trajectory.append(main_plan)
         # Publish
         self.display_trajectory_publisher.publish(display_trajectory)
 
         # Now, we call the planner to compute the plan and execute it.
-        ret = self.move_group.execute(plan, wait=True)
+        ret = self.move_group.execute(main_plan, wait=True)
+        input("hold")
         # Calling `stop()` ensures that there is no residual movement
         self.move_group.stop()
         # It is always good to clear your targets after planning with poses.
