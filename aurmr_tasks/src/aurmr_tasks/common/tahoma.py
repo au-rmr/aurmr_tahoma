@@ -488,11 +488,11 @@ class Tahoma:
             success, plan, planning_time, error_code = self.move_group.plan()
             if not success:
                 return False
-            m = self.move_group.get_jacobian_matrix(list(getattr(getattr(getattr(plan,"joint_trajectory"),"points")[-1],"positions")))
-            n = np.matmul(np.matrix(m),np.matrix.transpose(np.matrix(m)))
-            manip = math.sqrt(np.linalg.det(n))
-            if(manip>max_manipulability):
-                max_manipulability = manip
+            jacobian = self.move_group.get_jacobian_matrix(list(getattr(getattr(getattr(plan,"joint_trajectory"),"points")[-1],"positions")))
+            n = np.matmul(np.matrix(jacobian),np.matrix.transpose(np.matrix(jacobian)))
+            manipulability_index = math.sqrt(np.linalg.det(n))
+            if(manipulability_index>max_manipulability):
+                max_manipulability = manipulability_index
                 main_plan = plan
 
 
