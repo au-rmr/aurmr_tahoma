@@ -483,21 +483,17 @@ class Tahoma:
         self.move_group.allow_replanning(replan)
         self.move_group.set_goal_position_tolerance(tolerance)
         max_manipulability = 0
-
+        
         for index in range(5):
             success, plan, planning_time, error_code = self.move_group.plan()
             if not success:
                 return False
-            print("=================================================")
             m = self.move_group.get_jacobian_matrix(list(getattr(getattr(getattr(plan,"joint_trajectory"),"points")[-1],"positions")))
             n = np.matmul(np.matrix(m),np.matrix.transpose(np.matrix(m)))
             manip = math.sqrt(np.linalg.det(n))
             if(manip>max_manipulability):
                 max_manipulability = manip
                 main_plan = plan
-            print(manip)
-            print("=================================================")
-            input("waiting")
 
 
 
@@ -512,7 +508,6 @@ class Tahoma:
 
         # Now, we call the planner to compute the plan and execute it.
         ret = self.move_group.execute(main_plan, wait=True)
-        input("hold")
         # Calling `stop()` ensures that there is no residual movement
         self.move_group.stop()
         # It is always good to clear your targets after planning with poses.
