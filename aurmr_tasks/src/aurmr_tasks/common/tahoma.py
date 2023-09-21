@@ -661,7 +661,7 @@ class Tahoma:
         (plan, fraction) = self.move_group.compute_cartesian_path(
             waypoints, ee_step, jump_threshold, avoid_collisions
         )
-        plan = self.move_group.retime_trajectory(self.move_group.get_current_state(), plan, velocity_scaling_factor=.075, acceleration_scaling_factor=.05)
+        plan = self.move_group.retime_trajectory(self.move_group.get_current_state(), plan, velocity_scaling_factor=.05, acceleration_scaling_factor=.05)
         if fraction < .9:
             rospy.logwarn(f"Not moving in cartesian path. Only {fraction} waypoints reached")
             # return False

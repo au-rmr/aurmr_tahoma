@@ -333,10 +333,10 @@ class MoveEndEffectorToPose(State):
                           pose,
                           allowed_planning_time=15.0,
                           execution_timeout=15.0,
-                          num_planning_attempts=50,
+                          num_planning_attempts=20,
                           orientation_constraint=None,
                           replan=True,
-                          replan_attempts=20,
+                          replan_attempts=8,
                           tolerance=0.01)
         # input('check planning frame!!!!!!!!!!!!!!')
         if success:
