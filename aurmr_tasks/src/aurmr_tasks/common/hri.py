@@ -257,7 +257,7 @@ class UserPromptForRetry(State):
 
         POD_OFFSET = 0.02
         RGB_TO_DEPTH_FRAME_OFFSET = -0.032
-        DEPTH_TILT = 3*np.pi/180
+        DEPTH_TILT = 2.5*np.pi/180
         transform= self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
         grasp_pose.pose.position.z += grasp_pose.pose.position.x*np.sin(DEPTH_TILT)
         grasp_pose.pose.position.y -= RGB_TO_DEPTH_FRAME_OFFSET
