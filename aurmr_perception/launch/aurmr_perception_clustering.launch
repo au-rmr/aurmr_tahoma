@@ -11,7 +11,7 @@
 
 
 
-  <node name="demo_service" pkg="uois_service_multi_demo" type="demo_service.py" />
+  <node name="demo_service" pkg="uois_service_multi_demo" type="demo_service.py" output="screen" />
 
   <node name="aurmr_perception" pkg="aurmr_perception" type="aurmr_perception" output="screen">
     <param name="camera_name"                   value="$(arg camera)" />

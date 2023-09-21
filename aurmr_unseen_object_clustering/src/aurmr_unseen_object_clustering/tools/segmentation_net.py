@@ -54,7 +54,7 @@ PIXEL_MEANS = np.array([[[102.9801, 115.9465, 122.7717]]])
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning) 
 
-with open('/tmp/calibration_pixel_coords_pod_a.pkl', 'rb') as f:
+with open('/tmp/calibration_pixel_coords_pod.pkl', 'rb') as f:
     loaded_pixel_coords = pickle.load(f)
 
 bin_bounds = {
