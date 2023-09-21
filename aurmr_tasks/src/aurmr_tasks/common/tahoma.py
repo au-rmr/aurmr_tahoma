@@ -135,7 +135,7 @@ class Tahoma:
         self.commander = moveit_commander.RobotCommander()
         self.scene = moveit_commander.PlanningSceneInterface(synchronous=True)
         self.move_group = moveit_commander.MoveGroupCommander(ARM_GROUP_NAME)
-        self.MAX_VEL_FACTOR = .75
+        self.MAX_VEL_FACTOR = .3
         self.MAX_ACC_FACTOR = .5
         self.move_group.set_max_velocity_scaling_factor(self.MAX_VEL_FACTOR)
         self.move_group.set_max_acceleration_scaling_factor(self.MAX_ACC_FACTOR)
@@ -156,7 +156,7 @@ class Tahoma:
         group_names = self.commander.get_group_names()
 
         self.wrench_listener = rospy.Subscriber("/wrench", WrenchStamped, self.wrench_cb)
-        self.gripper_status_listener = rospy.Subscriber("/gripper_control/status", vacuum_gripper_input, self.gripper_status_cb)
+        #self.gripper_status_listener = rospy.Subscriber("/gripper_control/status", vacuum_gripper_input, self.gripper_status_cb)
         self.custom_gripper_status_listener = rospy.Subscriber("/vacuum_gripper_control/status", vacuum_gripper_input, self.custom_gripper_status_cb)
         self.traj_status_listener = rospy.Subscriber("/scaled_pos_joint_traj_controller/follow_joint_trajectory/status", GoalStatusArray, self.goal_status_cb)
         self.force_mag = 0
@@ -180,7 +180,7 @@ class Tahoma:
         self.object_detected = (msg.gPO < 95) 
 
     def custom_gripper_status_cb(self, msg: vacuum_gripper_input):
-        self.object_detected = msg.SYSTEM_VACUUM > 500 # because it is in mbar and is returned as an int
+        self.object_detected = msg.SYSTEM_VACUUM > 450 # because it is in mbar and is returned as an int
 
     def goal_status_cb(self, msg: GoalStatusArray):
         latest_time = 0
@@ -265,7 +265,7 @@ class Tahoma:
         self._gripper_client.send_goal(goal)
         if not return_before_done:
             self._gripper_client.wait_for_result()
-        rospy.sleep(3)
+        rospy.sleep(2)
 
         self.open_gripper()
         return 
@@ -392,6 +392,7 @@ class Tahoma:
                           replan=True,
                           replan_attempts=5,
                           tolerance=0.01):
+                          
         """Moves the end-effector to a pose, using motion planning.
 
         Args:
@@ -485,7 +486,7 @@ class Tahoma:
         (plan, fraction) = self.move_group.compute_cartesian_path(
             waypoints, ee_step, jump_threshold, avoid_collisions
         )
-        plan = self.move_group.retime_trajectory(self.move_group.get_current_state(), plan, velocity_scaling_factor=.075, acceleration_scaling_factor=.05)
+        plan = self.move_group.retime_trajectory(self.move_group.get_current_state(), plan, velocity_scaling_factor=.05, acceleration_scaling_factor=.05)
         if fraction < .9:
             rospy.logwarn(f"Not moving in cartesian path. Only {fraction} waypoints reached")
             # return False
