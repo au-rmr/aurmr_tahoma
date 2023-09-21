@@ -39,14 +39,14 @@ class VacuumGripper:
         self.ip = ip
         self.gripper_type = gripper_type
 
-        # if os.path.exists(LOG_FILE_PATH):
-        #     configure_default_logger(level=LOG_LEVEL, filename=LOG_FILE_PATH)
-        # else:
-        #     f = open(LOG_FILE_PATH, "x")
-        #     f.write("\n")
-        #     f.close()
-        #     print("Created new log file ", LOG_FILE_PATH)
-        #     configure_default_logger(level=LOG_LEVEL, filename=LOG_FILE_PATH)
+        if os.path.exists(LOG_FILE_PATH):
+            configure_default_logger(level=LOG_LEVEL, filename=LOG_FILE_PATH)
+        else:
+            f = open(LOG_FILE_PATH, "x")
+            f.write("\n")
+            f.close()
+            print("Created new log file ", LOG_FILE_PATH)
+            configure_default_logger(level=LOG_LEVEL, filename=LOG_FILE_PATH)
 
     def set_ip(self, ip):
         self.ip = ip
@@ -69,7 +69,7 @@ class VacuumGripper:
     def getStatus(self):
         if self.gripper_type == "vacuum":
             # TODO
-            
+
             message = vacuum_gripper_input()
             
             #Assign the values to their respective variables
@@ -212,10 +212,13 @@ class VacuumGripper:
     
     def get_system_vacuum(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SYSTEM_VACUUM, attribute=5)
-        print('HERE*************')
-        print(type(msg.value))
         print(msg)
-        return UINT.decode(msg.value[0:2])
+        try:
+            output = UINT.decode(msg.value[0:2])
+        except exceptions.BufferEmptyError:
+            return 0
+        return output
+    
     
     def get_SetPointH1(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5) 
@@ -238,8 +241,16 @@ class VacuumGripper:
         return hysteresis_h2
     
     def set_SetPointH1(self, value):
-        new = bytearray([hex(value & 0xFF), hex(value >> 8)] * 16)
-        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5, request_data = new)
+        #new = bytearray([hex(value & 0xFF), hex(value >> 8)] * 16)
+        #self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5, request_data = new)
+        # Setting the H1 value to 850 using bits
+        self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5,request_data = bytearray([0b01010010, 0b11]*16))
+
+    def set_Hysteresis_h1(self, value):
+        #new = bytearray([hex(value & 0xFF), hex(value >> 8)] * 16)
+        #self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5, request_data = new)
+        # Setting the H1 value to 850 using bits
+        self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5,request_data = bytearray([0b11111010, 0b00]*16))
 
     
     # CHECK: Does this set the vacuum range and correctly? 
@@ -301,6 +312,7 @@ def mainLoop(ur_address, gripper_type):
   
   while not rospy.is_shutdown():
     # Get and publish the Gripper status
+    gripper.set_SetPointH1(850)
     status = gripper.getStatus()
     pub.publish(status)
     # Wait a little
