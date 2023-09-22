@@ -9,7 +9,18 @@ find_package(catkin REQUIRED COMPONENTS
     message_generation
 )
 
+
 catkin_python_setup()
+
+add_service_files(
+  FILES
+  GetSegmentationUOIS.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
 
 catkin_package(
 )
@@ -18,7 +29,6 @@ include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
 )
-
 
 # Lint Python modules for PEP8 compatibility
 set(ROSLINT_PYTHON_OPTS "--max-line-length=120")
