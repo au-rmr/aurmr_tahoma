@@ -2,6 +2,8 @@
 <launch>
     <arg name="gui" default="True" />
     <arg name="pod_id" default="1" />
+    <!-- options are 1A, 1C, 2A, 2C -->
+    <arg name="pod_face" default="1C" />
     <!-- <include file="$(find tahoma_bringup)/launch/calibration.launch"/> -->
 
 
@@ -25,6 +27,7 @@
     <group if="$(eval pod_id > 0)">
       <include file="$(find tahoma_description)/launch/load_pod.launch">
         <arg name="id" value="$(arg pod_id)"/>
+        <arg name="pod_id" value="$(arg pod_face)"/>
       </include>
       <include file="$(find tahoma_description)/launch/pod_transform.launch"/>
     </group>
@@ -58,7 +61,7 @@
           args="load depth_image_proc/point_cloud_xyz nodelet_manager">
       <remap from="camera_info" to="/camera_lower_right/aligned_depth_to_color/camera_info"/>
       <remap from="image_rect" to="/camera_lower_right/aligned_depth_to_color/image_raw"/>
-      <remap from="points" to="/camera/depth/points"/>
+      <remap from="points" to="/camera/depth/points2"/>
     </node>
 
 

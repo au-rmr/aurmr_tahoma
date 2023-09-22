@@ -64,3 +64,6 @@ _autosummary
 
 # pickles, arrays
 *.npy
+
+# Python installation
+*.egg-info

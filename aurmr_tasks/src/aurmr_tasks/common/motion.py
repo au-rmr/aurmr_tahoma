@@ -228,7 +228,7 @@ class AdjustJointPositionsIfBin1F4H4F(State):
         if ud['target_bin_id'] == '1F':
             success = self.robot.move_to_joint_angles(self.join_config_1f)
             return 'succeeded' if success else 'aborted'
-        elif ud['target_bin_id'] == '4H':
+        if ud['target_bin_id'] == '4H':
             success = self.robot.move_to_joint_angles(self.join_config_4h)
             return 'succeeded' if success else 'aborted'
         elif ud['target_bin_id'] == '4F':
@@ -283,7 +283,7 @@ class MoveEndEffectorToPose(State):
                           replan=True,
                           replan_attempts=8,
                           tolerance=0.01)
-        input('check planning frame!!!!!!!!!!!!!!')
+        # input('check planning frame!!!!!!!!!!!!!!')
         if success:
             return "succeeded"
         else:
@@ -379,7 +379,38 @@ class ServoEndEffectorToOffset(State):
             return "succeeded"
         else:
             return "aborted"
-
+        
+class AdjustRightIfColumn1(State):
+    def __init__(self, robot, offset, frame=None):
+        State.__init__(self, input_keys=["target_bin_id"], outcomes=['succeeded', 'aborted', 'pass'])
+        self.robot = robot
+        self.offset = offset
+        self.frame = frame
+        
+    def execute(self, ud):
+        column_1 = ['1E', '1F', '1G', '1H']
+        if ud['target_bin_id'] in column_1:
+            sm = robust_move_to_offset(self.robot, self.offset, self.frame)
+            outcome = sm.execute()
+            return 'succeeded' if outcome == "succeeded" else 'aborted'
+        else:
+            return 'pass'
+        
+class AdjustLeftIfColumn4(State):
+    def __init__(self, robot, offset, frame=None):
+        State.__init__(self, input_keys=["target_bin_id"], outcomes=['succeeded', 'aborted', 'pass'])
+        self.robot = robot
+        self.offset = offset
+        self.frame = frame
+        
+    def execute(self, ud):
+        column_4 = ['4E', '4F', '4G', '4H']
+        if ud['target_bin_id'] in column_4:
+            sm = robust_move_to_offset(self.robot, self.offset, self.frame)
+            outcome = sm.execute()
+            return 'succeeded' if outcome == "succeeded" else 'aborted'
+        else:
+            return 'pass'
 
 def robust_move_to_offset(robot, offset, frame=None):
     sm = StateMachine(["succeeded", "preempted", "aborted"])
@@ -518,6 +549,7 @@ class AddInHandCollisionGeometry(State):
                                                  "gripper_right_distal_phalanx", "gripper_left_bar", "gripper_right_bar", "gripper_base_link", "epick_end_effector"])
         start = rospy.get_time()
         seconds = rospy.get_time()
+        
         timeout = 5.0
         while (seconds - start < timeout) and not rospy.is_shutdown():
             # Test if the box is in attached objects

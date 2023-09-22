@@ -216,5 +216,7 @@ class GetGraspPose(State):
         self.pose_viz.publish(grasp_pose)
         self.pre_grasp_viz.publish(pregrasp_pose)
 
+        # import pdb; pdb.set_trace()
+
         userdata["status"] = "picking"
         return "succeeded"
