@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+import time
+import os
+import rospy
+
+import logging
+
+import rospy
+import message_filters
+from rospy_message_converter import message_converter
+
+from smach_msgs.msg import SmachContainerStatus
+from typing import List
+import os
+
+import logging
+
+import subprocess
+import signal
+
+import atexit
+import psutil
+
+import rospy
+
+
+
+
+TOPICS_TO_RECORD = ["/rosout"]
+
+record_state_windows = [("MOVE_TO_PRE_GRASP", "MOVE_TO_PRE_TOTE_POSE")]
+
+class ROSBagRecorder:
+    """
+    Recorder for rosbag
+
+    adapted from https://answers.ros.org/question/10714/start-and-stop-rosbag-within-a-python-script/
+    """
+
+    def __init__(self, name: str, path: str, topic_names: List[str]):
+        self.topic_names = topic_names
+        self.name = name
+
+        os.makedirs(path, exist_ok=True)
+        self.path = os.path.join(path, "rosbag")
+        os.makedirs(self.path, exist_ok=True)
+        self.process = None
+
+        atexit.register(self.stop)
+
+    def start(self) -> bool:
+        topics = " ".join(self.topic_names)
+        cmd = f"rosbag record -o {self.name} -j {topics}"
+        rospy.loginfo("Recording the following topics %s", topics)
+        self.process = subprocess.Popen(
+            cmd, stdin=subprocess.PIPE, shell=True, cwd=self.path
+        )
+        return True
+
+
+    def stop(self) -> bool:
+        print("called stop")
+        if self.process:
+            rospy.loginfo(f"Signaling process with PID {self.process.pid}")
+
+            process = psutil.Process(self.process.pid)
+
+            procs = process.children(recursive=True)
+            for sub_process in procs:
+                sub_process.send_signal(signal.SIGINT)
+
+            _gone, alive = psutil.wait_procs(procs, timeout=3)
+            rospy.loginfo(f"Processes still alive {alive}. Sending terminate signal")
+            for sub_process in alive:
+                sub_process.terminate()
+
+            _gone, alive = psutil.wait_procs(procs, timeout=5)
+            rospy.loginfo(f"Processes still alive {alive}. Sending kill signal")
+            for sub_process in alive:
+                sub_process.kill()
+
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=3)
+            except psutil.TimeoutExpired:
+                rospy.logerr("Unable to terminate process.")
+                self.process.kill()
+            return True
+
+        rospy.logwarn("No active rosbag recording")
+        return False
+
+class StatemachineTrigger:
+    """
+    Trigger based on the current state machine
+    """
+
+    def __init__(self, recorder_factory):
+
+        topic_name = "/demo_sm/smach/container_status"
+        subscriber = message_filters.Subscriber(topic_name, SmachContainerStatus)
+
+        subscriber.registerCallback(self.on_new_state)
+
+        self._recorder_factory = recorder_factory
+        self.recorder = None
+
+        self._recording_window = None
+
+    def on_new_state(self, msg):
+
+        if not msg.active_states:
+            return
+
+        if msg.info != "HEARTBEAT":
+            rospy.loginfo("Active states %s", msg.active_states)
+
+        # We're actively recording, waiting for end trigger
+        if self._recording_window:
+            window_end = self._recording_window[1]
+            if window_end in msg.active_states:
+                rospy.loginfo("recording ended by state %s", window_end)
+                self.recorder.stop()
+                self.recorder = None
+                self._recording_window = None
+            return
+        # Must not have been triggered yet
+        for (window_start, window_end) in record_state_windows:
+            if window_start in msg.active_states:
+                rospy.loginfo("recording started by state %s", window_start)
+                self.recorder = self._recorder_factory()
+                self.recorder.start()
+                self._recording_window = (window_start, window_end)
+                return
+
+
+def main(path, config_file):
+    rospy.init_node("pick_logger")
+
+    i = 0
+    def make_recorder():
+        nonlocal i
+        i += 1
+        return ROSBagRecorder(f"{i}", path, TOPICS_TO_RECORD)
+
+    trigger = StatemachineTrigger(make_recorder)
+
+    rospy.spin()
+
+if __name__ == '__main__':
+    main("/tmp", None)
