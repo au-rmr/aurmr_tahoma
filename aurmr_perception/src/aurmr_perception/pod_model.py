@@ -55,6 +55,7 @@ class PodPerceptionROS:
             raise RuntimeError(f"Unknown camera type requested: {camera_type}")
         
         self.points_sub = rospy.Subscriber(f'/{self.camera_name}/points2', PointCloud2, self.points_cb)
+        self.masks_pub = rospy.Publisher('~detected_masks', Image, queue_size=1, latch=True)
 
         self.camera_synchronizer = message_filters.ApproximateTimeSynchronizer([
             self.camera_depth_subscriber, self.camera_rgb_subscriber, self.camera_info_subscriber], 10, 1)
@@ -149,6 +150,7 @@ class PodPerceptionROS:
 
         mask = ros_numpy.msgify(Image, mask.astype(np.uint8), encoding="mono8")
 
+        self.masks_pub.publish(mask)
         if request.mask_only:
             return True,\
                f"Mask successfully retrieved for object {request.object_id} in bin {bin_id}",\
