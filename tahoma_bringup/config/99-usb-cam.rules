@@ -1,0 +1,33 @@
+# Create a symlink for a particular model of USB webcam which we
+# mount to Tahoma's stand.
+#
+# INSTALLATION
+#
+# First, copy this rules file into the following directory:
+#
+# /etc/udev/rules.d/
+#
+# Second, run the following command to make the new rule files become
+# active and then disconnect and reconnect the device.
+#
+# sudo udevadm control --reload
+#
+# When writing udev rules, you can find relevant information about a
+# device by running commands like the following with the appropriate
+# device file name. You can often find the device file name by running
+# dmesg from the command line right after plugging in the device.
+#
+# udevadm info -a /dev/video3
+#
+# udevadm info -a /dev/video3 | grep serial
+#    ATTRS{serial}=="SN20210701004"
+#    ATTRS{serial}=="0000:00:14.0"
+#
+# udevadm info -a /dev/ttyUSB0
+#
+# REFERENCES
+#
+# http://www.linuxfromscratch.org/lfs/view/6.2/chapter07/symlinks.html
+#
+
+KERNEL=="video*", ATTRS{serial}=="5D27A600", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0825", MODE:="0777", SYMLINK+="tahoma-stand-camera"
