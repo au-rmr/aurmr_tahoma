@@ -1,0 +1,12 @@
+<?xml version="1.0" ?>
+<launch>
+  <arg name="video_device" default="/dev/tahoma-stand-camera"/>
+
+  <!-- Use `v4l2-ctl \-\-all` to look at what the camera supports -->
+  <node name="stand_camera" pkg="usb_cam" type="usb_cam_node">
+    <param name="camera_name"  value="stand_camera" />
+    <param name="video_device" value="$(arg video_device)"/>
+    <param name="pixel_format" value="yuyv" />
+  </node>
+
+</launch>
