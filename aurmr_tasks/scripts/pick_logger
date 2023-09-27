@@ -22,11 +22,27 @@ import atexit
 import psutil
 
 import rospy
+import datetime
 
+# This is an internal high-capacity drive, so we should only need to clear it once before the runs
+BAG_STORAGE_PATH = "/media/aurmr/Logging"
+BAG_STORAGE_PATH = "/tmp"
+# The host should be configured in ~/.ssh/hosts, and the key should be unlocked (or you'll be prompted on the first run)
+RSYNC_DESTINATION = "popo:/tmp"
 
-
-
-TOPICS_TO_RECORD = ["/rosout"]
+TOPICS_TO_RECORD = [
+    "/demo_sm/smach/container_status",
+    "/grasp_detection/detected_grasps",
+    "/grasp_detection/detected_pts",
+    "/robot_description",
+    "/robot_status",
+    "/rosout",
+    "/stand_camera/camera_info",
+    "/stand_camera/image_raw",
+    "/tf",
+    "/tf_static",
+    "/wrench"
+    ]
 
 record_state_windows = [("MOVE_TO_PRE_GRASP", "MOVE_TO_PRE_TOTE_POSE")]
 
@@ -37,20 +53,21 @@ class ROSBagRecorder:
     adapted from https://answers.ros.org/question/10714/start-and-stop-rosbag-within-a-python-script/
     """
 
-    def __init__(self, name: str, path: str, topic_names: List[str]):
+    def __init__(self, name: str, path: str, topic_names: List[str], finished_handler=None):
         self.topic_names = topic_names
         self.name = name
-
-        os.makedirs(path, exist_ok=True)
-        self.path = os.path.join(path, "rosbag")
+        self.path = path
         os.makedirs(self.path, exist_ok=True)
         self.process = None
-
+        self.finished_handler = finished_handler
+        # Prevent runaway bag recordings by always stopping on exit
         atexit.register(self.stop)
 
     def start(self) -> bool:
         topics = " ".join(self.topic_names)
-        cmd = f"rosbag record -o {self.name} -j {topics}"
+        timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        self.file_name =  f"{self.name}_{timestamp_str}"
+        cmd = f"rosbag record -O {self.file_name} -j {topics}"
         rospy.loginfo("Recording the following topics %s", topics)
         self.process = subprocess.Popen(
             cmd, stdin=subprocess.PIPE, shell=True, cwd=self.path
@@ -59,7 +76,6 @@ class ROSBagRecorder:
 
 
     def stop(self) -> bool:
-        print("called stop")
         if self.process:
             rospy.loginfo(f"Signaling process with PID {self.process.pid}")
 
@@ -70,14 +86,16 @@ class ROSBagRecorder:
                 sub_process.send_signal(signal.SIGINT)
 
             _gone, alive = psutil.wait_procs(procs, timeout=3)
-            rospy.loginfo(f"Processes still alive {alive}. Sending terminate signal")
-            for sub_process in alive:
-                sub_process.terminate()
+            if len(alive) > 0:
+                rospy.loginfo(f"Processes still alive {alive}. Sending terminate signal")
+                for sub_process in alive:
+                    sub_process.terminate()
 
-            _gone, alive = psutil.wait_procs(procs, timeout=5)
-            rospy.loginfo(f"Processes still alive {alive}. Sending kill signal")
-            for sub_process in alive:
-                sub_process.kill()
+                _gone, alive = psutil.wait_procs(procs, timeout=5)
+                if len(alive) > 0:
+                    rospy.loginfo(f"Processes still alive {alive}. Sending kill signal")
+                    for sub_process in alive:
+                        sub_process.kill()
 
             self.process.terminate()
             try:
@@ -85,10 +103,14 @@ class ROSBagRecorder:
             except psutil.TimeoutExpired:
                 rospy.logerr("Unable to terminate process.")
                 self.process.kill()
+            self.finished_handler(os.path.join(self.path, self.file_name + ".bag"))
+            # Make sure we don't get called again
+            atexit.unregister(self.stop)
             return True
 
         rospy.logwarn("No active rosbag recording")
         return False
+
 
 class StatemachineTrigger:
     """
@@ -137,15 +159,26 @@ class StatemachineTrigger:
 def main(path, config_file):
     rospy.init_node("pick_logger")
 
+    # Store all bags for this run in a timestamped dir inside the configured path
+    launch_timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    bags_path = os.path.join(path, launch_timestamp)
+    os.makedirs(bags_path)
     i = 0
     def make_recorder():
         nonlocal i
         i += 1
-        return ROSBagRecorder(f"{i}", path, TOPICS_TO_RECORD)
+        def bag_recording_finished(bag_path):
+            # Disable host key checknig to avoid a y/n prompt
+            cmd = f"rsync -ha -e 'ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no' {bag_path} {RSYNC_DESTINATION}"
+            rospy.loginfo(f"Transfering bag to {RSYNC_DESTINATION} with {cmd}")
+            subprocess.Popen(
+                cmd, stdin=subprocess.PIPE, shell=True, cwd="/"
+            )
+        return ROSBagRecorder(f"{i}", bags_path, TOPICS_TO_RECORD, finished_handler=bag_recording_finished)
 
     trigger = StatemachineTrigger(make_recorder)
 
     rospy.spin()
 
 if __name__ == '__main__':
-    main("/tmp", None)
+    main(BAG_STORAGE_PATH, None)
