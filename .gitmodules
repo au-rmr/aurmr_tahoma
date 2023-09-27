@@ -1,12 +1,39 @@
-[submodule "ur_msgs"]
-	path = ur_msgs
-	url = https://github.com/ros-industrial/ur_msgs.git
 [submodule "universal_robot"]
-	path = universal_robot
+	path = third-party/universal_robot
 	url = https://github.com/fmauch/universal_robot
 [submodule "Universal_Robots_ROS_Driver"]
-	path = Universal_Robots_ROS_Driver
+	path = third-party/Universal_Robots_ROS_Driver
 	url = https://github.com/UniversalRobots/Universal_Robots_ROS_Driver.git
 [submodule "robotiq"]
-	path = robotiq
+	path = third-party/robotiq
 	url = https://github.com/au-rmr/robotiq.git
+[submodule "third-party/Universal_Robots_Client_Library"]
+	path = third-party/Universal_Robots_Client_Library
+	url = https://github.com/UniversalRobots/Universal_Robots_Client_Library.git
+[submodule "third-party/industrial_robot_status_controller"]
+	path = third-party/industrial_robot_status_controller
+	url = git@github.com:gavanderhoorn/industrial_robot_status_controller.git
+[submodule "third-party/industrial_core"]
+	path = third-party/industrial_core
+	url = git@github.com:ros-industrial/industrial_core.git
+[submodule "third-party/rospy_message_converter"]
+	path = third-party/rospy_message_converter
+	url = git@github.com:DFKI-NI/rospy_message_converter.git
+[submodule "third-party/ros_controllers"]
+	path = third-party/ros_controllers
+	url = git@github.com:ros-controls/ros_controllers.git
+[submodule "third-party/Universal_Robots_ROS_scaled_controllers"]
+	path = third-party/Universal_Robots_ROS_scaled_controllers
+	url = git@github.com:UniversalRobots/Universal_Robots_ROS_scaled_controllers.git
+[submodule "Universal_Robots_ROS_passthrough_controllers"]
+	path = third-party/Universal_Robots_ROS_passthrough_controllers
+	url = git@github.com:UniversalRobots/Universal_Robots_ROS_passthrough_controllers.git
+[submodule "third-party/Universal_Robots_ROS_cartesian_control_msgs"]
+	path = third-party/Universal_Robots_ROS_cartesian_control_msgs
+	url = git@github.com:UniversalRobots/Universal_Robots_ROS_cartesian_control_msgs.git
+[submodule "third-party/Universal_Robots_ROS_controllers_cartesian"]
+	path = third-party/Universal_Robots_ROS_controllers_cartesian
+	url = git@github.com:UniversalRobots/Universal_Robots_ROS_controllers_cartesian.git
+[submodule "third-party/Azure_Kinect_ROS_Driver"]
+	path = third-party/Azure_Kinect_ROS_Driver
+	url = git@github.com:au-rmr/Azure_Kinect_ROS_Driver.git
