@@ -1,4 +1,11 @@
+<!-- For pod 1 -->
+<!-- <launch>
+    <node name="robot_to_pod_transform" pkg="tf2_ros" type="static_transform_publisher"
+          args="0.95 0.448 -0.088 -1.57 0 0 base_link pod_base_link"/>
+</launch> -->
+
+<!-- For pod 2 -->
 <launch>
     <node name="robot_to_pod_transform" pkg="tf2_ros" type="static_transform_publisher"
-          args="0.95 0.47 0 -1.57 0 0 base_link pod_base_link"/>
+          args="0.95 0.448 -0.072 -1.57 0 0 base_link pod_base_link"/>
 </launch>
