@@ -3,7 +3,7 @@
 
 import os
 from pycomm3 import CIPDriver, Services, configure_default_logger, LOG_VERBOSE, exceptions, SINT, UINT, USINT
-from logging import INFO
+from logging import WARNING
 import socket
 from vacuum_gripper_control.msg import vacuum_gripper_input, vacuum_gripper_output
 import rospy
@@ -14,7 +14,8 @@ LOG_FILE_PATH = '/home/aurmr/workspaces/ToF/logs/vacuum_gripper_control/pycomm3.
 # '/home/aurmr/workspaces/' + os + '/logs/vacuum_gripper_control/pycomm3.log'
 
 # Log levels are LOG_VERBOSE or INFO
-LOG_LEVEL = INFO
+LOG = False
+LOG_LEVEL = WARNING #INFO
 VALVE_ONE = None
 
 
@@ -39,14 +40,15 @@ class VacuumGripper:
         self.ip = ip
         self.gripper_type = gripper_type
 
-        if os.path.exists(LOG_FILE_PATH):
-            configure_default_logger(level=LOG_LEVEL, filename=LOG_FILE_PATH)
-        else:
-            f = open(LOG_FILE_PATH, "x")
-            f.write("\n")
-            f.close()
-            print("Created new log file ", LOG_FILE_PATH)
-            configure_default_logger(level=LOG_LEVEL, filename=LOG_FILE_PATH)
+        if LOG:
+            if os.path.exists(LOG_FILE_PATH):
+                configure_default_logger(level=LOG_LEVEL, filename=LOG_FILE_PATH)
+            else:
+                f = open(LOG_FILE_PATH, "x")
+                f.write("\n")
+                f.close()
+                print("Created new log file ", LOG_FILE_PATH)
+                configure_default_logger(level=LOG_LEVEL, filename=LOG_FILE_PATH)
 
     def set_ip(self, ip):
         self.ip = ip
@@ -54,7 +56,6 @@ class VacuumGripper:
     def open_connection(self):
         print("Opening connection to ", self.ip)
         self.cip_driver = CIPDriver(self.ip)
-        print(self.cip_driver)
         assert self.cip_driver.open()
         # assert self.cip_driver.connected
         print("Opened connection to ", self.ip)
@@ -106,7 +107,7 @@ class VacuumGripper:
             #self.vacuum(command.rPR, command.rATR)
             #rPR is the register for pressure on the vacuum
             #rATR is the register for auto release on the vacuum
-            #don't need gripper mode, max-pressure
+            #don't need gripper mocip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000000] + [0b00000000] + [0b00000001] + [0b00000001] + [0b00000000]*12))de, max-pressure
         # EJECTOR_CONTROL is an instance so it should not be set to 0, 
         # is there a way to to make this gripper be regulated to 0 - meaning off
         # var_dict = {EJECTOR_CONTROL, 0} # this is the instance - I need a varible that does the same thing
@@ -136,7 +137,8 @@ class VacuumGripper:
     def close_valve(self, number):
         print('Closing valve')
         try:
-            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000000] + [0b00000000]*15))
+            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000000] + [0b00000000] + [0b00000000] + [0b00000000] + [0b00000000]*12))
+            # self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000000] + [0b00000000]*15))
         except exceptions.CommError:
             if not self.open_connection():
                 raise exceptions.CommError
@@ -148,7 +150,8 @@ class VacuumGripper:
         ejectors[number - 1] = 1
         SINT[None].encode(ejectors)
         try:
-            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000001] + [0b00000000]*15))
+            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000000] + [0b00000000] + [0b00000001] + [0b00000001] + [0b00000000]*12))
+            # self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000001] + [0b00000000]*15))
         except exceptions.CommError:
             if not self.open_connection():
                 raise exceptions.CommError
@@ -157,7 +160,8 @@ class VacuumGripper:
 
     def blow_off(self, number):
         try:
-            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000010] + [0b00000000]*15))
+            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000000] + [0b00000000] + [0b00000010] + [0b00000010] + [0b00000000]*12))
+            # self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000010] + [0b00000000]*15))
         except exceptions.CommError:
             if not self.open_connection():
                 raise exceptions.CommError
@@ -210,9 +214,12 @@ class VacuumGripper:
     
     def get_system_vacuum(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SYSTEM_VACUUM, attribute=5)
-        print(msg)
+
         try:
-            output = UINT.decode(msg.value[0:2])
+            # output = UINT.decode(msg.value[0:2])
+            output = UINT.decode(msg.value[4:6])
+            # print(f'output 1: {UINT.decode(msg.value[4:6])}')
+            # print(f'output 2: {UINT.decode(msg.value[6:8])}')
         except exceptions.BufferEmptyError:
             return 0
         return output
@@ -239,6 +246,7 @@ class VacuumGripper:
         return hysteresis_h2
     
     def set_SetPointH1(self, value):
+        # data = []
         #new = bytearray([hex(value & 0xFF), hex(value >> 8)] * 16)
         #self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5, request_data = new)
         # Setting the H1 value to 850 using bits
@@ -310,7 +318,7 @@ def mainLoop(ur_address, gripper_type):
   
   while not rospy.is_shutdown():
     # Get and publish the Gripper status
-    gripper.set_SetPointH1(850)
+    # gripper.set_SetPointH1(850)
     status = gripper.getStatus()
     pub.publish(status)
     # Wait a little

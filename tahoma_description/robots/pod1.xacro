@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="pod1">
-  <xacro:include filename="$(find tahoma_description)/urdf/pod.xacro"/>
-  <xacro:pod prefix="pod_" recipe_a="${[8.75,5.5,7.5,6,4.5,8.75,5,6,5,8.75,5,6,11]}"/>
+  <xacro:include filename="$(find tahoma_description)/urdf/pod1.xacro"/>
+  <!-- Previous Values (in inches): [8.75,5.5,7.5,6,4.5,8.75,5,6,5,8.75,5,6,11] 
+       Current Values (in meters) are from pod1_recipe_790-00265-021.txt "bindDimensions" : A1-A13 -->
+  <xacro:pod prefix="pod_" recipe_a="${[0.223, 0.146, 0.197, 0.146, 0.121, 0.223, 0.121, 0.146, 0.121, 0.223, 0.121, 0.146, 0.261]}"/> 
 </robot>

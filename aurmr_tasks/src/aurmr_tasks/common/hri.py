@@ -266,9 +266,14 @@ class UserPromptForRetry(State):
         grasp_pose = self.tf_buffer.transform(grasp_pose, "base_link")
         grasp_pose.pose.orientation = quaternion
 
-        POD_OFFSET = 0.025 #-0.1
-        transform = self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
+        POD_OFFSET = 0.02
+        RGB_TO_DEPTH_FRAME_OFFSET = -0.032
+        DEPTH_TILT = -transform.transform.translation.z-0.04
+        transform= self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
+        grasp_pose.pose.position.z += DEPTH_TILT
+        grasp_pose.pose.position.y -= RGB_TO_DEPTH_FRAME_OFFSET
         grasp_pose.pose.position.x = transform.transform.translation.x - POD_OFFSET
+
         def visualize(pose, frame='base_link'):
             self.visualize_point_marker([
                 pose.position.x,
