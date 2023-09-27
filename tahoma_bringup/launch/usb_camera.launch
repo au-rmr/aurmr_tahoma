@@ -3,10 +3,14 @@
   <arg name="video_device" default="/dev/tahoma-stand-camera"/>
 
   <!-- Use `v4l2-ctl \-\-all` to look at what the camera supports -->
-  <node name="stand_camera" pkg="usb_cam" type="usb_cam_node">
+  <!-- Other tips: http://wiki.ros.org/usb_cam/Troubleshooting -->
+  <node name="stand_camera" pkg="usb_cam" type="usb_cam_node" output="screen">
     <param name="camera_name"  value="stand_camera" />
     <param name="video_device" value="$(arg video_device)"/>
-    <param name="pixel_format" value="yuyv" />
+    <param name="pixel_format" value="mjpeg" />
+    <param name="width" value="640" />
+    <param name="height" value="480" />
+    <param name="framerate" value="30" />
   </node>
 
 </launch>
