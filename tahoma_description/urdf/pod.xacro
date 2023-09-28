@@ -66,7 +66,7 @@
     <material name="yellow_fabric">
       <color rgba="1 .91 .2 1"/>
     </material>
-    <material name="aluminum">
+    <material name="steel">
       <color rgba=".6 .6 .6 1"/>
     </material>
 
@@ -80,7 +80,7 @@
         <geometry>
           <mesh filename="package://tahoma_description/meshes/pod/pod_frame.stl"/>
         </geometry>
-        <material name="aluminum"/>
+        <material name="steel"/>
       </visual>
       <collision>
         <origin rpy="0 0 0" xyz="${BASE_WIDTH / 2} ${BASE_WIDTH / 2} ${(BRACE_HEIGHT + BASE_HEIGHT) / 2}"/>

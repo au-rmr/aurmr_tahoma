@@ -18,7 +18,7 @@
     <material name="yellow_fabric">
       <color rgba="1 .91 .2 1"/>
     </material>
-    <material name="aluminum">
+    <material name="steel">
       <color rgba=".6 .6 .6 1"/>
     </material>
     <link name="${prefix}base_link">
