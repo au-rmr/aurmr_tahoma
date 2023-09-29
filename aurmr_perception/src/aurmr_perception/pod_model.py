@@ -6,6 +6,10 @@ from unittest import result
 import cv2
 import matplotlib
 from aurmr_perception.srv import CaptureObject, RemoveObject, GetObjectPoints, ResetBin, LoadDataset
+
+
+from skimage.color import label2rgb
+
 import numpy as np
 import ros_numpy
 import rospy
@@ -55,7 +59,9 @@ class PodPerceptionROS:
             raise RuntimeError(f"Unknown camera type requested: {camera_type}")
         
         self.points_sub = rospy.Subscriber(f'/{self.camera_name}/points2', PointCloud2, self.points_cb)
-
+        self.masks_pub = rospy.Publisher('~detected_masks', Image, queue_size=1, latch=True)
+        self.labels_pub = rospy.Publisher('~labeled_images', Image, queue_size=1, latch=True)
+        self.color_image_pub = rospy.Publisher('~colored_images', Image, queue_size=1, latch=True)
         self.camera_synchronizer = message_filters.ApproximateTimeSynchronizer([
             self.camera_depth_subscriber, self.camera_rgb_subscriber, self.camera_info_subscriber], 10, 1)
         self.camera_synchronizer.registerCallback(self.camera_callback)
@@ -145,16 +151,36 @@ class PodPerceptionROS:
         if not result:
             return result, message, None, None, None
 
-        bin_id, points, mask = result
 
-        mask = ros_numpy.msgify(Image, mask.astype(np.uint8), encoding="mono8")
+        bin_id, points, mask = result
+        bgr_to_rgb_image = cv2.cvtColor(self.rgb_image[:,:,:3].astype(np.uint8), cv2.COLOR_BGR2RGB)
+
+        labled_mask = mask.astype(np.uint8)
+        labled_mask[labled_mask>0] = 1
+        labled_img = cv2.bitwise_and(bgr_to_rgb_image, bgr_to_rgb_image, mask=labled_mask)
+        mask_msg = ros_numpy.msgify(Image, mask.astype(np.uint8), encoding="mono8")  
+            
+        labled_img_msg = ros_numpy.msgify(Image, labled_img.astype(np.uint8), encoding="rgb8")
+        
+        colored_img_msg = ros_numpy.msgify(Image, bgr_to_rgb_image, encoding="rgb8")
+
+        common_header = Header()
+        common_header.stamp = rospy.Time.now()
+
+        mask_msg.header = common_header
+        labled_img_msg.header = common_header
+        colored_img_msg.header = common_header
+
+        self.labels_pub.publish(labled_img_msg)
+        self.masks_pub.publish(mask_msg)
+        self.color_image_pub.publish(colored_img_msg)
 
         if request.mask_only:
             return True,\
                f"Mask successfully retrieved for object {request.object_id} in bin {bin_id}",\
                bin_id,\
                None,\
-               mask
+               mask_msg
 
         if request.frame_id != self.camera_points_frame:
             # Transform points to requested frame_id
@@ -199,7 +225,7 @@ class PodPerceptionROS:
                f"Points and mask successfully retrieved for object {request.object_id} in bin {bin_id}",\
                bin_id,\
                pointcloud,\
-               mask
+               mask_msg
 
     def pick_object_callback(self, request):
         if not request.bin_id or not request.object_id:
