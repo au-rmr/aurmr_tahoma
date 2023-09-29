@@ -18,7 +18,7 @@ from visualization_msgs.msg import MarkerArray, Marker
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import sys
-#sys.path.append("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/UIE_main/mask2former_frame/")
+#sys.path.append("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/UIE_main/mask2former_frame/")
 #from normal_std.inference_grasp_main import run_normal_std
 
 from scipy.spatial.transform import Rotation as R
@@ -60,22 +60,22 @@ class HeuristicGraspDetector:
         # center[0] = center[0] - 0.02
         # POD_OFFSET = -0.1
 
-        POD_OFFSET = 0.02
-        RGB_TO_DEPTH_FRAME_OFFSET = -0.032
-        DEPTH_TILT = 2.5*np.pi/180
         transform= self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
-        center[2] += center[0]*np.sin(DEPTH_TILT)
+        POD_OFFSET = 0.1
+        RGB_TO_DEPTH_FRAME_OFFSET = -0.015
+        DEPTH_TILT = -transform.transform.translation.z-0.03
+        # center[2] += center[0]*np.sin(DEPTH_TILT)
+        center[2] += DEPTH_TILT
         center[1] -= RGB_TO_DEPTH_FRAME_OFFSET
         center[0] = transform.transform.translation.x - POD_OFFSET
 
         # NOTE(nickswalker,4-29-22): Hack to compensate for the chunk of points that don't get observed
         # due to the lip of the bin
         #center[2] -= 0.02
-        position = center
-        print(position, center, points.shape, center.shape)
+        print(center, points.shape, center.shape)
         align_to_bin_orientation = transformations.quaternion_from_euler(math.pi / 2., -math.pi / 2., math.pi / 2.)
 
-        poses_stamped = [(position, align_to_bin_orientation)]
+        poses_stamped = [(center, align_to_bin_orientation)]
         print(poses_stamped)
         return poses_stamped
 
@@ -169,7 +169,7 @@ class GraspDetectionROS:
 
     def detect_grasps_cb(self, request):
         cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
-        # cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
+        # cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
         pts = ros_numpy.numpify(request.points)
         self.points_viz_pub.publish(request.points)
         pts = np.stack([pts['x'],
@@ -188,7 +188,7 @@ class GraspDetectionROS:
 
     def detect_grasps__normal_cb(self, request):
         cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
-        # cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
+        # cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
         
         # convert point cloud to mask
         fx, fy = 1940.1367, 1940.1958
@@ -197,7 +197,7 @@ class GraspDetectionROS:
         height = 3072
 
         cv_image_new = np.zeros([height, width])
-        # cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/zero_cv_image.png", cv_image_new)
+        # cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/zero_cv_image.png", cv_image_new)
         pts = ros_numpy.numpify(request.points)
         pts = np.stack([pts['x'],
                         pts['y'],
@@ -223,7 +223,7 @@ class GraspDetectionROS:
         #     cv_image_new[int(cx-pixel_pos_x)][int(cy-pixel_pos_y)] = 1 
         # print("xyz", i[0],i[1] , i[2])
         # print("uv ", pixel_pos_x, pixel_pos_y)
-        # cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/new_cv_image_mask.png", cv_image_new)
+        # cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/new_cv_image_mask.png", cv_image_new)
         # float z = msg->points[i].z*1000.0;
         # float u = (msg->points[i].x*1000.0*focal_x) / z;
         # float v = (msg->points[i].y*1000.0*focal_y) / z;
