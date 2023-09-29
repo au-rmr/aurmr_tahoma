@@ -6,6 +6,10 @@ from unittest import result
 import cv2
 import matplotlib
 from aurmr_perception.srv import CaptureObject, RemoveObject, GetObjectPoints, ResetBin, LoadDataset
+
+
+from skimage.color import label2rgb
+
 import numpy as np
 import ros_numpy
 import rospy
@@ -53,10 +57,11 @@ class PodPerceptionROS:
             self.camera_points_frame = "rgb_camera_link"
         else:
             raise RuntimeError(f"Unknown camera type requested: {camera_type}")
-        
+
         self.points_sub = rospy.Subscriber(f'/{self.camera_name}/points2', PointCloud2, self.points_cb)
         self.masks_pub = rospy.Publisher('~detected_masks', Image, queue_size=1, latch=True)
-
+        self.labels_pub = rospy.Publisher('~labeled_images', Image, queue_size=1, latch=True)
+        self.color_image_pub = rospy.Publisher('~colored_images', Image, queue_size=1, latch=True)
         self.camera_synchronizer = message_filters.ApproximateTimeSynchronizer([
             self.camera_depth_subscriber, self.camera_rgb_subscriber, self.camera_info_subscriber], 10, 1)
         self.camera_synchronizer.registerCallback(self.camera_callback)
@@ -85,7 +90,7 @@ class PodPerceptionROS:
         self.model.net = self.net
 
         for entry in dataset.entries[1:]:
-            rgb_image = entry.rgb_image 
+            rgb_image = entry.rgb_image
             depth_image = entry.depth_image
             for i in entry.inventory():
                 pass
@@ -97,7 +102,7 @@ class PodPerceptionROS:
         if not request.bin_id or not request.object_id:
             return False, "bin_id and object_id are required"
 
-        rospy.loginfo(request.bin_id)   
+        rospy.loginfo(request.bin_id)
         result, message, mask = self.model.capture_object(request.bin_id, request.object_id, self.rgb_image, self.depth_image, self.camera_info.K)
 
         if result and self.visualize:
@@ -125,7 +130,7 @@ class PodPerceptionROS:
         #     rospy.loginfo(f"Using cached empty pod image. Delete {filename} to regenerate the image.")
         # elif self.depth_image is not None:
         #     cv2.imwrite(filename, self.depth_image)
-            
+
         #     rospy.loginfo("Caching Empty Pod Image for Later use")
 
         # self.net = SegNet(init_depth=self.model.numpify_pointcloud(self.points_msg, self.rgb_image.shape))
@@ -146,17 +151,36 @@ class PodPerceptionROS:
         if not result:
             return result, message, None, None, None
 
+
         bin_id, points, mask = result
+        bgr_to_rgb_image = cv2.cvtColor(self.rgb_image[:,:,:3].astype(np.uint8), cv2.COLOR_BGR2RGB)
 
-        mask = ros_numpy.msgify(Image, mask.astype(np.uint8), encoding="mono8")
+        labled_mask = mask.astype(np.uint8)
+        labled_mask[labled_mask>0] = 1
+        labled_img = cv2.bitwise_and(bgr_to_rgb_image, bgr_to_rgb_image, mask=labled_mask)
+        mask_msg = ros_numpy.msgify(Image, mask.astype(np.uint8), encoding="mono8")
 
-        self.masks_pub.publish(mask)
+        labled_img_msg = ros_numpy.msgify(Image, labled_img.astype(np.uint8), encoding="rgb8")
+
+        colored_img_msg = ros_numpy.msgify(Image, bgr_to_rgb_image, encoding="rgb8")
+
+        common_header = Header()
+        common_header.stamp = rospy.Time.now()
+
+        mask_msg.header = common_header
+        labled_img_msg.header = common_header
+        colored_img_msg.header = common_header
+
+        self.labels_pub.publish(labled_img_msg)
+        self.masks_pub.publish(mask_msg)
+        self.color_image_pub.publish(colored_img_msg)
+
         if request.mask_only:
             return True,\
                f"Mask successfully retrieved for object {request.object_id} in bin {bin_id}",\
                bin_id,\
                None,\
-               mask
+               mask_msg
 
         if request.frame_id != self.camera_points_frame:
             # Transform points to requested frame_id
@@ -201,7 +225,7 @@ class PodPerceptionROS:
                f"Points and mask successfully retrieved for object {request.object_id} in bin {bin_id}",\
                bin_id,\
                pointcloud,\
-               mask
+               mask_msg
 
     def pick_object_callback(self, request):
         if not request.bin_id or not request.object_id:
@@ -231,9 +255,9 @@ class PodPerceptionROS:
     def reset_callback(self, request):
         if not request.bin_id:
             return False, "bin_id is required"
-    
-   
-            
+
+
+
         if self.rgb_image is None:
             return False, "No images have been streamed"
 
@@ -303,12 +327,12 @@ class DiffPodModel:
         points = np.reshape(points, final_shape)
         # points = np.vstack((points['x'],points['y'],points['z']))
         points = np.stack((points['x'],points['y'],points['z']), axis=2)
-        
+
         print(points.shape)
         plt.imshow(points[...,2])
         plt.show()
         return points
-    
+
     def mask_pointcloud(self, points, mask):
         points = ros_numpy.numpify(points)
         np.save("/tmp/points1.npy", points)
@@ -367,7 +391,7 @@ class DiffPodModel:
 
         if bin_id not in self.latest_captures:
             return False, f"Bin {bin_id} has not been reset"
-        
+
 
         last_rgb = self.latest_captures[bin_id]
         current_rgb = rgb_image
@@ -387,7 +411,7 @@ class DiffPodModel:
             areas = np.array([stats[i, cv2.CC_STAT_AREA] for i in range(len(stats))])
             max_area = np.max(areas[1:])
             max_area_idx = np.where(areas == max_area)[0][0]
-            mask[np.where(labels != max_area_idx)] = 0.0    
+            mask[np.where(labels != max_area_idx)] = 0.0
         else:
             raise RuntimeError(f"Unknown segmentation method requested: {self.segmentation_method}")
         points = rospy.wait_for_message(f'/camera_lower_right/points2', PointCloud2)
@@ -479,7 +503,7 @@ class DiffPodModel:
         return success, msg, mask_ret
 
     def get_object(self, bin_id, object_id, points_msg, im_shape):
-        
+
         if not object_id:
             return False, "object_id is required"
 
@@ -494,7 +518,7 @@ class DiffPodModel:
 
         if object_id not in self.points_table[bin_id]:
             return False, f"Object {object_id} was not found in bin {bin_id}"
-        
+
 
         if bin_id in self.net.bad_bins:
             msg = f"Object {object_id} in bin {bin_id} was could not be segmented, but was selected by user"
