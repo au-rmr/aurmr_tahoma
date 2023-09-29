@@ -46,7 +46,7 @@ def main():
       if(i == 'v'):
         image = cv2.resize(image, (1024, 768), interpolation= cv2.INTER_LINEAR)
         cv2.imshow("RGB window", image)
-        cv2.waitKey(000)
+        cv2.waitKey(1000)
         cv2.destroyWindow("RGB window")
       elif(i == 's'):
         cv2.imwrite(f"/home/aurmr/Documents/stack_objects_dataset/image_{image_counter}.png", image)
