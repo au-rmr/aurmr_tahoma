@@ -1,20 +1,30 @@
 <?xml version="1.0" ?>
 <launch>
     <arg name="gui" default="True" />
-    <arg name="pod_id" default="1" />
-    <!-- options are 1A, 1C, 2A, 2C -->
-    <arg name="pod_face" default="1C" />
+    <arg name="pod_id" default="2" />
+    <arg name="pod_face" default="2A" />
+    
     <!-- <include file="$(find tahoma_bringup)/launch/calibration.launch"/> -->
 
 
     <include file="$(find ur_robot_driver)/launch/ur16e_bringup.launch">
         <arg name="controllers" default="scaled_pos_joint_traj_controller joint_state_controller  force_torque_sensor_controller robot_status_controller"/>
-        <arg name="stopped_controllers" default="pos_joint_traj_controller joint_group_pos_controller joint_group_vel_controller" doc="Controllers that are initally loaded, but not started."/>        <arg name="robot_ip" value="192.168.43.92" />
+        <arg name="stopped_controllers" default="pos_joint_traj_controller joint_group_pos_controller joint_group_vel_controller" doc="Controllers that are initally loaded, but not started."/>        
+        <arg name="robot_ip" value="192.168.43.92" />
         <arg name="robot_description_file" value="$(find tahoma_description)/launch/load_tahoma.launch" />
         <arg name="controller_config_file" default="$(find tahoma_bringup)/config/controllers.yaml" />
         <arg name="kinematics_config" value="$(find tahoma_description)/config/arm_calibration.yaml" />
         <arg name="use_tool_communication" value="true" />
-        <arg name="tool_voltage" value="24" />
+        <arg name="tool_voltage" value="12" />
+        <!-- Tool parity: 0: none, 1: odd, 2: even -->
+        <arg name="tool_parity" value="0" />
+        <arg name="tool_baud_rate" value="115200" />
+        <arg name="tool_stop_bits" value="1" />
+        <arg name="tool_rx_idle_chars" value="1.5" />
+        <arg name="tool_tx_idle_chars" value="3.5" />
+        <!-- <arg name="tool_device_name" value="/tmp/ttyUR" /> -->
+        <arg name="tool_tcp_port" default="54321" doc="Port on which the robot controller publishes the tool comm interface. Only used, when `use_tool_communication` is set to true."/>
+        
     </include>
 
     <!-- MoveIt -->
@@ -47,11 +57,19 @@
       <param name="state" value="1.0" />
     </node> -->
 
-    <arg name="gripper_type" default="vacuum" />
+    <!-- <arg name="gripper_type" default="vacuum" />
     <include file="$(find robotiq_2f_gripper_control)/launch/robotiq_2f_gripper_socket.launch">
       <arg name="gripper_type" default="$(arg gripper_type)" />
     </include>
     <include file="$(find robotiq_2f_gripper_action_server)/launch/robotiq_2f_gripper_socket_action_server.launch">
+      <arg name="gripper_type" default="$(arg gripper_type)" />
+    </include> -->
+    
+    <arg name="gripper_type" default="vacuum" />
+    <include file="$(find vacuum_gripper_control)/launch/vacuum_gripper_socket.launch">
+      <arg name="gripper_type" default="$(arg gripper_type)" />
+    </include>
+    <include file="$(find vacuum_gripper_action_server)/launch/vacuum_gripper_socket_action_server.launch">
       <arg name="gripper_type" default="$(arg gripper_type)" />
     </include>
 

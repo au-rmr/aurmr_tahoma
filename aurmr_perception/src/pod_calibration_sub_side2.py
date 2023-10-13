@@ -149,13 +149,13 @@ if __name__ == '__main__':
 
         if(bin[8] == '1'):
             kinect_3F[1] -= POD_FACE_C_FROM_MARKER_Y[bin_id]
-            kinect_3F[0] += 0.23
+            kinect_3F[0] += 0.31
             kinect_3F[0] -= 0.025
         else:
             kinect_3F[1] -= POD_FACE_C_FROM_MARKER_Y[bin_id]
-            kinect_3F[0] += 0.23
+            kinect_3F[0] += 0.31
         
-        if(bin[8] == '4'):
+        if(bin[8] == '3'):
             kinect_3F[0] -= 0.025
 
         u2,v2 = convert_xyz_point_to_uv_point(kinect_3F, fx, cx, fy, cy)
@@ -163,15 +163,18 @@ if __name__ == '__main__':
         # rgb_img = cv2.circle(rgb_img, (int(u2/4), int(v2/4)), 2, (255,0,0), 3)
         cv2.rectangle(rgb_img, (int(u2/4), int(v2/4)), (int(u1/4), int(v1/4)), (128, 0, 0), 2)
 
-        bin_DM_pixel_coords[bin[3:]] = np.array([int(v2), int(v1), int(u2), int(u1)])
+        bin_DM_pixel_coords[bin[3:]] = np.array([int(v2), int(v1), int(u1), int(u2)])
 
+
+
+    bin_DM_pixel_coords = {k[5:].upper(): v for k, v in bin_DM_pixel_coords.items()}
     print(bin_DM_pixel_coords)
 
     with open('/tmp/calibration_pixel_coords_pod.pkl', 'wb') as f:
         pickle.dump(bin_DM_pixel_coords, f)
     
-    cv2.imshow("rgb", rgb_img)
-    cv2.waitKey(0)
+    # cv2.imshow("rgb", rgb_img)
+    # cv2.waitKey(0)
 
     # pub = rospy.Publisher('/kinect/points2', PointCloud2, queue_size=10)
     # while not rospy.is_shutdown():

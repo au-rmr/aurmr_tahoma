@@ -23,7 +23,8 @@ aluminum peripherial evaluation case.
 
 <robot name="sensor_l515" xmlns:xacro="http://ros.org/wiki/xacro">
   <!-- Includes -->
-  <xacro:include filename="$(find tahoma_description)/urdf/_materials.urdf.xacro" />
+  <!-- FIXME(nickswalker,9-29-23): Somehow aluminum is ending up duplicated in our full xacros. Debug if you need to fix the colors-->
+  <!--xacro:include filename="$(find tahoma_description)/urdf/_materials.urdf.xacro" /> -->
   <xacro:include filename="$(find tahoma_description)/urdf/_usb_plug.urdf.xacro" /> <!-- this specific plug does not apply to L515 -->
 
   <xacro:macro name="sensor_l515" params="parent *origin name:=camera use_nominal_extrinsics:=false add_plug:=false use_mesh:=true">
