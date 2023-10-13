@@ -25,8 +25,7 @@ import rospy
 import datetime
 
 # This is an internal high-capacity drive, so we should only need to clear it once before the runs
-BAG_STORAGE_PATH = "/media/aurmr/Logging"
-BAG_STORAGE_PATH = "/tmp"
+BAG_STORAGE_PATH = "/media/logging"
 # The host should be configured in ~/.ssh/hosts, and the key should be unlocked (or you'll be prompted on the first run)
 RSYNC_DESTINATION = "popo:/tmp"
 

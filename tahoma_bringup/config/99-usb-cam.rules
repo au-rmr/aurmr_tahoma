@@ -30,4 +30,4 @@
 # http://www.linuxfromscratch.org/lfs/view/6.2/chapter07/symlinks.html
 #
 
-KERNEL=="video*", SUBSYSTEM=="video4linux", ATTRS{bInterfaceNumber}=="00", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0825", MODE:="0777", SYMLINK+="tahoma-stand-camera"
+KERNEL=="video*", SUBSYSTEM=="video4linux", ATTR{idVendor}=="046d", ATTR{idProduct}=="0825", MODE:="0777", SYMLINK+="tahoma-stand-camera"
