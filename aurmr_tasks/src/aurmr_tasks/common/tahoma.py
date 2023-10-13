@@ -271,6 +271,7 @@ class Tahoma:
         self._gripper_client.send_goal(goal)
         if not return_before_done:
             self._gripper_client.wait_for_result()
+        rospy.sleep(3)
         while self.object_detected_blowoff:
             pass
 
@@ -508,7 +509,7 @@ class Tahoma:
         self.move_group.set_goal_position_tolerance(tolerance)
         max_manipulability = 0
         
-        for index in range(10):
+        for index in range(5):
             success, plan, planning_time, error_code = self.move_group.plan()
             if success:
                 jacobian = self.move_group.get_jacobian_matrix(list(getattr(getattr(getattr(plan,"joint_trajectory"),"points")[-1],"positions")))

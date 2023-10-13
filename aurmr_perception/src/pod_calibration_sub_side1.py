@@ -164,24 +164,13 @@ if __name__ == '__main__':
         # rgb_img = cv2.circle(rgb_img, (int(u2/4), int(v2/4)), 2, (255,0,0), 3)
         cv2.rectangle(rgb_img, (int(u2/4), int(v2/4)), (int(u1/4), int(v1/4)), (128, 0, 0), 2)
 
-        bin_DM_pixel_coords[bin[3:]] = np.array([int(v2), int(v1), int(u2), int(u1)])
+        bin_DM_pixel_coords[bin[3:]] = np.array([int(v2), int(v1), int(u1), int(u2)])
 
     print(bin_DM_pixel_coords)
 
+    bin_DM_pixel_coords = {k[5:].upper(): v for k, v in bin_DM_pixel_coords.items()}
     with open('/tmp/calibration_pixel_coords_pod.pkl', 'wb') as f:
         pickle.dump(bin_DM_pixel_coords, f)
     
-    cv2.imshow("rgb", rgb_img)
-    cv2.waitKey(0)
-
-    # pub = rospy.Publisher('/kinect/points2', PointCloud2, queue_size=10)
-    # while not rospy.is_shutdown():
-    #     depth_array = np.array(depth_img_undistort, dtype=np.float32)/1000.0
-    #     point_cloud = depth_to_point_cloud(depth_array, fx, cx, fy, cy)
-    #     point_cloud = point_cloud.reshape(-1, 3)
-    #     header = rospy.Header()
-    #     header.stamp = rospy.Time.now()
-    #     header.frame_id = 'rgb_camera_link'
-    #     pc_msg = point_cloud2.create_cloud_xyz32(header, point_cloud)
-    #     pub.publish(pc_msg)
-    #     rospy.sleep(1)
+    # cv2.imshow("rgb", rgb_img)
+    # cv2.waitKey(0)
