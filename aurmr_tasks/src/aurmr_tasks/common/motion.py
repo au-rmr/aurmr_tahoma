@@ -942,7 +942,6 @@ class AddFullPodCollisionGeometry(State):
             import tf
             listener = tf.TransformListener()
             (trans, rot) = listener.lookupTransform('base_link', 'pod_bin_4h', rospy.Time())
-            print("############################################################################", trans)
         except:
             try:
                 bin_id = ud['target_bin_id']

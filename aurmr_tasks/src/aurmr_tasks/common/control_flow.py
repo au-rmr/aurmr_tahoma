@@ -314,12 +314,3 @@ def enqueue(name, from_key, to_key, transitions={}):
             return "succeeded"
 
     StateMachine.add(name, Enqueue(), transitions=transitions)
-
-
-class BreakGoal(State):
-    def __init__(self):
-        State.__init__(self, outcomes=["succeeded"], input_keys=["goal"], output_keys=["parameters"])
-
-    def execute(self, ud):
-        ud.parameters = ud.goal.parameters
-        return 'succeeded'
