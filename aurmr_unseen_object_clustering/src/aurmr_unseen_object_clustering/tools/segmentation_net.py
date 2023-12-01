@@ -279,7 +279,19 @@ class SegNet:
             rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
   
         H, W, _ = rgb.shape
-  
+
+        # Save the entire pod images for further reproduction
+        pod_img_path = f"{workspace_path}/src/uois_service_multi_demo/dataset/pod"
+        os.makedirs(pod_img_path, exist_ok=True)
+        pod_img_files = os.listdir(pod_img_path)
+        indices = [int(f.split('_')[-1].split('.')[0]) for f in pod_img_files if f.startswith('pod_img_') and f.endswith('.png')]
+        if indices:
+            next_index = max(indices) + 1
+        else:
+            next_index = 0
+        index_str = str(next_index).zfill(4)
+        cv2.imwrite(os.path.join(pod_img_path, f"pod_img_{index_str}.png"), rgb)
+
         # Crops the image to the current bin
         xyz = xyz[bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], :]
         rgb = rgb[bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3]
@@ -327,6 +339,9 @@ class SegNet:
         index_str = str(next_index).zfill(4)
         file_path = os.path.join(path, f"color_{index_str}.npy")
         np.save(file_path, rgb_segment)
+        # Save the image in png format to compare with predicted masks
+        png_filepath = file_path.split('.')[0] + '.png'
+        cv2.imwrite(png_filepath, rgb_segment)
 
         # xyz = xyz.astype(np.uint8)
 
@@ -864,13 +879,16 @@ class SegNet:
         #     plt.imshow(mask_crop)
         #     plt.title("Cropped mask prediction after pick")
         #     plt.show()
-  
-        old_mask = bin.last['mask'].copy()
-        old_embeddings = bin.last['embeddings'].copy()
-        # Remove the object that is no longer in the scene
-        old_mask[old_mask == obj_n] = 0
-        old_mask[old_mask > obj_n] -= 1
-        old_embeddings = np.delete(old_embeddings, obj_n-1, 0)
+        try:
+            old_mask = bin.last['mask'].copy()
+            old_embeddings = bin.last['embeddings'].copy()
+            # Remove the object that is no longer in the scene
+            old_mask[old_mask == obj_n] = 0
+            old_mask[old_mask > obj_n] -= 1
+            old_embeddings = np.delete(old_embeddings, obj_n-1, 0)
+        except:
+            old_embeddings = np.ones((1, 256), dtype = np.float64)
+            old_mask = np.zeros((256, 256), dtype = np.uint8)
 
         # Find object correspondence between scenes
         recs, match_failed, row_recs = self.match_masks_using_embeddings(bin.last['rgb'],bin.current['rgb'], old_mask, mask_crop, old_embeddings, embeddings)
