@@ -24,6 +24,16 @@ def apply_offset_to_pose(pose, offset, offset_frame=None, tf_buffer=None):
     offset_pose = tf_buffer.transform(offset_pose, pose.header.frame_id, rospy.Duration(1))
     return offset_pose
 
+def add_offset(self, offset, grasp_pose):
+    v = qv_mult(
+        quat_msg_to_vec(grasp_pose.pose.orientation), (0, 0, offset))
+    offset_pose = deepcopy(grasp_pose)
+    offset_pose.pose.position.x += v[0]
+    offset_pose.pose.position.y += v[1]
+    offset_pose.pose.position.z += v[2]
+    return offset_pose
+
+
 
 class Formulator(State):
     def __init__(self, template, input_keys, output_key):

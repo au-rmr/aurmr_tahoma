@@ -118,16 +118,6 @@ def chain_states(*args):
     return ChainedStates()
 
 
-class Sleep(smach.State):
-    def __init__(self, seconds):
-        self.seconds = seconds
-        smach.State.__init__(self, outcomes=['succeeded'])
-
-    def execute(self, userdata):
-        rospy.sleep(self.seconds)
-        return 'succeeded'
-
-
 def retry_n(state, n, failure_status='aborted'):
     class RetryN(State):
         def __init__(self):

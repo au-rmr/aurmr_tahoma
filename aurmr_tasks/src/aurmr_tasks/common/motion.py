@@ -8,9 +8,7 @@ from smach import State, StateMachine
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from smach import State
 from std_msgs.msg import Header
-from aurmr_tasks.interaction import prompt_for_confirmation
 from aurmr_tasks.util import apply_offset_to_pose
-from aurmr_tasks import interaction
 from aurmr_perception.util import I_QUAT, ROT_90_Z_QUAT
 from std_msgs.msg import Float64MultiArray, MultiArrayDimension, Bool
 from geometry_msgs.msg import PoseStamped, WrenchStamped
@@ -951,6 +949,7 @@ class AddFullPodCollisionGeometry(State):
 
         # If we exited the while loop without returning then we timed out
         return "aborted"
+
 
 class AddPartialPodCollisionGeometry(State):
     def __init__(self, robot):

@@ -5,7 +5,7 @@ from smach import State, StateMachine
 import rospy
 
 from aurmr_tasks.common import motion, perception
-from aurmr_tasks import interaction
+from aurmr_tasks.common import hri
 
 import aurmr_tasks.common.control_flow as cf
 from aurmr_tasks.util import formulate_ud_str_auto
@@ -31,7 +31,7 @@ def load_sm(stows):
         cf.splat_auto("SPLAT_STOW", "stow", ["target_bin_id", "target_object_id"])
         StateMachine.add_auto("PRE_PERCEIVE", perception.CaptureEmptyBin(), ["succeeded"])
         formulate_ud_str_auto("MAKE_PROMPT_STRING", "Load bin {} with the {}", ["target_bin_id", "target_object_id"], "prompt")
-        StateMachine.add_auto("ASK_FOR_BIN_LOAD", interaction.AskForHumanAction(), ["succeeded"])
+        StateMachine.add_auto("ASK_FOR_BIN_LOAD", hri.AskForHumanAction(), ["succeeded"])
         StateMachine.add_auto("POST_PERCEIVE", perception.StowObject(), ["aborted"], {"succeeded": "ITERATE_STOWS"})
 
     return sm
