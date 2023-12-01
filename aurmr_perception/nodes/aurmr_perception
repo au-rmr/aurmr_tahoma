@@ -18,6 +18,12 @@ if __name__ == '__main__':
         files = glob.glob(f'{folder_path}/*.npy')
         for file in files:
             os.remove(file)
+        files = glob.glob(f'{folder_path}/*.png')
+        for file in files:
+            os.remove(file)
+    files = glob.glob(f'{path}/pod/*.png')
+    for file in files:
+        os.remove(file)
 
     parser = argparse.ArgumentParser(description='AURMR Perception Module')
     parser.add_argument('-v', '--viz', action='store_true', default=False)
