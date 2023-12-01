@@ -12,7 +12,6 @@ import rospy
 
 from aurmr_tasks.common.tahoma import Tahoma
 from aurmr_tasks.common import motion, perception
-from aurmr_tasks import interaction
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from tf_conversions import transformations
 import aurmr_tasks.common.control_flow as cf
@@ -86,7 +85,7 @@ class PickStowQueue:
 
     def multiple_pick_cb(self, requests: MultiplePickRequestRequest):
         for i in range(len(requests.bin_ids)):
-            r = PickRequest()
+            r = PickRequestRequest()
             r.object_id = requests.object_ids[i]
             r.bin_id = requests.bin_ids[i]
             r.object_asin = requests.object_asins[i]
@@ -157,11 +156,11 @@ def main():
     robot = Tahoma(simulation)
     demo_sm = StateMachine(["done"], input_keys=[], output_keys=[])
     pick_sm = StateMachine(["done"], input_keys=["request"], output_keys=["status"])
+    pick_success_cleanup_sm = StateMachine(["succeeded"], input_keys=['target_bin_id', 'target_object_id', 'target_object_asin', "start_time"], output_keys=[])
+    pick_retry_sm = StateMachine(["retry", "continue"], input_keys=['target_bin_id', 'target_object_id', 'target_object_asin', 'grasp_pose', "start_time"], output_keys=['grasp_pose'])
+
     stow_sm = StateMachine(["done"], input_keys=["request"], output_keys=["status"])
     task_queue = PickStowQueue()
-    # stows = [["4f", "mouthwash"], ["4f", "soda"], ["4f", "syrup"]]
-    # stows = [["3f", "mouthwash"], ['3f', 'lysol'], ['2f', 'box']]
-    # picks = [["3f", "lysol"], ['2f', 'box'], ['3f', 'mouthwash']]
 
     with demo_sm:
 
@@ -196,18 +195,30 @@ def main():
             #                     {"succeeded": "PICTURE_WAIT", "aborted": "MOVE_INTO_JOINT_LIMITS"})
 
             StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "drop_hide"), ["succeeded", "aborted"])
-            # StateMachine.add_auto("MOVE_INTO_JOINT_LIMITS", motion.MoveIntoJointLimits(robot), ["succeeded", "aborted"])
-            StateMachine.add_auto("PICTURE_WAIT", Wait(2), ["succeeded"])
             StateMachine.add("CHECK_FOR_GRIPPER_ITEM", motion.CheckGripperItem(robot),
-                            {"item_detected": "POST_PICK_UPDATE_MASKS", "no_item_detected": "UPDATE_BIN_MASKS"})
-            StateMachine.add("POST_PICK_UPDATE_MASKS", perception.PickObject(),
-                            {"succeeded": "PUBLISH_PICK_STATUS", "aborted": "PUBLISH_PICK_STATUS", "preempted": "PUBLISH_PICK_STATUS"})
-            StateMachine.add("UPDATE_BIN_MASKS", perception.UpdateBin(),
-                            {"succeeded": "USER_PROMPT_FOR_RETRY", "aborted": "USER_PROMPT_FOR_RETRY", "preempted": "USER_PROMPT_FOR_RETRY"})
-            StateMachine.add('USER_PROMPT_FOR_RETRY', UserPromptForRetry(robot.tf2_buffer, timeout_connection_secs=1.0), {'retry': 'CLEAR_SCENE_PREMOVE', 'continue': 'PUBLISH_PICK_STATUS'})
-            StateMachine.add_auto("PUBLISH_PICK_STATUS", PublishStatus(task_queue), ["succeeded"])
-            StateMachine.add("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot, return_before_done=True), {"succeeded": "BLOW_OFF_GRIPPER", "aborted": "BLOW_OFF_GRIPPER", "preempted": "BLOW_OFF_GRIPPER"})
-            StateMachine.add("BLOW_OFF_GRIPPER", motion.BlowOffGripper(robot, return_before_done=True), {"succeeded": "done", "aborted": "done", "preempted": "done"})
+                            {"item_detected": "POST_PICK_SUCCESS_CLEANUP", "no_item_detected": "RETRY"})
+
+
+            with pick_success_cleanup_sm:
+                StateMachine.add_auto("BLOW_OFF_GRIPPER", motion.BlowOffGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
+                StateMachine.add_auto("PICTURE_WAIT", Wait(2), ["succeeded"])
+                StateMachine.add_auto("POST_PICK_UPDATE_MASKS", perception.PickObject(), ["succeeded", "preempted", "aborted"])
+                StateMachine.add_auto("PUBLISH_PICK_STATUS", PublishStatus(task_queue), ["succeeded"])
+                StateMachine.add("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot, return_before_done=True), {"succeeded": "succeeded", "preempted": "succeeded", "aborted": "succeeded"})
+
+            with pick_retry_sm:
+                StateMachine.add_auto("BLOW_OFF_GRIPPER", motion.BlowOffGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
+                StateMachine.add_auto("PICTURE_WAIT", Wait(2), ["succeeded"])
+                StateMachine.add_auto("UPDATE_BIN_MASKS", perception.UpdateBin(), ["succeeded", "preempted", "aborted"])
+                StateMachine.add('USER_PROMPT_FOR_RETRY', UserPromptForRetry(rospy.get_param("bin_bounds"), robot.tf2_buffer, timeout_connection_secs=1.0), {"retry": "REMAP_GRASP", "continue": "continue"})
+                cf.remap_auto("REMAP_GRASP", "human_grasp_pose", "grasp_pose")
+                cf.remap("REMAP_PRE_GRASP", "human_pre_grasp_pose", "pre_grasp_pose", {"succeeded": "retry"})
+
+
+            StateMachine.add("POST_PICK_SUCCESS_CLEANUP", pick_success_cleanup_sm, {"succeeded": "done"})
+            StateMachine.add("RETRY", pick_retry_sm, {'retry': 'CLEAR_SCENE_PREMOVE', 'continue': 'done'})
+
+
 
         with stow_sm:
             cf.splat_auto("SPLAT_STOW", "request", ["target_bin_id", "target_object_id", "target_object_asin"])
@@ -223,7 +234,6 @@ def main():
             cf.inject_userdata("STOW_FAILED", "done", "status", False)
             cf.inject_userdata("STOW_SUCCESS", "done", "status", True)
 
-        cf.inject_userdata_auto("INITIALIZE_HUMAN_GRASP_POSE", "human_grasp_pose", None)
         StateMachine.add_auto("CLEAR_SCENE", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
         StateMachine.add_auto("SETUP_COLLISION_SCENE", motion.AddFullPodCollisionGeometryDropHide(robot), ["succeeded", "aborted"])
         StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "drop_hide"),  ["succeeded", "aborted"])
