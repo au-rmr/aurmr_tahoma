@@ -165,21 +165,17 @@ class Tahoma:
         self._controller_switcher = rospy.ServiceProxy("/controller_manager/switch_controller", SwitchController)
         self.servo_to_pose_client = SimpleActionClient("/servo_server/servo_to_pose", ServoToPoseAction)
 
-        self.grasp_pose_pub = rospy.Publisher("~grasp_pose", PoseStamped)
+        self.grasp_pose_pub = rospy.Publisher("~grasp_pose", PoseStamped, queue_size=1)
 
         planning_frame = self.move_group.get_planning_frame()
         eef_link = self.move_group.get_end_effector_link()
         group_names = self.commander.get_group_names()
 
         self.wrench_listener = rospy.Subscriber("/wrench", WrenchStamped, self.wrench_cb)
-        #self.gripper_status_listener = rospy.Subscriber("/gripper_control/status", vacuum_gripper_input, self.gripper_status_cb)
-        self.custom_gripper_status_listener = rospy.Subscriber("/vacuum_gripper_control/status", vacuum_gripper_input, self.custom_gripper_status_cb)
-        self.custom_gripper_blowoff_listener = rospy.Subscriber("/vacuum_gripper_control/status", vacuum_gripper_input, self.custom_gripper_blowoff_cb)
+        self.custom_gripper_status_listener = rospy.Subscriber("/vacuum_gripper_control/status", vacuum_gripper_input, self.gripper_status_cb)
         self.traj_status_listener = rospy.Subscriber("/scaled_pos_joint_traj_controller/follow_joint_trajectory/status", GoalStatusArray, self.goal_status_cb)
         self.force_mag = 0
         self.torque_mag = 0
-        self.object_detected = False
-        self.object_detected_blowoff = False
         self.goal_finished = True
         self.goal_stamp = 0
         # Misc variables
@@ -195,13 +191,8 @@ class Tahoma:
         self.torque_mag = math.sqrt(msg.wrench.torque.x**2 + msg.wrench.torque.y**2+ msg.wrench.torque.z**2)
 
     def gripper_status_cb(self, msg: vacuum_gripper_input):
-        self.object_detected = (msg.gPO < 95) 
-
-    def custom_gripper_status_cb(self, msg: vacuum_gripper_input):
-        self.object_detected = msg.SYSTEM_VACUUM > 450 # because it is in mbar and is returned as an int
-
-    def custom_gripper_blowoff_cb(self, msg: vacuum_gripper_input):
-        self.object_detected_blowoff = msg.SYSTEM_VACUUM > 10 # because it is in mbar and is returned as an int
+        # mbar, typed as int
+        self.system_vacuum = msg.SYSTEM_VACUUM
 
     def goal_status_cb(self, msg: GoalStatusArray):
         latest_time = 0
@@ -277,7 +268,7 @@ class Tahoma:
             self._gripper_client.wait_for_result()
 
     def check_gripper_item(self):
-        return self.object_detected 
+        return self.system_vacuum > 450 # because it is in mbar and is returned as an int
     
     def blow_off_gripper(self, return_before_done=False):
         goal = GripperCommandGoal()
@@ -286,9 +277,9 @@ class Tahoma:
         self._gripper_client.send_goal(goal)
         if not return_before_done:
             self._gripper_client.wait_for_result()
-        rospy.sleep(3)
-        while self.object_detected_blowoff:
-            pass
+        rospy.sleep(1.)
+        while self.system_vacuum > 10:
+            rospy.sleep(.05)
 
         self.open_gripper()
         return 
@@ -397,7 +388,6 @@ class Tahoma:
         #     self.move_group.set_path_constraints(path_constraints)
         joint_values = joints
 
-        print("######################################",joint_values)
         if isinstance(joints, str):
             joint_values = self.get_joint_values_for_name(joints)
             print(joint_values)
@@ -854,7 +844,7 @@ class Tahoma:
                     rospy.loginfo("Stopping movement due to force feedback")
                     early_stop = True
                     break
-                elif use_gripper and self.object_detected:
+                elif use_gripper and self.check_gripper_item():
                     self.move_group.stop()
                     rospy.loginfo("Stopping movement due to object detection")
                     early_stop = True
