@@ -372,10 +372,7 @@ class MoveEndEffectorToPoseManipulable(State):
             return "succeeded"
         else:
             return "aborted"
-<<<<<<< HEAD
-=======
 
->>>>>>> 1. Added changes for multiple suction outlets for vaccum gripper 2. Added pod models which were created by sanjar. 3. Added pod calibration script for both the pods. 4. Added modified version of reachability code originally implemented by hitesh. 4. Modified collision scene for arm by adding a constraint space instead of only pod model. 5. Modified the 3d point calibration for multiple files
 
 class MoveEndEffectorToPoseLinear(State):
     def __init__(self, robot, to_pose):
@@ -914,7 +911,6 @@ class AddFullPodCollisionGeometry(State):
             import tf
             listener = tf.TransformListener()
             (trans, rot) = listener.lookupTransform('base_link', 'pod_bin_4h', rospy.Time())
-            print("############################################################################", trans)
         except:
             try:
                 bin_id = ud['target_bin_id']
