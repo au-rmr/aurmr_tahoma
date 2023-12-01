@@ -25,21 +25,25 @@ import datetime
 import threading
 
 # This is an internal high-capacity drive, so we should only need to clear it once before the runs
-BAG_STORAGE_PATH = "/data/datasets/2023-09-nick-logging"
+# /data is a network crossmount (see /etc/fstab). If it's not mounted, `sudo mount -a`
+BAG_STORAGE_PATH = "/data/datasets/2023-12-nick-logging"
 
 TOPICS_TO_RECORD = [
+    "/audio/audio",
+    "/audio/audio_info",
     "/aurmr/hri/retry_grasp/goal",
     "/aurmr/hri/retry_grasp/result",
     "/aurmr_perception/detected_masks",
     "/aurmr_perception/labeled_images",
     "/aurmr_perception/colored_images",
     "/demo_sm/smach/container_status",
+    "/diagnostics_agg",
     "/grasp_detection/detected_grasps",
     "/grasp_detection/detected_pts",
     "/joint_states",
     "/robot_description",
     "/robot_status",
-    "/rosout",
+    "/rosout_agg",
     "/stand_camera/camera_info",
     "/stand_camera/image_raw",
     "/tf",
@@ -77,7 +81,7 @@ class ROSBagRecorder:
             cmd, stdin=subprocess.PIPE, shell=True, cwd=self.path
         )
         # Prevent runaway bags
-        self._timeout = threading.Timer(25.0, self.stop).start()
+        self._timeout = threading.Timer(30.0, self.stop).start()
         return True
     
     @property
@@ -116,7 +120,8 @@ class ROSBagRecorder:
                 self.process.kill()
 
             self.process = None
-            self.finished_handler(os.path.join(self.path, self.file_name + ".bag"))
+            if self.finished_handler:
+                self.finished_handler(os.path.join(self.path, self.file_name + ".bag"))
             # Make sure we don't get called again
             atexit.unregister(self.stop)
             return True
