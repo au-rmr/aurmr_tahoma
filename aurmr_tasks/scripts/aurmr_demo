@@ -191,6 +191,9 @@ def main():
             StateMachine.add_auto("CLEAR_SCENE_POSTGRASP", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_POSTGRASP", motion.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
             # StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX", motion.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
+            # StateMachine.add("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "drop_hide"), 
+            #                     {"succeeded": "PICTURE_WAIT", "aborted": "MOVE_INTO_JOINT_LIMITS"})
+
             StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "drop_hide"), ["succeeded", "aborted"])
             StateMachine.add("CHECK_FOR_GRIPPER_ITEM", motion.CheckGripperItem(robot),
                             {"item_detected": "POST_PICK_SUCCESS_CLEANUP", "no_item_detected": "RETRY"})
