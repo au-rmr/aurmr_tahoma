@@ -1,0 +1,9 @@
+<launch>
+    <arg name="gripper_type" default="vacuum" />
+    <include file="$(find vacuum_gripper_control)/launch/vacuum_gripper_socket.launch">
+      <arg name="gripper_type" default="$(arg gripper_type)" />
+    </include>
+    <include file="$(find vacuum_gripper_action_server)/launch/vacuum_gripper_socket_action_server.launch">
+      <arg name="gripper_type" default="$(arg gripper_type)" />
+    </include>
+</launch>
