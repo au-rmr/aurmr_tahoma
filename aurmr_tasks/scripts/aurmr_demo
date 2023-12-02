@@ -181,7 +181,11 @@ def main():
             StateMachine.add_auto("CLEAR_SCENE_POSTGRASP", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_POSTGRASP", motion.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
             # StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX", motion.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
+            # StateMachine.add("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "drop_hide"), 
+            #                     {"succeeded": "PICTURE_WAIT", "aborted": "MOVE_INTO_JOINT_LIMITS"})
+
             StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "drop_hide"), ["succeeded", "aborted"])
+            # StateMachine.add_auto("MOVE_INTO_JOINT_LIMITS", motion.MoveIntoJointLimits(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("PICTURE_WAIT", Wait(2), ["succeeded"])
             StateMachine.add("CHECK_FOR_GRIPPER_ITEM", motion.CheckGripperItem(robot),
                             {"item_detected": "POST_PICK_UPDATE_MASKS", "no_item_detected": "UPDATE_BIN_MASKS"})
@@ -189,7 +193,7 @@ def main():
                             {"succeeded": "PUBLISH_PICK_STATUS", "aborted": "PUBLISH_PICK_STATUS", "preempted": "PUBLISH_PICK_STATUS"})
             StateMachine.add("UPDATE_BIN_MASKS", perception.UpdateBin(),
                             {"succeeded": "USER_PROMPT_FOR_RETRY", "aborted": "USER_PROMPT_FOR_RETRY", "preempted": "USER_PROMPT_FOR_RETRY"})
-            StateMachine.add('USER_PROMPT_FOR_RETRY', UserPromptForRetry(robot.tf2_buffer, timeout_connection_secs=1.0), {'retry': 'CLEAR_SCENE_PREMOVE', 'continue': 'PUBLISH_PICK_STATUS'})
+            StateMachine.add('USER_PROMPT_FOR_RETRY', UserPromptForRetry(robot.tf2_buffer, timeout_connection_secs=5.0), {'retry': 'GET_GRASP_POSE', 'continue': 'PUBLISH_PICK_STATUS'})
             StateMachine.add_auto("PUBLISH_PICK_STATUS", PublishStatus(status_pub), ["succeeded"])
             StateMachine.add("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot, return_before_done=True), {"succeeded": "BLOW_OFF_GRIPPER", "aborted": "BLOW_OFF_GRIPPER", "preempted": "BLOW_OFF_GRIPPER"})
             StateMachine.add("BLOW_OFF_GRIPPER", motion.BlowOffGripper(robot, return_before_done=True), {"succeeded": "done", "aborted": "done", "preempted": "done"})

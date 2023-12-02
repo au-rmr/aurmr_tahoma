@@ -16,7 +16,7 @@ from std_msgs.msg import Float64MultiArray, MultiArrayDimension, Bool
 from geometry_msgs.msg import PoseStamped, WrenchStamped
 from robotiq_2f_gripper_control.msg import vacuum_gripper_input as VacuumGripperStatus
 from control_msgs.msg import FollowJointTrajectoryAction, GripperCommandAction, GripperCommandGoal
-
+from moveit_msgs.msg import Constraints, JointConstraint
 class MoveEndEffectorToPose_Storm(State):
     def __init__(self, default_pose=None):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
@@ -313,12 +313,43 @@ class MoveToJointAngles(State):
         else:
             return "aborted"
 
+class MoveIntoJointLimits(State):
+    def __init__(self, robot):
+        State.__init__(self, input_keys=[], outcomes=['succeeded', 'aborted'])
+        self.robot = robot
 
+    def execute(self, ud):
+        target_angle = math.pi*.9
+        joint_angles = self.robot.move_group.get_current_joint_values()
+        for i, angle in enumerate(joint_angles):
+            if angle > math.pi:
+                joint_angles[i] = target_angle
+            elif angle < -math.pi:
+                joint_angles[i] = -target_angle
+
+        constraints = self.robot.move_group.get_path_constraints()
+        print("constraints", constraints)
+        constraints.joint_constraints = []
+        for name in self.robot.commander.get_active_joint_names():
+            if name == "arm_elbow_joint":
+                continue
+            new_constraint = JointConstraint()
+            new_constraint.joint_name = name
+            new_constraint.position = 0
+            new_constraint.tolerance_above =  1.5*math.pi
+            new_constraint.tolerance_below = 1.5*math.pi
+            constraints.joint_constraints.append(new_constraint)
+        print(constraints)
+        success = self.robot.move_to_joint_angles(joint_angles, path_constraints=constraints)
+        if success:
+            return "succeeded"
+        else:
+            return "aborted"
+        
 class MoveEndEffectorToPose(State):
-    def __init__(self, robot, default_pose=None):
+    def __init__(self, robot):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
-        self.default_pose = default_pose
         self.target_pose_visualizer = rospy.Publisher("end_effector_target", geometry_msgs.msg.PoseStamped,
                                                       queue_size=1, latch=True)
 
@@ -925,17 +956,17 @@ class AddFullPodCollisionGeometry(State):
                     number_collision_box = 6
                     z_coordinate = self.bin_2A_heights[bin_id[1]]
                     y_coordinate = self.bin_2A_widths[bin_id[0]]
-                    self.robot.scene.add_box("horizontal_plane", PoseStamped(header=Header(frame_id="base_link"),
-                                                                pose=Pose(position=Point(x=0.75, y=0.0, z=z_coordinate),
-                                                                        orientation=I_QUAT)), (0.5, 1.5, 0.02))
+                    # self.robot.scene.add_box("horizontal_plane", PoseStamped(header=Header(frame_id="base_link"),
+                    #                                             pose=Pose(position=Point(x=0.75, y=0.0, z=z_coordinate),
+                    #                                                     orientation=I_QUAT)), (0.5, 1.5, 0.02))
                     
-                    self.robot.scene.add_box("vertical_plane_1", PoseStamped(header=Header(frame_id="base_link"),
-                                                                pose=Pose(position=Point(x=0.72, y=y_coordinate+0.18, z=1.2),
-                                                                        orientation=I_QUAT)), (0.5, 0.01, 3.0))
+                    # self.robot.scene.add_box("vertical_plane_1", PoseStamped(header=Header(frame_id="base_link"),
+                    #                                             pose=Pose(position=Point(x=0.72, y=y_coordinate+0.18, z=1.2),
+                    #                                                     orientation=I_QUAT)), (0.5, 0.01, 3.0))
                     
-                    self.robot.scene.add_box("vertical_plane_2", PoseStamped(header=Header(frame_id="base_link"),
-                                                                pose=Pose(position=Point(x=0.72, y=y_coordinate-0.18, z=1.2),
-                                                                        orientation=I_QUAT)), (0.5, 0.01, 3.0))
+                    # self.robot.scene.add_box("vertical_plane_2", PoseStamped(header=Header(frame_id="base_link"),
+                    #                                             pose=Pose(position=Point(x=0.72, y=y_coordinate-0.18, z=1.2),
+                    #                                                     orientation=I_QUAT)), (0.5, 0.01, 3.0))
             except Exception as e:
                 print(e)
 
