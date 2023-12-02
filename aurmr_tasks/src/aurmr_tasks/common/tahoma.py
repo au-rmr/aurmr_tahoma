@@ -22,7 +22,7 @@ from tf2_geometry_msgs import from_msg_msg
 from geometry_msgs.msg import PoseStamped, WrenchStamped
 from robotiq_2f_gripper_control.msg import vacuum_gripper_input as VacuumGripperStatus
 from aurmr_tasks.util import all_close, pose_dist
-from moveit_msgs.msg import MoveItErrorCodes, MoveGroupAction, DisplayTrajectory
+from moveit_msgs.msg import MoveItErrorCodes, MoveGroupAction, DisplayTrajectory, Constraints, JointConstraint
 from moveit_msgs.srv import GetPositionIK, GetPositionIKRequest
 
 import moveit_commander
@@ -144,6 +144,19 @@ class Tahoma:
             queue_size=1,
             latch=True
         )
+
+        # default_constraints = self.move_group.get_path_constraints()
+        # for name in self.commander.get_active_joint_names():
+        #     new_constraint = JointConstraint()
+        #     new_constraint.joint_name = name
+        #     new_constraint.position = 0
+        #     new_constraint.tolerance_above = math.pi
+        #     new_constraint.tolerance_below = math.pi
+        #     default_constraints.joint_constraints.append(new_constraint)
+        # self.default_constraints = default_constraints
+        # self.move_group.set_path_constraints(self.default_constraints)
+
+
         self._controller_lister = rospy.ServiceProxy("/controller_manager/list_controllers", ListControllers)
         self._controller_switcher = rospy.ServiceProxy("/controller_manager/switch_controller", SwitchController)
         self.servo_to_pose_client = SimpleActionClient("/servo_server/servo_to_pose", ServoToPoseAction)
@@ -251,7 +264,7 @@ class Tahoma:
             self._gripper_client.wait_for_result()
 
     def check_gripper_item(self):
-        return self.object_detected 
+        return self.object_detected
 
     def close_gripper(self, return_before_done=False):
         goal = GripperCommandGoal()
@@ -306,6 +319,8 @@ class Tahoma:
         values = self.move_group.get_joint_value_target()
         return values
 
+
+
     @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_joint_angles(self,
                            joints,
@@ -315,7 +330,8 @@ class Tahoma:
                            plan_only=False,
                            replan=False,
                            replan_attempts=5,
-                           tolerance=0.01):
+                           tolerance=0.01,
+                           path_constraints=None):
         """Moves the end-effector to a pose, using motion planning.
 
         Args:
@@ -347,7 +363,11 @@ class Tahoma:
         self.move_group.allow_replanning(replan)
         self.move_group.set_goal_joint_tolerance(tolerance)
         self.move_group.set_planning_time(allowed_planning_time)
-
+        # if path_constraints is not None:
+        #     old_path_constraints = self.move_group.get_path_constraints()
+        #     old_trajectory_constraints = self.move_group.get_trajectory_constraints()
+        #     self.move_group.clear_trajectory_constraints()
+        #     self.move_group.set_path_constraints(path_constraints)
         joint_values = joints
         if isinstance(joints, str):
             joint_values = self.get_joint_values_for_name(joints)
@@ -359,6 +379,9 @@ class Tahoma:
         # Calling ``stop()`` ensures that there is no residual movement
         self.move_group.stop()
 
+        # if path_constraints is not None:
+        #     self.move_group.set_path_constraints(old_path_constraints)
+        #     self.move_group.set_trajectory_constraints(old_trajectory_constraints)
         current_joints = self.move_group.get_current_joint_values()
         return all_close(joint_values, current_joints, tolerance)
 
@@ -407,6 +430,7 @@ class Tahoma:
         self.move_group.set_num_planning_attempts(num_planning_attempts)
         self.move_group.allow_replanning(replan)
         self.move_group.set_goal_position_tolerance(tolerance)
+        # self.move_group.set_path_constraints(self.default_constraints)
         success, plan, planning_time, error_code = self.move_group.plan()
         if not success:
             return False
@@ -422,6 +446,252 @@ class Tahoma:
 
         # Now, we call the planner to compute the plan and execute it.
         ret = self.move_group.execute(plan, wait=True)
+        # Calling `stop()` ensures that there is no residual movement
+        self.move_group.stop()
+        # It is always good to clear your targets after planning with poses.
+        # Note: there is no equivalent function for clear_joint_value_targets()
+        self.move_group.clear_pose_targets()
+
+        current_pose = self.move_group.get_current_pose()
+        rospy.loginfo(f"Pose dist: {pose_dist(goal_in_planning_frame, current_pose)}")
+        return all_close(goal_in_planning_frame, current_pose, tolerance)
+
+    @requires_controller(JOINT_TRAJ_CONTROLLER)
+    def move_to_pose_manipulable(self,
+                          pose_stamped,
+                          allowed_planning_time=10.0,
+                          execution_timeout=15.0,
+                          num_planning_attempts=20,
+                          orientation_constraint=None,
+                          replan=True,
+                          replan_attempts=5,
+                          tolerance=0.01):
+        """Moves the end-effector to a pose, using motion planning.
+
+        Args:
+            pose: geometry_msgs/PoseStamped. The goal pose for the gripper.
+            allowed_planning_time: float. The maximum duration to wait for a
+                planning result.
+            execution_timeout: float. The maximum duration to wait for an arm
+                motion to execute (or for planning to fail completely), in
+                seconds.
+            num_planning_attempts: int. The number of times to compute the same
+                plan. The shortest path is ultimately used. For random
+                planners, this can help get shorter, less weird paths.
+            orientation_constraint: moveit_msgs/OrientationConstraint. An
+                orientation constraint for the entire path.
+            replan: bool. If True, then if an execution fails (while the arm is
+                moving), then come up with a new plan and execute it.
+            replan_attempts: int. How many times to replan if the execution
+                fails.
+            tolerance: float. The goal tolerance, in meters.
+
+        Returns:
+            string describing the error if an error occurred, else None.
+        """
+
+        pose_stamped = from_msg_msg(pose_stamped )
+
+        goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.move_group.get_planning_frame(),
+                                       rospy.Duration(1))
+
+        self.move_group.set_end_effector_link("arm_tool0")
+        self.move_group.set_pose_target(pose_stamped)
+        self.move_group.set_planning_time(allowed_planning_time)
+        self.move_group.set_num_planning_attempts(num_planning_attempts)
+        self.move_group.allow_replanning(replan)
+        self.move_group.set_goal_position_tolerance(tolerance)
+        max_manipulability = 0
+
+        for index in range(5):
+            success, plan, planning_time, error_code = self.move_group.plan()
+            if not success:
+                return False
+            jacobian = self.move_group.get_jacobian_matrix(list(getattr(getattr(getattr(plan,"joint_trajectory"),"points")[-1],"positions")))
+            n = np.matmul(np.matrix(jacobian),np.matrix.transpose(np.matrix(jacobian)))
+            manipulability_index = math.sqrt(np.linalg.det(n))
+            if(manipulability_index>max_manipulability):
+                max_manipulability = manipulability_index
+                main_plan = plan
+
+
+
+        # A `DisplayTrajectory`_ msg has two primary fields, trajectory_start and trajectory.
+        # We populate the trajectory_start with our current robot state to copy over
+        # any AttachedCollisionObjects and add our plan to the trajectory.
+        display_trajectory = DisplayTrajectory()
+        display_trajectory.trajectory_start = self.commander.get_current_state()
+        display_trajectory.trajectory.append(main_plan)
+        # Publish
+        self.display_trajectory_publisher.publish(display_trajectory)
+
+        # Now, we call the planner to compute the plan and execute it.
+        ret = self.move_group.execute(main_plan, wait=True)
+        # Calling `stop()` ensures that there is no residual movement
+        self.move_group.stop()
+        # It is always good to clear your targets after planning with poses.
+        # Note: there is no equivalent function for clear_joint_value_targets()
+        self.move_group.clear_pose_targets()
+
+        current_pose = self.move_group.get_current_pose()
+        rospy.loginfo(f"Pose dist: {pose_dist(goal_in_planning_frame, current_pose)}")
+        return all_close(goal_in_planning_frame, current_pose, tolerance)
+
+
+    @requires_controller(JOINT_TRAJ_CONTROLLER)
+    def move_to_pose_manipulable(self,
+                          pose_stamped,
+                          allowed_planning_time=10.0,
+                          execution_timeout=15.0,
+                          num_planning_attempts=20,
+                          orientation_constraint=None,
+                          replan=True,
+                          replan_attempts=5,
+                          tolerance=0.01):
+        """Moves the end-effector to a pose, using motion planning.
+
+        Args:
+            pose: geometry_msgs/PoseStamped. The goal pose for the gripper.
+            allowed_planning_time: float. The maximum duration to wait for a
+                planning result.
+            execution_timeout: float. The maximum duration to wait for an arm
+                motion to execute (or for planning to fail completely), in
+                seconds.
+            num_planning_attempts: int. The number of times to compute the same
+                plan. The shortest path is ultimately used. For random
+                planners, this can help get shorter, less weird paths.
+            orientation_constraint: moveit_msgs/OrientationConstraint. An
+                orientation constraint for the entire path.
+            replan: bool. If True, then if an execution fails (while the arm is
+                moving), then come up with a new plan and execute it.
+            replan_attempts: int. How many times to replan if the execution
+                fails.
+            tolerance: float. The goal tolerance, in meters.
+
+        Returns:
+            string describing the error if an error occurred, else None.
+        """
+
+        pose_stamped = from_msg_msg(pose_stamped )
+
+        goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.move_group.get_planning_frame(),
+                                       rospy.Duration(1))
+
+        self.move_group.set_end_effector_link("arm_tool0")
+        self.move_group.set_pose_target(pose_stamped)
+        self.move_group.set_planning_time(allowed_planning_time)
+        self.move_group.set_num_planning_attempts(num_planning_attempts)
+        self.move_group.allow_replanning(replan)
+        self.move_group.set_goal_position_tolerance(tolerance)
+        max_manipulability = 0
+
+        for index in range(5):
+            success, plan, planning_time, error_code = self.move_group.plan()
+            if success:
+                jacobian = self.move_group.get_jacobian_matrix(list(getattr(getattr(getattr(plan,"joint_trajectory"),"points")[-1],"positions")))
+                n = np.matmul(np.matrix(jacobian),np.matrix.transpose(np.matrix(jacobian)))
+                manipulability_index = math.sqrt(np.linalg.det(n))
+                if(manipulability_index>max_manipulability):
+                    max_manipulability = manipulability_index
+                    main_plan = plan
+
+        if not success:
+            return False
+
+
+        # A `DisplayTrajectory`_ msg has two primary fields, trajectory_start and trajectory.
+        # We populate the trajectory_start with our current robot state to copy over
+        # any AttachedCollisionObjects and add our plan to the trajectory.
+        display_trajectory = DisplayTrajectory()
+        display_trajectory.trajectory_start = self.commander.get_current_state()
+        display_trajectory.trajectory.append(main_plan)
+        # Publish
+        self.display_trajectory_publisher.publish(display_trajectory)
+
+        # Now, we call the planner to compute the plan and execute it.
+        ret = self.move_group.execute(main_plan, wait=True)
+        # Calling `stop()` ensures that there is no residual movement
+        self.move_group.stop()
+        # It is always good to clear your targets after planning with poses.
+        # Note: there is no equivalent function for clear_joint_value_targets()
+        self.move_group.clear_pose_targets()
+
+        current_pose = self.move_group.get_current_pose()
+        rospy.loginfo(f"Pose dist: {pose_dist(goal_in_planning_frame, current_pose)}")
+        return all_close(goal_in_planning_frame, current_pose, tolerance)
+
+    @requires_controller(JOINT_TRAJ_CONTROLLER)
+    def move_to_pose_manipulable(self,
+                          pose_stamped,
+                          allowed_planning_time=10.0,
+                          execution_timeout=15.0,
+                          num_planning_attempts=20,
+                          orientation_constraint=None,
+                          replan=True,
+                          replan_attempts=5,
+                          tolerance=0.01):
+        """Moves the end-effector to a pose, using motion planning.
+
+        Args:
+            pose: geometry_msgs/PoseStamped. The goal pose for the gripper.
+            allowed_planning_time: float. The maximum duration to wait for a
+                planning result.
+            execution_timeout: float. The maximum duration to wait for an arm
+                motion to execute (or for planning to fail completely), in
+                seconds.
+            num_planning_attempts: int. The number of times to compute the same
+                plan. The shortest path is ultimately used. For random
+                planners, this can help get shorter, less weird paths.
+            orientation_constraint: moveit_msgs/OrientationConstraint. An
+                orientation constraint for the entire path.
+            replan: bool. If True, then if an execution fails (while the arm is
+                moving), then come up with a new plan and execute it.
+            replan_attempts: int. How many times to replan if the execution
+                fails.
+            tolerance: float. The goal tolerance, in meters.
+
+        Returns:
+            string describing the error if an error occurred, else None.
+        """
+
+        pose_stamped = from_msg_msg(pose_stamped )
+
+        goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.move_group.get_planning_frame(),
+                                       rospy.Duration(1))
+
+        self.move_group.set_end_effector_link("arm_tool0")
+        self.move_group.set_pose_target(pose_stamped)
+        self.move_group.set_planning_time(allowed_planning_time)
+        self.move_group.set_num_planning_attempts(num_planning_attempts)
+        self.move_group.allow_replanning(replan)
+        self.move_group.set_goal_position_tolerance(tolerance)
+        max_manipulability = 0
+
+        for index in range(10):
+            success, plan, planning_time, error_code = self.move_group.plan()
+            if success:
+                jacobian = self.move_group.get_jacobian_matrix(list(getattr(getattr(getattr(plan,"joint_trajectory"),"points")[-1],"positions")))
+                n = np.matmul(np.matrix(jacobian),np.matrix.transpose(np.matrix(jacobian)))
+                manipulability_index = math.sqrt(np.linalg.det(n))
+                if(manipulability_index>max_manipulability):
+                    max_manipulability = manipulability_index
+                    main_plan = plan
+
+        if not success:
+            return False
+
+
+        # A `DisplayTrajectory`_ msg has two primary fields, trajectory_start and trajectory.
+        # We populate the trajectory_start with our current robot state to copy over
+        # any AttachedCollisionObjects and add our plan to the trajectory.
+        display_trajectory = DisplayTrajectory()
+        display_trajectory.trajectory_start = self.commander.get_current_state()
+        display_trajectory.trajectory.append(main_plan)
+        # Publish
+        self.display_trajectory_publisher.publish(display_trajectory)
+
+        # Now, we call the planner to compute the plan and execute it.
+        ret = self.move_group.execute(main_plan, wait=True)
         # Calling `stop()` ensures that there is no residual movement
         self.move_group.stop()
         # It is always good to clear your targets after planning with poses.
@@ -455,7 +725,7 @@ class Tahoma:
         Returns:
             string describing the error if an error occurred, else None.
         """
- 
+
         self.move_group.set_end_effector_link("arm_tool0")
         goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.planning_frame, rospy.Duration(1))
 
@@ -507,7 +777,7 @@ class Tahoma:
                 rospy.sleep(.01)
                 steps = steps + .01
 
- 
+
         current_pose = self.move_group.get_current_pose()
         rospy.loginfo(f"Pose dist: {pose_dist(goal_in_planning_frame, current_pose)}")
         return early_stop or all_close(goal_in_planning_frame, current_pose, tolerance)
