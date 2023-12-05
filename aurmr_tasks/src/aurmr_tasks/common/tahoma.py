@@ -3,6 +3,7 @@ import math
 import sys
 from functools import wraps
 from turtle import pos
+from typing import Union
 import numpy as np
 
 
@@ -113,7 +114,6 @@ def moveit_error_string(val):
 class Tahoma:
     def __init__(self, in_sim=False):
         self.in_sim = in_sim
-        self.joint_state = None
         self.point_cloud = None
 
         self.tf2_buffer = tf2_ros.Buffer()
@@ -121,7 +121,6 @@ class Tahoma:
         self.wrist_position = None
         self.lift_position = None
 
-        # self.joint_states_subscriber = rospy.Subscriber('/joint_states', JointState, self.joint_states_callback)
         self._joint_traj_client = actionlib.SimpleActionClient(
             JOINT_ACTION_SERVER, control_msgs.msg.FollowJointTrajectoryAction)
         self._gripper_client = actionlib.SimpleActionClient(GRIPPER_ACTION_SERVER, GripperCommandAction)
@@ -185,6 +184,20 @@ class Tahoma:
 
         self.active_controllers = None
         self.update_running_controllers()
+
+    def get_current_joint_values(self):
+        # Thin wrapper so users don't have to rely on the move_group.
+        # We may replace moveit in the future.
+        return self.move_group.get_current_joint_values()
+    
+    def close_to_joint_values(self, values: Union[str, list], tolerance=0.01):
+        if isinstance(values, str):
+            values = self.move_group.get_named_target_values(values)
+            joint_names = self.move_group.get_active_joints()
+            print(values, joint_names)
+            values = [values[name] for name in joint_names]
+        print(values, self.get_current_joint_values())
+        return all_close(values, self.get_current_joint_values(), tolerance)
 
     def wrench_cb(self, msg: WrenchStamped):
         self.force_mag = math.sqrt(msg.wrench.force.x**2 + msg.wrench.force.y**2+ msg.wrench.force.z**2)
@@ -762,7 +775,7 @@ class Tahoma:
                     rospy.loginfo("Stopping movement due to force feedback")
                     early_stop = True
                     break
-                elif use_gripper and self.object_detected:
+                elif use_gripper and self.check_gripper_item():
                     self.move_group.stop()
                     rospy.loginfo("Stopping movement due to object detection")
                     early_stop = True
