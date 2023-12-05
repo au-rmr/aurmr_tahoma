@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import Union
 
 import geometry_msgs.msg
 from math import pi, tau, dist, fabs, cos
@@ -60,7 +61,7 @@ def formulate_ud_str_auto(name, template, input_keys, output_key, transitions=No
     StateMachine.add_auto(name, Formulator(template, input_keys, output_key), ["succeeded"],transitions=transitions)
 
 
-def all_close(goal, actual, tolerance):
+def all_close(goal: Union[geometry_msgs.msg.Pose, geometry_msgs.msg.PoseStamped, list], actual: Union[geometry_msgs.msg.Pose, geometry_msgs.msg.PoseStamped, list], tolerance: float):
     """
     Convenience method for testing if the values in two lists are within a tolerance of each other.
     For Pose and PoseStamped inputs, the angle between the two quaternions is compared (the angle
