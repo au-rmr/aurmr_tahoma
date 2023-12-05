@@ -27,6 +27,7 @@ import threading
 # This is an internal high-capacity drive, so we should only need to clear it once before the runs
 # /data is a network crossmount (see /etc/fstab). If it's not mounted, `sudo mount -a`
 BAG_STORAGE_PATH = "/data/datasets/2023-12-nick-logging"
+BACKUP_RECORDING_PATH = "/home/aurmr/bag_recording_failover"
 
 TOPICS_TO_RECORD = [
     "/audio/audio",
@@ -36,8 +37,11 @@ TOPICS_TO_RECORD = [
     "/aurmr_perception/detected_masks",
     "/aurmr_perception/labeled_images",
     "/aurmr_perception/colored_images",
+    "/camera_lower_right/depth/camera_info",
+    "/camera_lower_right/depth_to_rgb/camera_info",
+    "/camera_lower_right/rgb/camera_info",
+    "/camera_lower_right/rgb_to_depth/camera_info",
     "/demo_sm/smach/container_status",
-    "/diagnostics_agg",
     "/grasp_detection/detected_grasps",
     "/grasp_detection/detected_pts",
     "/joint_states",
@@ -185,8 +189,11 @@ def main(path, config_file):
     i = 0
     def make_recorder():
         nonlocal i
+        path_to_use = bags_path
         i += 1
-        return ROSBagRecorder(f"{i}", path, TOPICS_TO_RECORD)
+        if not os.path.isdir(path):
+            path_to_use = os.path.join(BACKUP_RECORDING_PATH, launch_timestamp)
+        return ROSBagRecorder(f"{i}", path_to_use, TOPICS_TO_RECORD)
 
     trigger = StatemachineTrigger(make_recorder)
 
