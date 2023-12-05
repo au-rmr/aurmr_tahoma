@@ -3,6 +3,7 @@ import math
 import sys
 from functools import wraps
 from turtle import pos
+from typing import Union
 import numpy as np
 
 
@@ -114,7 +115,6 @@ def moveit_error_string(val):
 class Tahoma:
     def __init__(self, in_sim=False):
         self.in_sim = in_sim
-        self.joint_state = None
         self.point_cloud = None
 
         self.tf2_buffer = tf2_ros.Buffer()
@@ -122,7 +122,6 @@ class Tahoma:
         self.wrist_position = None
         self.lift_position = None
 
-        # self.joint_states_subscriber = rospy.Subscriber('/joint_states', JointState, self.joint_states_callback)
         self._joint_traj_client = actionlib.SimpleActionClient(
             JOINT_ACTION_SERVER, control_msgs.msg.FollowJointTrajectoryAction)
         self._gripper_client = actionlib.SimpleActionClient(GRIPPER_ACTION_SERVER, GripperCommandAction)
