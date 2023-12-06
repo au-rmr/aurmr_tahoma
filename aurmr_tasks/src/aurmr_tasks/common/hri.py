@@ -144,7 +144,6 @@ class UserPromptForRetry(State):
         marker2.type = Marker.SPHERE
         marker2.action = Marker.ADD
 
-        print(f"publishing {point}")
         marker2.pose.position.x = point[0]
         marker2.pose.position.y = point[1]
         marker2.pose.position.z = point[2]
@@ -190,7 +189,6 @@ class UserPromptForRetry(State):
             p0 = np.array(ray_z) * 2
             closest_point = pc[np.argmin(np.linalg.norm(np.cross(p1-p0, p0-pc, axisb=1), axis=1)/np.linalg.norm(p1-p0))]
             return closest_point
-
 
     def execute(self, userdata):
         if self.ros_pointcloud is None or self.ros_rgb_image is None or self.camera_model is None:
@@ -275,14 +273,14 @@ class UserPromptForRetry(State):
 
 
         # As the arm_tool0 is 20cm in length w.r.t tip of suction cup thus adding 0.2m offset
-        grasp_pose = self.add_offset(-0.20, grasp_pose)
+        grasp_pose = add_offset(-0.20, grasp_pose)
 
-        userdata['grasp_pose'] = grasp_pose
+        userdata['human_grasp_pose'] = grasp_pose
 
         # adding 0.12m offset for pre grasp pose to prepare it for grasp pose which is use to pick the object
-        pregrasp_pose = self.add_offset(-self.pre_grasp_offset, grasp_pose)
+        pregrasp_pose = add_offset(-self.pre_grasp_offset, grasp_pose)
 
-        userdata['pre_grasp_pose'] = pregrasp_pose
+        userdata['human_pre_grasp_pose'] = pregrasp_pose
 
         return "retry"
 
