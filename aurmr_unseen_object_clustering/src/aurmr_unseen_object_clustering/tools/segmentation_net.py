@@ -1,5 +1,6 @@
 import os
 from operator import truediv
+from typing import List, Tuple
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
@@ -18,7 +19,7 @@ from matplotlib.widgets import RectangleSelector
 import sys
 import calendar
 import time
-from aurmr_unseen_object_clustering.srv import GetSegmentationUOIS
+from aurmr_unseen_object_clustering.uois_multi_frame import UOISMultiFrame
 import rospy
 import imutils
 import pickle
@@ -81,7 +82,6 @@ def_config = {
    'min_match_count': 3,
 
    # Segmentation / 
- 
     # Erosion/Dilation and largest connected component
    'perform_cv_ops':False,
    'perform_cv_ops_ref':True,
@@ -95,68 +95,13 @@ def_config = {
    'xyz_is_standardized':True,
    'min_bg_change':15,
    'resize':True,
-   'print_preds':False
+   'print_preds':False,
+
+    # UOIS
+    "uois_config": f'{workspace_path}/src/aurmr_perception/configs/amazon/256x256_synbin_v0p3_stackXYZ011010_optRPY110100_randXYZ110_2s12345_v6_v76_contra_1p0_softmax_0p1_21k24k.yaml',
+    "uois_weights": f'{workspace_path}/model_final.pth'
 }
 
-
-class Bin:
-    def __init__(self, bin_id, bounds=None, init_depth=None, config=def_config):
-        # String ID of the bin
-        self.bin = bin_id
-        self.visualize = False
-  
-        # The crop bounds of the bin
-        if bounds is None:
-            self.bounds = bin_bounds[self.bin]
-        else:
-            self.bounds = bounds
-  
-        # Total number of bin objects
-        self.n = 0
-
-        self.config = config
-  
-        # Stores bin state
-        #
-        # raise Exception("seems like there is either an error in the calibaration file or self.bounds[2] - self.bounds[3] are flipped ")
-        
-        self.current = {'rgb':np.zeros(shape=(self.bounds[1] - self.bounds[0], self.bounds[3] - self.bounds[2], 3), dtype=np.uint8), 'depth':None, 'mask':None, 'embeddings':np.array([])}
-        self.last = {'rgb':None, 'depth':None, 'mask':None, 'embeddings':np.array([])}
-        self.init_depth = init_depth[bounds[0]:bounds[1], bounds[2]:bounds[3]]
-        self.bg_mask = np.ones(self.init_depth.shape, dtype=np.uint8)
-  
-    def update_current(self, current):
-        self.last = self.current.copy()
-  
-        rgb = current['rgb']
-        depth = current['depth']
-        self.current['rgb'] = rgb[self.bounds[0]:self.bounds[1], self.bounds[2]:self.bounds[3], ...]
-        self.current['depth'] = depth[self.bounds[0]:self.bounds[1], self.bounds[2]:self.bounds[3], ...]
-        self.current['embeddings'] = None
-        self.bg_mask = np.abs(self.current['depth'][...,2] - self.init_depth[...,2]) < self.config['min_bg_change']
-        # plt.imshow(self.bg_mask)
-        # plt.title("Background Mask")
-        # plt.show()
-        self.current['mask'] = None
-
-    def new_object_detected(self, current):
-        # Crop the current depth down to bin size
-        r1,r2,c1,c2 = self.bounds
-        depth_now = current['depth'][r1:r2, c1:c2, 2]
-        
-        if self.current['depth'] is None:
-            depth_bin = self.init_depth[...,2]
-        else:
-            depth_bin = self.current['depth'][...,2]
-        
-
-        mask = (np.abs(depth_bin - depth_now) > self.config['min_pixel_threshhold'])
-        kernel = np.ones(shape=(9,9), dtype=np.uint8)
-        mask_now = spy.binary_erosion(mask, structure=kernel, iterations=2)
-
-        if np.sum(mask_now) > 0:
-            return True
-        return False
 
 
 class SegNet:
@@ -178,6 +123,7 @@ class SegNet:
         cfg.MODE = 'TEST'
   
         self.config = config
+        self.uois_multi_frame = UOISMultiFrame(config["uois_config"], config["uois_weights"])
         
         self.const = 0
   
@@ -206,14 +152,6 @@ class SegNet:
         if init_depth is None:
             print("WARNING: No initial scene provided")
 
-        # Initializes the bins
-        bin_names = config['bounds'].keys()
-        self.bins = {}
-
-        init_xyz = self.compute_xyz(init_depth, init_info)
-        for bin in bin_names:
-            self.bins[bin] = Bin(bin, bounds=config['bounds'][bin], init_depth=init_xyz)
-  
         self.H, self.W = None, None
   
         # Contains mappings from pruduct bin ID to [bin, intra_bin_ID]
@@ -229,14 +167,6 @@ class SegNet:
         # List of all bins to ignore
         self.bad_bins = []
 
-        ######################################################################################################
-        # print("init pre")
-        # sys.path.append("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/UIE_main/mask2former_frame")
-        # print("post sys")
-        # from demo.segnetv2_demo import SegnetV2
-        # print("post import")
-        # self.object = SegnetV2()
-        # print("post object call")
   
    # Computes the point cloud from a depth array and camera intrinsics
     def compute_xyz(self, depth_img, intrinsic):
@@ -253,49 +183,12 @@ class SegNet:
         xyz_img = np.stack([x_e, y_e, z_e], axis=-1) # Shape: [H x W x 3]
         return xyz_img
     
-    def uois_segmentation(self, bin_id):
-        rospy.wait_for_service('segmentation_with_embeddings')
-        try:
-            uois_client = rospy.ServiceProxy('segmentation_with_embeddings', GetSegmentationUOIS)
-            req = uois_client(bin_id)
-            return req.out_label, req.embeddings
-        except rospy.ServiceException as e:
-            print("Service call failed: %s"%e)
-    
     # Segments the current bin and returns the masks both from the bin reference and from the overall reference
-    def segment(self, bin_id, scene=None):
-        # Grab the current bin
-        bin = self.bins[bin_id]
-  
-        # Get the image and point cloud
-        if scene is None:
-            rgb = self.current['rgb'].copy()
-            xyz = self.current['depth'].copy()
-        else:
-            rgb = scene['rgb']
-            xyz = scene['depth']
-
-        if bin_id == 'syn':
-            rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-  
-        H, W, _ = rgb.shape
-
-        # Save the entire pod images for further reproduction
-        pod_img_path = f"{workspace_path}/src/uois_service_multi_demo/dataset/pod"
-        os.makedirs(pod_img_path, exist_ok=True)
-        pod_img_files = os.listdir(pod_img_path)
-        indices = [int(f.split('_')[-1].split('.')[0]) for f in pod_img_files if f.startswith('pod_img_') and f.endswith('.png')]
-        if indices:
-            next_index = max(indices) + 1
-        else:
-            next_index = 0
-        index_str = str(next_index).zfill(4)
-        cv2.imwrite(os.path.join(pod_img_path, f"pod_img_{index_str}.png"), rgb)
-
-        # Crops the image to the current bin
-        xyz = xyz[bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], :]
-        rgb = rgb[bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3]
+    # Pass in sequence of rgb, xyz pairs already cropped to bin bounds
+    def segment(self, rgb_d_sequence: List[Tuple[np.ndarray, np.ndarray]]):
        
+        rgb_sequence = [pair[0] for pair in rgb_d_sequence]
+        rgb, xyz = rgb_d_sequence[-1]
         # rgb = rgb.astype(np.float32)
 
         # rgb_n = rgb.copy()
@@ -306,12 +199,6 @@ class SegNet:
         #     rgb[..., 1] = (rgb[..., 1] - np.mean(rgb[...,1])) / np.std(rgb[...,1])
         #     rgb[..., 2] = (rgb[..., 2] - np.mean(rgb[...,2])) / np.std(rgb[...,2])
         if self.config['xyz_is_standardized']:
-            if bin_id == 'syn':
-                mask = xyz[...,2] > .05
-                xyz[..., 0] = (xyz[..., 0] - np.mean(xyz[..., 0], where=mask)) / np.std(xyz[..., 0], where=mask) * mask
-                xyz[..., 1] = (xyz[..., 1] - np.mean(xyz[..., 1], where=mask)) / np.std(xyz[..., 1], where=mask) * mask
-                xyz[..., 2] = (xyz[..., 2] - np.mean(xyz[..., 2], where=mask)) / np.std(xyz[..., 2], where=mask) * mask
-            else:
                 xyz[..., 0] = (xyz[..., 0] - np.mean(xyz[...,0])) / np.std(xyz[...,0])
                 xyz[..., 1] = (xyz[..., 1] - np.mean(xyz[...,1])) / np.std(xyz[...,1])
                 xyz[..., 2] = (xyz[..., 2] - np.mean(xyz[...,2])) / np.std(xyz[...,2])
@@ -326,22 +213,6 @@ class SegNet:
         #     bg_mask_now = cv2.resize(bin.bg_mask.astype(np.uint8), (256, 256), interpolation=cv2.INTER_AREA)
 
         rgb_segment = rgb.astype(np.uint8)
-        
-        path = f"{workspace_path}/src/uois_service_multi_demo/dataset/{bin_id}"
-        os.makedirs(path, exist_ok=True)
-        #path = "/home/aurmr/workspaces/uois_multi_frame_ws/src/uois_service_multi_demo/dataset/"+bin_id+"/"
-        files = os.listdir(path)
-        indices = [int(f.split('_')[-1].split('.')[0]) for f in files if f.startswith('color_') and f.endswith('.npy')]
-        if indices:
-            next_index = max(indices) + 1
-        else:
-            next_index = 0
-        index_str = str(next_index).zfill(4)
-        file_path = os.path.join(path, f"color_{index_str}.npy")
-        np.save(file_path, rgb_segment)
-        # Save the image in png format to compare with predicted masks
-        png_filepath = file_path.split('.')[0] + '.png'
-        cv2.imwrite(png_filepath, rgb_segment)
 
         # xyz = xyz.astype(np.uint8)
 
@@ -354,7 +225,12 @@ class SegNet:
         new method
         '''
         # mask, embed = self.uois_segmentation(reshaped_img, rgb_segment.shape[0], rgb_segment.shape[1])
-        mask, embed = self.uois_segmentation(bin_id)
+        try:
+            mask, embed = self.uois_multi_frame.inference(rgb_sequence)
+        except Exception as e:
+            rospy.logerr("Unseen object segmentation call failed")
+            print(e)
+            return None, None
 
         try:
             mask = np.asarray(mask).astype(np.uint8).reshape(rgb_segment.shape[0], rgb_segment.shape[1])
@@ -363,14 +239,14 @@ class SegNet:
         embed = np.asarray(embed).astype(np.float64)
         # print(embed)
         if(np.max(mask) > 0):
-            embed = embed.reshape(int(len(embed)/256), 256)
+            embed = embed.reshape(-1, 256)
         
         out_label = mask
         out_label_new = out_label.astype(np.uint8)
         # out_label_new = out_label\
         try:
-            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/mask.png", out_label_new.astype(np.uint8))
-            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/rgb.png", rgb_segment.astype(np.uint8))
+            cv2.imwrite(f"{workspace_path}/mask_result_mask.png", out_label_new.astype(np.uint8))
+            cv2.imwrite(f"{workspace_path}/mask_result_rgb.png", rgb_segment.astype(np.uint8))
         except:
             pass
         if self.config['perform_cv_ops']:
@@ -402,13 +278,10 @@ class SegNet:
 
         mask_crop = mask_crop_f
         
-        mask_crop = cv2.resize(mask_crop, (bin.bounds[3] - bin.bounds[2], bin.bounds[1] - bin.bounds[0]), interpolation=cv2.INTER_AREA)
+        #FIXME COMMENTING BECAUSE MASK ALREADY SEEMS T OBE THE RIGHT SIZE
+        #mask_crop = cv2.resize(mask_crop, (bin.bounds[3] - bin.bounds[2], bin.bounds[1] - bin.bounds[0]), interpolation=cv2.INTER_AREA)
 
-        if self.visualize:
-            try:
-                cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/soofiyan_mask.png", mask_crop)
-            except:
-                pass
+
         return mask_crop, embed
   
     # Returns a best-guess matching between masks in frame 0 and masks in frame 1
@@ -450,7 +323,7 @@ class SegNet:
   
         # Find the mask in the destination image that best matches the soruce mask using Hungarian matching
         row_ind, col_ind = linear_sum_assignment(-mask_recs)
-        self.const += 1
+        self.const 
   
         return col_ind + 1, match_failed, row_ind + 1
     
@@ -520,7 +393,7 @@ class SegNet:
         print("mask_recs sift", mask_recs)
         # Find the mask in the destination image that best matches the soruce mask sing Hungarian matching
         row_ind, col_ind = linear_sum_assignment(-mask_recs)
-        self.const += 1
+        self.const 
   
         return col_ind + 1, sift_failed, row_ind + 1
   
@@ -661,367 +534,7 @@ class SegNet:
         except:
             pass
         return mask, embeddings
-  
-    # Retrieves the mask with bin product id obj_id from the full camera reference frame
-    def get_obj_mask(self, obj_id):
-        bin_id, id = self.items[obj_id]
-        bin = self.bins[bin_id]
-        print(f"get_object segnet: bin_id: {bin_id}, {id}")
 
-        if bin_id in self.bad_bins:
-            print(self.bad_bins)
-            print("Redirected to manual entry")
-            mask_full = self.get_obj_mask_bad_bin(obj_id)
-            # plt.imshow(mask_full)
-            # plt.title("This is what we are going to send to the robot")
-            # plt.show()
-            return mask_full
-
-        mask_crop = bin.current['mask']
-        mask_full = np.zeros((self.H, self.W), dtype=np.uint8)
-        r1, r2, c1, c2 = bin.bounds
-        # plt.imshow(mask_crop)
-        # plt.title("mask_crop")
-        # plt.show()
-        mask_full[r1:r2, c1:c2] = np.array((mask_crop == id)).astype(np.uint8)
-        return mask_full
-  
-    # After object with product id obj_id is stowed in bin with id bin_id, 
-    #           updates perception using the current camera information (rgb_raw, depth_raw, intrinsic)
-    # FAILURES:
-    #       1. No object is stored. Covered using depth difference in bin.new_object_detected CODE NO_OBJ_STORED
-    #       2. Fewer than n objects are segmented (undersegmentation). Covered in refine_masks CODE UNDERSEGMENTATION
-    def stow(self, bin_id, obj_id, rgb_raw, depth_raw=None,info=None, points_raw=None):
-        # Grabs the current bin
-        bin = self.bins[bin_id]
-
-        if self.H is None:
-            self.H, self.W, _ = rgb_raw.shape
-
-        # check whether the stow is valid (there is a meaningful pixel difference)
-        if not bin.new_object_detected({'rgb':rgb_raw, 'depth':self.compute_xyz(depth_raw, info)}):
-            print(f"No new object detected: Did you store an object in bin {bin_id}?\nPlease try again")
-            return NO_OBJ_STORED
-        
-        # points_raw[:,:][np.isnan(points_raw)] = 0
-
-        # if not bin.new_object_detected({'rgb':rgb_raw, 'depth':points_raw}):
-        #     print(f"Error detected: Did you store an object in bin {bin_id}?\nPlease try again")
-        #     return 1
-  
-        # Update the current state of the bin and scene with the new images
-        self.last = self.current.copy()
-        self.current['rgb'] = rgb_raw.astype(np.uint8)
-        # self.current['depth'] = 
-        self.current['depth'] = self.compute_xyz(depth_raw, info)
-        self.current['mask'] = None
-        bin.update_current(self.current)
-        # plt.imshow(self.current['rgb'] )
-        # plt.show()
-
-        # Check if in bad bins
-        if bin_id in self.bad_bins:
-            bin.n += 1
-            self.n += 1
-            self.items[obj_id] = [bin_id, bin.n]
-            return IN_BAD_BINS
-  
-        # Keep track of the total number of objects in the bin
-        bin.n += 1
-        self.n += 1
-
-        # Current mask recommendations on the bin
-        mask_crop, embeddings = self.segment(bin_id)
-
-        # plt.imshow(mask_crop)
-        # plt.title("Predicted object mask before refinement")
-        # plt.show()
-
-        # Make sure that the bin only has segmentations for n objects
-        mask_crop, embeddings = self.refine_masks(mask_crop, bin.n, embeddings)
-        
-        current_GMT = time.gmtime()
-        time_stamp = calendar.timegm(current_GMT)
-        self.frame_count_yi += 1
-        try:
-            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Data_Collection/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
-            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_stow_"+str(self.frame_count_yi)+".png", mask_crop.astype(np.uint8)*40)
-            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"rgb_stow_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
-        except:
-            pass
-        # mask2vis = self.vis_masks(bin.current['rgb'], mask_crop)
-        # plt.imshow(mask2vis)
-        # plt.title(f"Masks in the scene. There should be {bin.n}")
-        # plt.show()
-
-        if mask_crop is None:
-            print(f"Bin {bin_id} added to bad bins. CAUSE Undersegmentation")
-            self.items[obj_id] = [bin_id, bin.n]
-            self.bad_bins.append(bin_id)
-            return UNDERSEGMENTATION
-        else:
-            if self.visualize:
-                cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/refined_mask.png", mask_crop)
-
-        mask2vis = self.vis_masks(bin.current['rgb'], mask_crop)
-        # plt.imshow(mask2vis)
-        # plt.title(f"Masks in the scene (stow). There should be {bin.n} but there are {np.unique(mask_crop)}")
-        # plt.show()
-
-  
-        # Find the recommended matches between the two frames
-        if bin.last['mask'] is not None:
-            recs, match_failed, row_recs = self.match_masks_using_embeddings(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop, bin.last['embeddings'], embeddings)
-            # recs_, sift_failed_, row_recs_ = self.match_masks_using_sift(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
-
-            # print("matching method embeddings and sift", recs, recs_)
-
-            if(match_failed):
-                print(f"WARNING: Embeddings Matching Failure on bin {bin_id}. But not Appending to bad bins yet.")
-                recs, sift_failed, row_recs = self.match_masks_using_sift(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
-                match_failed = False
-
-                if sift_failed:
-                    print(f"WARNING: SIFT Matching Failure on bin {bin_id}. Appending to bad bins.")
-                    self.bad_bins.append(bin_id)
-  
-            # Find the index of the new object (not matched)
-            for i in range(1, bin.n + 1):
-                if i not in recs:
-                    recs = np.append(recs, i)
-                    break
-            
-            # Update the new frame's masks
-            bin.current['mask'], bin.current['embeddings'] = self.update_masks(mask_crop, recs, embeddings)
-            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_stow_update_"+str(self.frame_count_yi)+".png", bin.current['mask'].astype(np.uint8)*40)
-        else:
-            # This should only happen at the first insertion
-            assert(bin.n == 1)
-            # No matching is necessary because there is only one object in the scene
-            bin.current['mask'] = mask_crop.copy()
-            bin.current['embeddings'] = embeddings
-
-        # Add the object-bin pair the list of stored items
-        self.items[obj_id] = [bin_id, bin.n]
-        
-        return 0
-    
-
-    # After a successful pick of object with product id obj_id, updates perception
-    #           using camera information (rgb_raw, depth_raw, intrinsic)
-    def pick(self, obj_id, rgb_raw, depth_raw=None,info=None, points_raw=None):
-        # Finds the bin and local ID for the object
-        try:
-            bin_id, obj_n = self.items[obj_id]
-        except:
-            print(f"Object with ID {obj_id} not found in our database. Please try another item.")
-            bin.n -= 1
-            self.n -= 1
-            return OBJ_NOT_FOUND
-
-        # Grabs the current bin
-        bin = self.bins[bin_id]
-
-
-        # points_raw[:,:][np.isnan(points_raw)] = 0
-
-        
-        # Update the current state of the bin and scene with the new images
-        self.last = self.current.copy()
-        self.current['rgb'] = rgb_raw.astype(np.uint8)
-        # self.current['depth'] = points_raw
-        self.current['depth'] = self.compute_xyz(depth_raw, info)
-        self.current['mask'] = None
-        bin.update_current(self.current)
-
-        # Check if in bad bins
-        if bin_id in self.bad_bins:
-            bin.n -= 1
-            self.n -= 1
-            del self.items[obj_id]
-            return IN_BAD_BINS
-  
-        # Current mask recommendations on the bin
-        mask_crop, embeddings = self.segment(bin_id)
-
-
-        # Keep track of the total number of objects in the bin
-        bin.n -= 1
-        self.n -= 1
-
-        # mask2vis = self.vis_masks(bin.current['rgb'], mask_crop)
-        # plt.imshow(mask2vis)
-        # plt.title(f"Masks in the scene (pick). There should be {bin.n}")
-        # plt.show()
-  
-        # Make sure that the bin only has segmentations for n objects
-        mask_crop, embeddings = self.refine_masks(mask_crop, bin.n, embeddings)
-
-        current_GMT = time.gmtime()
-        time_stamp = calendar.timegm(current_GMT)
-        self.frame_count_yi += 1
-        try:
-            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Data_Collection/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
-            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_pick_"+str(self.frame_count_yi)+".png", mask_crop.astype(np.uint8)*40)
-            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"rgb_pick_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
-            print("successfully saved images")
-        except:
-            pass
-
-        if mask_crop is None:
-            print(f"Adding {bin_id} to bad bins. Reason: Undersegmentation")
-            self.bad_bins.append(bin_id)
-            del self.items[obj_id]
-            return UNDERSEGMENTATION
-
-        # Optional visualization
-        # if self.config['print_preds']:
-        #     plt.imshow(mask_crop)
-        #     plt.title("Cropped mask prediction after pick")
-        #     plt.show()
-        try:
-            old_mask = bin.last['mask'].copy()
-            old_embeddings = bin.last['embeddings'].copy()
-            # Remove the object that is no longer in the scene
-            old_mask[old_mask == obj_n] = 0
-            old_mask[old_mask > obj_n] -= 1
-            old_embeddings = np.delete(old_embeddings, obj_n-1, 0)
-        except:
-            old_embeddings = np.ones((1, 256), dtype = np.float64)
-            old_mask = np.zeros((256, 256), dtype = np.uint8)
-
-        # Find object correspondence between scenes
-        recs, match_failed, row_recs = self.match_masks_using_embeddings(bin.last['rgb'],bin.current['rgb'], old_mask, mask_crop, old_embeddings, embeddings)
-        # recs_, sift_failed_, row_recs_ = self.match_masks_using_sift(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
-        # print("matching method embeddings and sift", recs, recs_)
-        
-        if(match_failed):
-            print(f"WARNING: Embeddings Matching Failure on bin {bin_id}. But not Appending to bad bins yet.")
-            recs, sift_failed, row_recs = self.match_masks_using_sift(bin.last['rgb'],bin.current['rgb'], old_mask, mask_crop)
-            match_failed = False
-
-            if sift_failed:
-                del self.items[obj_id]
-                print(f"Adding {bin_id} to bad bins. CAUSE: Unconfident matching")
-                self.bad_bins.append(bin_id)
-                return MATCH_FAILED
-
-        # Checks that SIFT could accurately mask objects
-        # if recs is None:
-        #     print(f"SIFT can not confidently determine matches for bin {bin_id}. Reset bin to continue.")
-        #     self.bad_bins.append(bin_id)
-        #     return 1
-
-        bin.current['mask'], bin.current['embeddings'] = self.update_masks(mask_crop, recs, embeddings)
-        
-        # Remove the picked object from the list of tracked items
-        for loc_obj_id, (loc_bin, loc_id) in self.items.items():
-            if loc_bin == bin_id:
-                if loc_id > obj_n:
-                    self.items[loc_obj_id] = [loc_bin, loc_id - 1]
-        del self.items[obj_id]
-
-        return 0
-  
-    # Update the bin state if there's no new object (grasping failure)
-    def update(self, bin_id, rgb_raw, depth_raw=None, info=None, points_raw=None):
-        # Grabs the current bin
-        bin = self.bins[bin_id]
-
-        if self.H is None:
-            self.H, self.W, _ = rgb_raw.shape
-
-        # Update the current state of the bin and scene with the new images
-        self.last = self.current.copy()
-        self.current['rgb'] = rgb_raw.astype(np.uint8)
-        # points_raw[:,:][np.isnan(points_raw)] = 0
-        # self.current['depth'] = points_raw
-        self.current['depth'] = self.compute_xyz(depth_raw, info)
-        self.current['mask'] = None
-        # print(f"Current: {self.current}")
-        bin.update_current(self.current)
-
-        # Current mask recommendations on the bin
-        mask_crop, embeddings = self.segment(bin_id)
-
-        # Check if in bad bins
-        if bin_id in self.bad_bins:
-            return IN_BAD_BINS
-
-        # Make sure that the bin only has segmentations for n objects
-        mask_crop, embeddings = self.refine_masks(mask_crop, bin.n, embeddings)
-        
-        current_GMT = time.gmtime()
-        time_stamp = calendar.timegm(current_GMT)
-        self.frame_count_yi += 1
-        try:
-            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Data_Collection/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
-            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_update_"+str(self.frame_count_yi)+".png", mask_crop.astype(np.uint8)*40)
-            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
-        except:
-            pass
-
-        if mask_crop is None:
-            self.current = self.last
-            return UNDERSEGMENTATION
-
-        # if mask_crop is None:
-        #     print(f"Segmentation could not find objects in bin {bin_id}")
-        #     input("Need to reset bin. Take out all items and reput them in.")
-        #     self.bad_bins.append(bin_id)
-        #     self.reset_bin(bin_id)
-
-        # Find the recommended matches between the two frames
-        if bin.last['mask'] is not None:
-            recs, match_failed, row_recs = self.match_masks_using_embeddings(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop, bin.last['embeddings'], embeddings)
-            # recs_, sift_failed_, row_recs_ = self.match_masks_using_sift(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
-            # print("matching method embeddings and sift", recs, recs_)
-
-            if(match_failed):
-                print(f"WARNING: Embeddings Matching Failure on bin {bin_id}. But not Appending to bad bins yet.")
-                recs, sift_failed, row_recs = self.match_masks_using_sift(bin.last['rgb'],bin.current['rgb'], bin.last['mask'], mask_crop)
-                match_failed = False
-
-                if sift_failed:
-                    print(f"WARNING: SIFT Matching Failure on bin {bin_id}. Appending to bad bins.")
-                    self.bad_bins.append(bin_id)
-            
-            # if recs is None:
-            #     print(f"SIFT could not confidently match bin {bin_id}")
-            #     figure, axis = plt.subplots(2,)
-            #     axis[0].imshow(bin.last['rgb'])
-            #     axis[1].imshow(bin.current['rgb'])
-            #     plt.title("Frames that sift failed on")
-            #     plt.show()
-            #     self.bad_bins.append(bin_id)
-            
-            # Update the new frame's masks
-            bin.current['mask'], bin.current['embeddings'] = self.update_masks(mask_crop, recs, embeddings)
-
-            # plt.imshow(bin.current['mask'])
-            # plt.title("After update")
-            # plt.show()
-        
-        else:
-            print(bin.last)
-            print("ERROR: THIS SHOULD NEVER HAPPEN!!!")
-            return 1
-
-        return 0
-
-    def get_masks(self):
-       mask = np.zeros((self.H, self.W))
-       offset = 0
-       for bin in self.bins.values():
-           if bin.current['mask'] is not None:
-               mask_bin = bin.current['mask'].copy()
-               mask_bin[mask_bin > 0] += offset
-               r1,r2,c1,c2 = bin.bounds
-               mask[r1:r2, c1:c2] = mask_bin
- 
-               offset += np.max(mask_bin)
- 
-       return mask
 
     def vis_masks(self, image, mask):
         image = image.copy()[...,0:3] * 0.3
@@ -1074,24 +587,5 @@ class SegNet:
         mask_full[r1:r2, c1:c2] = np.array((bin_mask_crop == id)).astype(np.uint8)
 
         return  mask_full
-
-
-
-
-    def reset_bin(self, bin_id):
-        bin = self.bins[bin_id]
-        bin.n = 0
-        bin.current = {'rgb':None, 'depth':None, 'mask':None, 'embeddings':None}
-        bin.last = {'rgb':None, 'depth':None, 'mask':None, 'embeddings':None}
-
-        # Remove all objects in the bin from the database
-        for loc_obj_id, (loc_bin, loc_id) in self.items.copy().items():
-            if loc_bin == bin_id:
-                del self.items[loc_obj_id]
-        
-        # Remove bin from list of bad bins
-        self.bad_bins.remove(bin_id)
-
-        return 0
 
         
