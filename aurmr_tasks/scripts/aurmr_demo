@@ -25,14 +25,6 @@ from aurmr_tasks.common.hri import UserPromptForRetry
 
 from queue import Empty, Queue
 
-align_to_tote_orientation = transformations.quaternion_from_euler(math.pi, 0, 0)
-align_to_bin_quat = vec_to_quat_msg(align_to_tote_orientation)
-
-quat_obj = Quaternion(x=0, y=0.707, z=0, w=0.707)
-# quat_obj = Quaternion(0, 0.7071068, 0, 0.7071068)
-TOTE_APPROACH_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=-0.05, y=-0.45,z=1.05), orientation=align_to_bin_quat ))
-
-# TOTE_APPROACH_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=.108, y=-.514,z=0.884), orientation=align_to_bin_quat))
 
 class PublishStatus(State):
     def __init__(self, task_queue, wait_time=0):
@@ -164,13 +156,13 @@ def main():
             cf.splat_auto("SPLAT_PICK", "request", ["target_bin_id", "target_object_id", "target_object_asin"])
             # StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX_PRE_GRASP", planning_scene.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=.015),    
-                            {"succeeded": "REMAP_PRE_GRASP_POSE", "aborted":"NOTE_PASS", "preempted":"NOTE_PASS"})
-            cf.inject_userdata("NOTE_PASS", "done", "status", "passed")
+                            {"succeeded": "REMAP_PRE_GRASP_POSE", "aborted":"RETRY", "preempted":"RETRY"})
+      
             StateMachine.add_auto("REMAP_PRE_GRASP_POSE", cf.input_to_output("pre_grasp_pose", "pose"), ["succeeded"])
             StateMachine.add_auto("CLEAR_SCENE_PREMOVE", planning_scene.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_PREMOVE", planning_scene.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
 
-            StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPoseManipulable(robot), ["succeeded", "aborted", "preempted"])
+            StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPoseManipulable(robot), ["succeeded", "preempted"], {"aborted": "MOVE_TO_PRE_TOTE_POSE"})
             StateMachine.add_auto("CLEAR_SCENE_PREGRASP", planning_scene.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_PREGRASP", planning_scene.AddPartialPodCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("MOVE_TO_GRASP", motion.grasp_move_to_offset(robot, (0, 0, 0.5)), ["succeeded", "aborted", "preempted"])
@@ -224,8 +216,8 @@ def main():
         StateMachine.add_auto("CLEAR_SCENE", planning_scene.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
         StateMachine.add_auto("SETUP_COLLISION_SCENE", planning_scene.AddFullPodCollisionGeometryDropHide(robot), ["succeeded", "aborted"])
         StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "drop_hide"),  ["succeeded", "aborted"])
-        StateMachine.add_auto("CHECK_GRIPPER_CLOSE", motion.CloseGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
-        StateMachine.add_auto("CHECK_GRIPPER_OPEN", motion.OpenGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
+        #StateMachine.add_auto("CHECK_GRIPPER_CLOSE", motion.CloseGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
+        #StateMachine.add_auto("CHECK_GRIPPER_OPEN", motion.OpenGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
         StateMachine.add_auto("CAPTURE_EMPTY_POD", perception.CaptureEmptyPod(),  ["succeeded"])
         StateMachine.add("WAIT_FOR_COMMAND", WaitForPickStow(task_queue), {"stow": "STOW", "pick":"PICK"})
         StateMachine.add("PICK", pick_sm, {"done": "REPORT_OUTCOME"})
