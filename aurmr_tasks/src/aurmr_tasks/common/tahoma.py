@@ -33,6 +33,7 @@ from controller_manager_msgs.srv import ListControllers, SwitchController
 from tahoma_moveit_config.msg import ServoToPoseAction, ServoToPoseGoal
 import numpy as np
 
+from typing import Union
 
 
 ARM_GROUP_NAME = 'manipulator'
@@ -127,9 +128,7 @@ class Tahoma:
         self._gripper_client = actionlib.SimpleActionClient(GRIPPER_ACTION_SERVER, GripperCommandAction)
         server_reached = self._joint_traj_client.wait_for_server(rospy.Duration(10))
         if not server_reached:
-            print('Unable to connect to arm action server. Timeout exceeded. Exiting...')
-            rospy.signal_shutdown('Unable to connect to arm action server. Timeout exceeded.')
-            sys.exit()
+            raise RuntimeError('Unable to connect to arm action server. Timeout exceeded.')
         self._move_group_client = actionlib.SimpleActionClient(
             MOVE_GROUP_ACTION_SERVER, MoveGroupAction)
         self._move_group_client.wait_for_server(rospy.Duration(10))
@@ -185,6 +184,20 @@ class Tahoma:
 
         self.active_controllers = None
         self.update_running_controllers()
+
+    def get_current_joint_values(self):
+        # Thin wrapper so users don't have to rely on the move_group.
+        # We may replace moveit in the future.
+        return self.move_group.get_current_joint_values()
+
+    def close_to_joint_values(self, values: Union[str, list], tolerance=0.01):
+        if isinstance(values, str):
+            values = self.move_group.get_named_target_values(values)
+            joint_names = self.move_group.get_active_joints()
+            print(values, joint_names)
+            values = [values[name] for name in joint_names]
+        print(values, self.get_current_joint_values())
+        return all_close(values, self.get_current_joint_values(), tolerance)
 
     def wrench_cb(self, msg: WrenchStamped):
         self.force_mag = math.sqrt(msg.wrench.force.x**2 + msg.wrench.force.y**2+ msg.wrench.force.z**2)
@@ -269,7 +282,7 @@ class Tahoma:
 
     def check_gripper_item(self):
         return self.system_vacuum > 450 # because it is in mbar and is returned as an int
-    
+
     def blow_off_gripper(self, return_before_done=False):
         goal = GripperCommandGoal()
         goal.command.position = 2
@@ -282,7 +295,7 @@ class Tahoma:
             rospy.sleep(.05)
 
         self.open_gripper()
-        return 
+        return
 
     def close_gripper(self, return_before_done=False):
         goal = GripperCommandGoal()
@@ -337,7 +350,7 @@ class Tahoma:
         values = self.move_group.get_joint_value_target()
         return values
 
-    
+
 
     @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_joint_angles(self,
@@ -404,7 +417,7 @@ class Tahoma:
         #     self.move_group.set_trajectory_constraints(old_trajectory_constraints)
         current_joints = self.move_group.get_current_joint_values()
         return all_close(joint_values, current_joints, tolerance)
-    
+
 
     @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_pose(self,
@@ -416,7 +429,7 @@ class Tahoma:
                           replan=True,
                           replan_attempts=5,
                           tolerance=0.01):
-                          
+
         """Moves the end-effector to a pose, using motion planning.
 
         Args:
@@ -477,7 +490,7 @@ class Tahoma:
         current_pose = self.move_group.get_current_pose()
         rospy.loginfo(f"Pose dist: {pose_dist(goal_in_planning_frame, current_pose)}")
         return all_close(goal_in_planning_frame, current_pose, tolerance)
-    
+
     @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_pose_manipulable(self,
                           pose_stamped,
@@ -524,7 +537,7 @@ class Tahoma:
         self.move_group.allow_replanning(replan)
         self.move_group.set_goal_position_tolerance(tolerance)
         max_manipulability = 0
-        
+
         for index in range(5):
             success, plan, planning_time, error_code = self.move_group.plan()
             if not success:
@@ -570,7 +583,7 @@ class Tahoma:
                           replan=True,
                           replan_attempts=5,
                           tolerance=0.01):
-        
+
         """Moves the end-effector to a pose, using motion planning.
 
         Args:
@@ -607,7 +620,7 @@ class Tahoma:
         self.move_group.allow_replanning(replan)
         self.move_group.set_goal_position_tolerance(tolerance)
         max_manipulability = 0
-        
+
         for index in range(5):
             success, plan, planning_time, error_code = self.move_group.plan()
             if success:
@@ -625,19 +638,19 @@ class Tahoma:
                     den = 4 * (joint_limit - joint_angles_target[i])**2 * (joint_angles_target[i] - (-joint_limit))**2
                     gradient = np.abs(num/den)
                     # print("gradient", gradient)
-                    
+
                     if(np.abs(joint_angles_target[i] - (-joint_limit)) > np.abs(joint_limit - joint_angles_target[i])):
                         neg_pen_term_joint = np.append(neg_pen_term_joint, 1)
                         pos_pen_term_joint = np.append(pos_pen_term_joint, 1/np.sqrt(1+gradient))
                     else:
                         neg_pen_term_joint = np.append(neg_pen_term_joint, 1/np.sqrt(1+gradient))
                         pos_pen_term_joint = np.append(pos_pen_term_joint, 1)
-                    
+
                     if((current_joint_angles[i] - joint_angles_target[i]) > 0):
                         hyperoctant_direction = np.append(hyperoctant_direction, -1)
                     else:
                         hyperoctant_direction = np.append(hyperoctant_direction, 1)
-                        
+
 
                 # print("manipuability analysis: ", joint_angles_target, current_joint_angles, hyperoctant_direction)
                 Penalization_Matrix = np.identity(6)
@@ -740,7 +753,7 @@ class Tahoma:
         self.move_group.allow_replanning(replan)
         self.move_group.set_goal_position_tolerance(tolerance)
         max_manipulability = 0
-        
+
         for index in range(10):
             success, plan, planning_time, error_code = self.move_group.plan()
             if success:
