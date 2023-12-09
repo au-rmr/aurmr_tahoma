@@ -9,7 +9,7 @@ import cv2
 import math
 import pickle
 
-from smach import State
+from smach import State, StateMachine
 from cv_bridge import CvBridge
 from tf_conversions import transformations
 from aurmr_perception.util import qv_mult, quat_msg_to_vec
@@ -35,7 +35,7 @@ from aurmr_tasks.util import add_offset
 #    '4G':[371*4, 412*4, 619*4, 711*4],
 #    '1F':[420*4, 514*4, 314*4, 405*4],
 #    '2F':[424*4, 511*4, 407*4, 512*4],
-#    '3F':[425*4, 515*4, 515*4, 620*4],    
+#    '3F':[425*4, 515*4, 515*4, 620*4],
 #    '4F':[426*4, 514*4, 621*4, 714*4],
 #    '1E':[527*4, 572*4, 311*4, 405*4],
 #    '2E':[529*4, 571*4, 407*4, 513*4],
@@ -133,7 +133,7 @@ class UserPromptForRetry(State):
         marker.lifetime = rospy.rostime.Duration()
 
         self.marker_publisher.publish(marker)
-        
+
     def visualize_point_marker(self, point, frame_id):
         marker2 = Marker()
         # marker2.header.frame_id = self.camera_model.tfFrame()
@@ -252,7 +252,7 @@ class UserPromptForRetry(State):
         POD_OFFSET = 0.1
         RGB_TO_DEPTH_FRAME_OFFSET = transform.transform.translation.y-0.47
         DEPTH_TILT = -transform.transform.translation.z-0.02
-        
+
         grasp_pose.pose.position.z += DEPTH_TILT
         grasp_pose.pose.position.y -= RGB_TO_DEPTH_FRAME_OFFSET
         grasp_pose.pose.position.x = transform.transform.translation.x - POD_OFFSET
@@ -263,10 +263,10 @@ class UserPromptForRetry(State):
                 pose.position.y,
                 pose.position.z
             ], frame)
-        
+
         # visualize(grasp_pose.pose)
         # import pdb; pdb.set_trace()
-        
+
         # visualize()
 
         # import pdb; pdb.set_trace()
@@ -312,6 +312,25 @@ class AskForHumanAction(State):
             return "aborted"
 
 
+
+class Formatter(State):
+    def __init__(self, template, input_keys, output_key):
+        State.__init__(self, outcomes=["succeeded", "aborted"], input_keys=input_keys,
+                        output_keys=[output_key])
+        self.ordered_input_keys = input_keys
+        self.template = template
+
+    def execute(self, ud):
+        try:
+            args = [ud[input_key] for input_key in self.ordered_input_keys]
+            ud[self.get_registered_output_keys()[0]] = self.template.format(*args)
+            return "succeeded"
+        except Exception as e:
+            # Catch any fumbled templates
+            rospy.logerr("Bad formulate_ud_str: {}, {}, {}".format(self.template, self.ordered_input_keys, self.get_registered_output_keys()[0]))
+            return "aborted"
+
+
 class WaitForKeyPress(State):
     def __init__(self):
         State.__init__(self, outcomes=['signalled', 'not_signalled', 'aborted'])
@@ -322,3 +341,14 @@ class WaitForKeyPress(State):
             return 'signalled'
         except KeyboardInterrupt:
             return 'aborted'
+
+class GetASINAndBinScans(State):
+    def __init__(self):
+        State.__init__(self, outcomes=['succeeded', 'preempted', 'aborted'], output_keys=["asin", "bin_id"])
+
+    def execute(self, userdata):
+        asin = input(f"Scan ASIN\n")
+        userdata["asin"] = asin
+        bin_id = input(f"Scan bin\n")
+        userdata["bin_id"] = bin_id
+        return "succeeded"

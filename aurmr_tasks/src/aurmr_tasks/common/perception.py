@@ -59,7 +59,6 @@ class CaptureObject(State):
             bin_id=userdata['target_bin_id'],
             object_id=userdata['target_object_id'],
         )
-        rospy.loginfo("in CAPTUREOBJECT" + userdata['target_bin_id'])
         capture_response = self.capture_object(capture_obj_req)
 
         if capture_response.success:
@@ -83,7 +82,6 @@ class StowObject(State):
             bin_id=userdata['target_bin_id'],
             object_id=userdata['target_object_id'],
         )
-        rospy.loginfo("in STOWOBJECT" + userdata['target_bin_id'])
         capture_response = self.capture_object(capture_obj_req)
 
         if capture_response.success:
@@ -106,7 +104,6 @@ class PickObject(State):
             bin_id=userdata['target_bin_id'],
             object_id=userdata['target_object_id'],
         )
-        rospy.loginfo("in CAPTUREOBJECT" + userdata['target_bin_id'])
         capture_response = self.capture_object(capture_obj_req)
 
         if capture_response.success:
@@ -129,7 +126,6 @@ class UpdateBin(State):
             bin_id=userdata['target_bin_id'],
             object_id=None,
         )
-        rospy.loginfo("in UPDATEBIN" + userdata['target_bin_id'])
         capture_response = self.capture_object(capture_obj_req)
 
         if capture_response.success:

@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+import smach_ros
+
+from smach import State, StateMachine
+
+from typing import List
+import rospy
+
+from aurmr_tasks.common import motion, perception, planning_scene
+
+import aurmr_tasks.common.control_flow as cf
+from aurmr_tasks.pod import load_sm
+
+from aurmr_tasks.common.states import Wait, RecordTime
+from aurmr_tasks.common import hri
+from aurmr_tasks.task_queue import PickStowQueue, WaitForPickStow, ReportPickStowOutcome
+
+
+
+def main():
+    rospy.init_node("aurmr_demo")
+    simulation = rospy.get_param("/use_sim_time", False)
+
+    demo_sm = StateMachine(["succeeded", "aborted", "preempted"], input_keys=[], output_keys=[])
+    pick_sm = StateMachine(["succeeded", "preempted", "passed", "aborted"], input_keys=["request"], output_keys=["status"])
+    pick_success_cleanup_sm = StateMachine(["succeeded", "preempted", "aborted"], input_keys=['target_bin_id', 'target_object_id', 'target_object_asin', "start_time"], output_keys=[])
+    pick_retry_sm = StateMachine(["succeeded", "preempted", "aborted"], input_keys=['target_bin_id', 'target_object_id', 'target_object_asin', 'grasp_pose', "start_time"], output_keys=['grasp_pose'])
+
+    stow_sm = StateMachine(["succeeded", "preempted", "aborted"], input_keys=["request"], output_keys=["status"])
+    task_queue = PickStowQueue()
+
+    with demo_sm:
+
+        with pick_sm:
+            StateMachine.add_auto("RECORD_TIME", RecordTime(), ["succeeded"])
+            cf.splat_auto("SPLAT_PICK", "request", ["target_bin_id", "target_object_id", "target_object_asin"])
+            StateMachine.add_auto("FORMAT_REQUEST", hri.Formatter("Please pick {} from bin {}", ["target_bin_id", "target_object_asin"], "prompt"), ["succeeded", "aborted"])
+
+            StateMachine.add("ASK_HUMAN_TO_PICK", hri.AskForHumanAction(), {"succeeded": "POST_PICK_SUCCESS_CLEANUP", "aborted": "RETRY"})
+
+            with pick_success_cleanup_sm:
+
+                StateMachine.add_auto("POST_PICK_UPDATE_MASKS", perception.PickObject(), ["succeeded", "preempted", "aborted"])
+
+            with pick_retry_sm:
+                StateMachine.add_auto("UPDATE_BIN_MASKS", perception.UpdateBin(), ["succeeded", "preempted", "aborted"])
+                # FIXME: This requires TF data. Need to hack a version of the state which allows testing the interface without the robot running
+                #StateMachine.add('USER_PROMPT_FOR_RETRY', UserPromptForRetry(None, timeout_connection_secs=1.0), {"retry": "REMAP_GRASP", "continue": "continue"})
+                StateMachine.add_auto("FORMAT_REQUEST", hri.Formatter("Please decide whether to try to pick {} from bin {} again", ["target_bin_id", "target_object_asin"], "prompt"), ["succeeded", "aborted"])
+                StateMachine.add('USER_PROMPT_FOR_RETRY', hri.AskForHumanAction())
+
+
+            StateMachine.add("POST_PICK_SUCCESS_CLEANUP", pick_success_cleanup_sm)
+            StateMachine.add("RETRY", pick_retry_sm, {'succeeded': 'ASK_HUMAN_TO_PICK', 'aborted': 'aborted'})
+
+
+        with stow_sm:
+            cf.splat_auto("SPLAT_STOW", "request", ["target_bin_id", "target_object_id", "target_object_asin"])
+            StateMachine.add_auto("POST_STOW_PERCEPTION", perception.StowObject(), ["succeeded", "preempted", "aborted"])
+
+
+        StateMachine.add_auto("CAPTURE_EMPTY_POD", perception.CaptureEmptyPod(),  ["succeeded"])
+        StateMachine.add("WAIT_FOR_COMMAND", WaitForPickStow(task_queue), {"stow": "STOW", "pick":"PICK"})
+        StateMachine.add("PICK", pick_sm, {"succeeded": "REPORT_OUTCOME", "preempted": "REPORT_OUTCOME", "passed": "REPORT_OUTCOME", "aborted": "REPORT_OUTCOME"})
+        StateMachine.add("STOW", stow_sm, {"succeeded": "REPORT_OUTCOME", "preempted": "REPORT_OUTCOME", "aborted": "REPORT_OUTCOME"})
+        StateMachine.add("REPORT_OUTCOME", ReportPickStowOutcome(task_queue), {"succeeded": "WAIT_FOR_COMMAND"})
+
+    rospy.loginfo('Starting state machine')
+
+    sis = smach_ros.IntrospectionServer('demo_sm', demo_sm, '/task')
+    sis.start()
+
+    outcome = demo_sm.execute()
+
+    rospy.spin()
+    sis.stop()
+
+
+if __name__ == '__main__':
+    main()
