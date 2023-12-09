@@ -19,3 +19,12 @@ class NoOp(Wait):
     def __init__(self):
         Wait.__init__(self, 0)
 
+
+class RecordTime(State):
+    def __init__(self):
+        State.__init__(self, outcomes=['succeeded'], output_keys=["start_time"])
+
+    def execute(self, userdata):
+        now = rospy.get_rostime()
+        userdata["start_time"] = now.secs + now.nsecs*1E-9
+        return "succeeded"
