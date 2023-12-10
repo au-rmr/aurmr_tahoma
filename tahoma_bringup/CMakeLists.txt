@@ -6,7 +6,7 @@ catkin_package()
 install(DIRECTORY config launch
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
-catkin_install_python(PROGRAMS scripts/fake_gripper_state
+catkin_install_python(PROGRAMS scripts/fake_gripper_state scripts/fake_gripper_state
         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 catkin_add_env_hooks(${PROJECT_NAME} SHELLS sh DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/env-hooks)

@@ -1,10 +1,7 @@
-#!/usr/bin/env python  
+#!/usr/bin/env python
 import rospy
 
-import math
 import tf2_ros
-import geometry_msgs.msg
-import turtlesim.srv
 import numpy as np
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
@@ -13,6 +10,8 @@ from sensor_msgs.msg import Image, CameraInfo
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs import point_cloud2
 import pickle
+import yaml
+
 
 POD_FACE_C = ['pod_bin_1e', 'pod_bin_2e', 'pod_bin_3e',
               'pod_bin_1d', 'pod_bin_2d', 'pod_bin_3d',
@@ -75,8 +74,8 @@ def distorted_point(pt, mtx, dist):
     r6 = r2*r4
     k1, k2, p1, p2, k3 = dist.flatten()
     # Radial distortion
-    x_d = x_u * (1 + k1*r2 + k2*r4 + k3*r6) 
-    y_d = y_u * (1 + k1*r2 + k2*r4 + k3*r6) 
+    x_d = x_u * (1 + k1*r2 + k2*r4 + k3*r6)
+    y_d = y_u * (1 + k1*r2 + k2*r4 + k3*r6)
     # Tangential distortion
     x_d = x_d + (2*p1*x_u*y_u + p2*(r2 + 2*x_u**2))
     y_d = y_d + (p1*(r2 + 2*y_u**2) + 2*p2*x_u*y_u)
@@ -96,13 +95,13 @@ if __name__ == '__main__':
             try:
                 trans_top_left_base_link = tfBuffer.lookup_transform('base_link', bin, rospy.Time())
                 trans_right_bottom_base_link = tfBuffer.lookup_transform('base_link', bin, rospy.Time())
-                trans_top_left_base_link = np.array([trans_top_left_base_link.transform.translation.x, trans_top_left_base_link.transform.translation.y, trans_top_left_base_link.transform.translation.z]) 
+                trans_top_left_base_link = np.array([trans_top_left_base_link.transform.translation.x, trans_top_left_base_link.transform.translation.y, trans_top_left_base_link.transform.translation.z])
                 trans_right_bottom_base_link = np.array([trans_right_bottom_base_link.transform.translation.x, trans_right_bottom_base_link.transform.translation.y, trans_right_bottom_base_link.transform.translation.z])
                 bin_DM_coords_base_link[bin] = trans_top_left_base_link
 
                 trans_top_left = tfBuffer.lookup_transform('rgb_camera_link', bin, rospy.Time())
                 trans_right_bottom = tfBuffer.lookup_transform('rgb_camera_link', bin, rospy.Time())
-                trans_top_left = np.array([trans_top_left.transform.translation.x, trans_top_left.transform.translation.y, trans_top_left.transform.translation.z]) 
+                trans_top_left = np.array([trans_top_left.transform.translation.x, trans_top_left.transform.translation.y, trans_top_left.transform.translation.z])
                 trans_right_bottom = np.array([trans_right_bottom.transform.translation.x, trans_right_bottom.transform.translation.y, trans_right_bottom.transform.translation.z])
                 bin_DM_coords[bin] = trans_top_left
                 # break
@@ -111,12 +110,6 @@ if __name__ == '__main__':
         if(len(bin_DM_coords) == len(POD_FACE_C)):
             break
     print(bin_DM_coords)
-
-    with open('/tmp/calibration_xyz_coords_pod_base_link.pkl', 'wb') as f:
-        pickle.dump(bin_DM_coords_base_link, f)
-
-    with open('/tmp/calibration_xyz_coords_pod.pkl', 'wb') as f:
-        pickle.dump(bin_DM_coords, f)
 
     rgb_img = fetch_rgb_img()
     rgb_img_undistort = rgb_img
@@ -128,7 +121,7 @@ if __name__ == '__main__':
 
     trans_kinect_base_ink = tfBuffer.lookup_transform('base_link', 'depth_camera_link', rospy.Time())
     # trans_kinect_base_ink = np.array([trans_kinect_base_ink.transform.translation.x, trans_kinect_base_ink.transform.translation.y, trans_kinect_base_ink.transform.translation.z])
-    
+
     rgb_img = cv2.resize(rgb_img_undistort, (int(rgb_img_undistort.shape[1]/4), int(rgb_img_undistort.shape[0]/4)), interpolation = cv2.INTER_AREA)
 
     for bin in POD_FACE_C:
@@ -140,7 +133,7 @@ if __name__ == '__main__':
 
         if(bin[8] == '1'):
             kinect_3F[0] += 0.025
-        
+
         kinect_3F[1] -= 0.025
 
         u1,v1 = convert_xyz_point_to_uv_point(kinect_3F, fx, cx, fy, cy)
@@ -154,7 +147,7 @@ if __name__ == '__main__':
         else:
             kinect_3F[1] -= POD_FACE_C_FROM_MARKER_Y[bin_id]
             kinect_3F[0] += 0.31
-        
+
         if(bin[8] == '3'):
             kinect_3F[0] -= 0.025
 
@@ -170,9 +163,9 @@ if __name__ == '__main__':
     bin_DM_pixel_coords = {k[5:].upper(): v for k, v in bin_DM_pixel_coords.items()}
     print(bin_DM_pixel_coords)
 
-    with open('/tmp/calibration_pixel_coords_pod.pkl', 'wb') as f:
-        pickle.dump(bin_DM_pixel_coords, f)
-    
+    with open('/tmp/calibration_pixel_coords_pod.yaml', 'w') as f:
+        yaml.dump(bin_DM_pixel_coords, f)
+
     # cv2.imshow("rgb", rgb_img)
     # cv2.waitKey(0)
 
