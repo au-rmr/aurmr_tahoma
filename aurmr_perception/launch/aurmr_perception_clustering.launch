@@ -10,7 +10,6 @@
   <arg name="grasp_type" default="normal" />
 
 
-
   <node name="demo_service" pkg="aurmr_unseen_object_clustering" type="demo_service.py" output="screen" />
 
   <node name="aurmr_perception" pkg="aurmr_perception" type="aurmr_perception" output="screen">
@@ -20,12 +19,12 @@
     <param name="camera_type" value="$(arg camera_type)"/>
   </node>
   
-  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="rgb_camera_link_offset_broadcaster" args="-0.032 0 0.004 0 0 0 1 rgb_camera_link rgb_camera_link_offset" /> -->
   <node pkg="tf2_ros" type="static_transform_publisher" name="rgb_camera_link_offset_broadcaster" args="-0.01 0 0 0 0 0 1 rgb_camera_link rgb_camera_link_offset" />
 
-  <param name="grasp_detector" value="$(arg grasp_detector)" />
-  <param name="grasp_detection_method" type="str" value="$(arg grasp_type)" />
+
   <node name="grasp_detection" pkg="aurmr_perception" type="grasp_detection_server" output="screen">
+    <param name="grasp_detector" value="$(arg grasp_detector)" />
+    <param name="grasp_detection_method" type="str" value="$(arg grasp_type)" />
   </node>
 
 </launch>
