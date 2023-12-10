@@ -1,17 +1,17 @@
 <?xml version="1.0" ?>
 <launch>
     <arg name="gui" default="True" />
-    <arg name="pod_id" default="1" />
-    <arg name="pod_face" default="1C" />
+    <arg name="pod_id" doc="1 for little bins, 2 for big bins"/>
+    <arg name="pod_face" doc="1A/1C are the sides we normally use on 1, and 2A/2C for Pod 2"/>
 
     <arg name="gripper_type" default="vacuum" />
-    
+
     <!-- <include file="$(find tahoma_bringup)/launch/calibration.launch"/> -->
 
 
     <include file="$(find ur_robot_driver)/launch/ur16e_bringup.launch">
         <arg name="controllers" default="scaled_pos_joint_traj_controller joint_state_controller  force_torque_sensor_controller robot_status_controller"/>
-        <arg name="stopped_controllers" default="pos_joint_traj_controller joint_group_pos_controller joint_group_vel_controller" doc="Controllers that are initally loaded, but not started."/>        
+        <arg name="stopped_controllers" default="pos_joint_traj_controller joint_group_pos_controller joint_group_vel_controller" doc="Controllers that are initally loaded, but not started."/>
         <arg name="robot_ip" value="192.168.43.92" />
         <arg name="robot_description_file" value="$(find tahoma_description)/launch/load_tahoma.launch" />
         <arg name="controller_config_file" default="$(find tahoma_bringup)/config/controllers.yaml" />
@@ -26,7 +26,7 @@
         <arg name="tool_tx_idle_chars" value="3.5" />
         <!-- <arg name="tool_device_name" value="/tmp/ttyUR" /> -->
         <arg name="tool_tcp_port" default="54321" doc="Port on which the robot controller publishes the tool comm interface. Only used, when `use_tool_communication` is set to true."/>
-        
+
     </include>
 
     <!-- MoveIt -->
@@ -67,7 +67,7 @@
 
 
   <!-- Server for webserver communication -->
-  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" > 
+  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" >
      <arg name="port" value="9090"/>
   </include>
 
