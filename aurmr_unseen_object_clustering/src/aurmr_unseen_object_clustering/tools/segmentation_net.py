@@ -55,26 +55,8 @@ import warnings
 warnings.filterwarnings("ignore", category=UserWarning) 
 
 with open('/tmp/calibration_pixel_coords_pod.pkl', 'rb') as f:
-    loaded_pixel_coords = pickle.load(f)
+    bin_bounds = pickle.load(f)
 
-bin_bounds = {
-          '1H':loaded_pixel_coords['1H'],
-          '2H':loaded_pixel_coords['2H'],
-          '3H':loaded_pixel_coords['3H'],
-          '4H':loaded_pixel_coords['4H'],
-          '1G':loaded_pixel_coords['1G'],
-          '2G':loaded_pixel_coords['2G'],
-          '3G':loaded_pixel_coords['3G'],
-          '4G':loaded_pixel_coords['4G'],
-          '1F':loaded_pixel_coords['1F'],
-          '2F':loaded_pixel_coords['2F'],
-          '3F':loaded_pixel_coords['3F'],    
-          '4F':loaded_pixel_coords['4F'],
-          '1E':loaded_pixel_coords['1E'],
-          '2E':loaded_pixel_coords['2E'],
-          '3E':loaded_pixel_coords['3E'],
-          '4E':loaded_pixel_coords['4E'],
-            }
 print(bin_bounds)
 
 def_config = {
@@ -135,6 +117,9 @@ class Bin:
         self.config = config
   
         # Stores bin state
+        #
+        # raise Exception("seems like there is either an error in the calibaration file or self.bounds[2] - self.bounds[3] are flipped ")
+        
         self.current = {'rgb':np.zeros(shape=(self.bounds[1] - self.bounds[0], self.bounds[3] - self.bounds[2], 3), dtype=np.uint8), 'depth':None, 'mask':None, 'embeddings':np.array([])}
         self.last = {'rgb':None, 'depth':None, 'mask':None, 'embeddings':np.array([])}
         self.init_depth = init_depth[bounds[0]:bounds[1], bounds[2]:bounds[3]]
@@ -246,7 +231,7 @@ class SegNet:
 
         ######################################################################################################
         # print("init pre")
-        # sys.path.append("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/UIE_main/mask2former_frame")
+        # sys.path.append("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/UIE_main/mask2former_frame")
         # print("post sys")
         # from demo.segnetv2_demo import SegnetV2
         # print("post import")
@@ -294,7 +279,19 @@ class SegNet:
             rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
   
         H, W, _ = rgb.shape
-  
+
+        # Save the entire pod images for further reproduction
+        pod_img_path = f"{workspace_path}/src/uois_service_multi_demo/dataset/pod"
+        os.makedirs(pod_img_path, exist_ok=True)
+        pod_img_files = os.listdir(pod_img_path)
+        indices = [int(f.split('_')[-1].split('.')[0]) for f in pod_img_files if f.startswith('pod_img_') and f.endswith('.png')]
+        if indices:
+            next_index = max(indices) + 1
+        else:
+            next_index = 0
+        index_str = str(next_index).zfill(4)
+        cv2.imwrite(os.path.join(pod_img_path, f"pod_img_{index_str}.png"), rgb)
+
         # Crops the image to the current bin
         xyz = xyz[bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], :]
         rgb = rgb[bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3]
@@ -342,6 +339,9 @@ class SegNet:
         index_str = str(next_index).zfill(4)
         file_path = os.path.join(path, f"color_{index_str}.npy")
         np.save(file_path, rgb_segment)
+        # Save the image in png format to compare with predicted masks
+        png_filepath = file_path.split('.')[0] + '.png'
+        cv2.imwrite(png_filepath, rgb_segment)
 
         # xyz = xyz.astype(np.uint8)
 
@@ -369,8 +369,8 @@ class SegNet:
         out_label_new = out_label.astype(np.uint8)
         # out_label_new = out_label\
         try:
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/mask.png", out_label_new.astype(np.uint8))
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/rgb.png", rgb_segment.astype(np.uint8))
+            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/mask.png", out_label_new.astype(np.uint8))
+            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/rgb.png", rgb_segment.astype(np.uint8))
         except:
             pass
         if self.config['perform_cv_ops']:
@@ -406,7 +406,7 @@ class SegNet:
 
         if self.visualize:
             try:
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/soofiyan_mask.png", mask_crop)
+                cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/soofiyan_mask.png", mask_crop)
             except:
                 pass
         return mask_crop, embed
@@ -421,10 +421,10 @@ class SegNet:
         #     pass
         # Convert the images to greyscale
 
-        cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/match_rgb1.png", im1)
-        cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/match_rgb2.png", im2)
-        cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/match_mask1.png", mask1)
-        cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/match_mask2.png", mask2)
+        cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/match_rgb1.png", im1)
+        cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/match_rgb2.png", im2)
+        cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/match_mask1.png", mask1)
+        cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/match_mask2.png", mask2)
         mask_recs = np.zeros(shape=(np.max(mask1), np.max(mask2)))
 
         for i in range(np.max(mask1)):
@@ -460,8 +460,8 @@ class SegNet:
         im1 = cv2.cvtColor(im1, cv2.COLOR_RGB2GRAY)
         im2 = cv2.cvtColor(im2, cv2.COLOR_RGB2GRAY)
 
-        cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/match_mask1.png", mask1)
-        cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/match_mask2.png", mask2)
+        cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/match_mask1.png", mask1)
+        cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/match_mask2.png", mask2)
         mask_recs = np.zeros(shape=(np.max(mask1), np.max(mask2)))
   
         # Calculate keypoints for the frame 1 image
@@ -505,7 +505,7 @@ class SegNet:
 
             time_stamp = calendar.timegm(current_GMT)
 
-            cv2.imwrite(f"/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/matched_mask_{i}.png", matched_img)
+            cv2.imwrite(f"/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/matched_mask_{i}.png", matched_img)
            
             dst_pts = np.float32([k2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
             dst_pts = np.round(dst_pts).astype(int)
@@ -559,8 +559,8 @@ class SegNet:
         try:
             current_GMT = time.gmtime()
             time_stamp = calendar.timegm(current_GMT)
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/before_refine_mask.png", mask*30)
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"before_refine_mask"+str(self.frame_count_yi)+".png", mask*30)
+            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/before_refine_mask.png", mask*30)
+            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"before_refine_mask"+str(self.frame_count_yi)+".png", mask*30)
         except:
             pass
         embeddings = np.copy(embed)
@@ -657,7 +657,7 @@ class SegNet:
             pass
 
         try:
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/after_refine_mask.png", mask*30)
+            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/after_refine_mask.png", mask*30)
         except:
             pass
         return mask, embeddings
@@ -744,9 +744,9 @@ class SegNet:
         time_stamp = calendar.timegm(current_GMT)
         self.frame_count_yi += 1
         try:
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Data_Collection/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_stow_"+str(self.frame_count_yi)+".png", mask_crop.astype(np.uint8)*40)
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"rgb_stow_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
+            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Data_Collection/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
+            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_stow_"+str(self.frame_count_yi)+".png", mask_crop.astype(np.uint8)*40)
+            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"rgb_stow_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
         except:
             pass
         # mask2vis = self.vis_masks(bin.current['rgb'], mask_crop)
@@ -761,7 +761,7 @@ class SegNet:
             return UNDERSEGMENTATION
         else:
             if self.visualize:
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/refined_mask.png", mask_crop)
+                cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/refined_mask.png", mask_crop)
 
         mask2vis = self.vis_masks(bin.current['rgb'], mask_crop)
         # plt.imshow(mask2vis)
@@ -793,7 +793,7 @@ class SegNet:
             
             # Update the new frame's masks
             bin.current['mask'], bin.current['embeddings'] = self.update_masks(mask_crop, recs, embeddings)
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_stow_update_"+str(self.frame_count_yi)+".png", bin.current['mask'].astype(np.uint8)*40)
+            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_stow_update_"+str(self.frame_count_yi)+".png", bin.current['mask'].astype(np.uint8)*40)
         else:
             # This should only happen at the first insertion
             assert(bin.n == 1)
@@ -861,9 +861,9 @@ class SegNet:
         time_stamp = calendar.timegm(current_GMT)
         self.frame_count_yi += 1
         try:
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Data_Collection/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_pick_"+str(self.frame_count_yi)+".png", mask_crop.astype(np.uint8)*40)
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"rgb_pick_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
+            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Data_Collection/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
+            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_pick_"+str(self.frame_count_yi)+".png", mask_crop.astype(np.uint8)*40)
+            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"rgb_pick_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
             print("successfully saved images")
         except:
             pass
@@ -879,13 +879,16 @@ class SegNet:
         #     plt.imshow(mask_crop)
         #     plt.title("Cropped mask prediction after pick")
         #     plt.show()
-  
-        old_mask = bin.last['mask'].copy()
-        old_embeddings = bin.last['embeddings'].copy()
-        # Remove the object that is no longer in the scene
-        old_mask[old_mask == obj_n] = 0
-        old_mask[old_mask > obj_n] -= 1
-        old_embeddings = np.delete(old_embeddings, obj_n-1, 0)
+        try:
+            old_mask = bin.last['mask'].copy()
+            old_embeddings = bin.last['embeddings'].copy()
+            # Remove the object that is no longer in the scene
+            old_mask[old_mask == obj_n] = 0
+            old_mask[old_mask > obj_n] -= 1
+            old_embeddings = np.delete(old_embeddings, obj_n-1, 0)
+        except:
+            old_embeddings = np.ones((1, 256), dtype = np.float64)
+            old_mask = np.zeros((256, 256), dtype = np.uint8)
 
         # Find object correspondence between scenes
         recs, match_failed, row_recs = self.match_masks_using_embeddings(bin.last['rgb'],bin.current['rgb'], old_mask, mask_crop, old_embeddings, embeddings)
@@ -952,9 +955,9 @@ class SegNet:
         time_stamp = calendar.timegm(current_GMT)
         self.frame_count_yi += 1
         try:
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Data_Collection/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_update_"+str(self.frame_count_yi)+".png", mask_crop.astype(np.uint8)*40)
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
+            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Data_Collection/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
+            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_update_"+str(self.frame_count_yi)+".png", mask_crop.astype(np.uint8)*40)
+            cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
         except:
             pass
 

@@ -20,6 +20,7 @@ from geometry_msgs.msg import PoseStamped, Quaternion, Pose, Point
 from visualization_msgs.msg import Marker
 import image_geometry
 
+from aurmr_tasks.util import add_offset
 
 # Copied from: https://github.com/au-rmr/aurmr_tahoma/blob/uois_multi_frame_with_service/aurmr_unseen_object_clustering/src/aurmr_unseen_object_clustering/tools/segmentation_net.py#LL65C1-L82C14
 # TODO: Move somewhere shared (or use the upcoming automated process)
@@ -50,7 +51,7 @@ class UserPromptForRetry(State):
         State.__init__(
             self,
             input_keys=['target_bin_id', 'target_object_id', 'target_object_asin', 'grasp_pose'],
-            output_keys=['human_grasp_pose'],
+            output_keys=['human_grasp_pose', "human_pre_grasp_pose"],
             outcomes=['retry', 'continue']
         )
 
@@ -84,14 +85,6 @@ class UserPromptForRetry(State):
         self.camera_model.fromCameraInfo(msg)
         self.camera_info_sub.unregister() #Only subscribe once
 
-    def add_offset(self, offset, grasp_pose):
-        v = qv_mult(
-            quat_msg_to_vec(grasp_pose.pose.orientation), (0, 0, offset))
-        offset_pose = deepcopy(grasp_pose)
-        offset_pose.pose.position.x += v[0]
-        offset_pose.pose.position.y += v[1]
-        offset_pose.pose.position.z += v[2]
-        return offset_pose
 
     def visualize_point_in_image(self, rgb_image, x, y):
         rgb_image = cv2.circle(rgb_image,(x, y), 20, (0,255,0), -1)
@@ -140,6 +133,7 @@ class UserPromptForRetry(State):
         marker.lifetime = rospy.rostime.Duration()
 
         self.marker_publisher.publish(marker)
+        
     def visualize_point_marker(self, point, frame_id):
         marker2 = Marker()
         # marker2.header.frame_id = self.camera_model.tfFrame()
@@ -150,7 +144,6 @@ class UserPromptForRetry(State):
         marker2.type = Marker.SPHERE
         marker2.action = Marker.ADD
 
-        print(f"publishing {point}")
         marker2.pose.position.x = point[0]
         marker2.pose.position.y = point[1]
         marker2.pose.position.z = point[2]
@@ -196,7 +189,6 @@ class UserPromptForRetry(State):
             p0 = np.array(ray_z) * 2
             closest_point = pc[np.argmin(np.linalg.norm(np.cross(p1-p0, p0-pc, axisb=1), axis=1)/np.linalg.norm(p1-p0))]
             return closest_point
-
 
     def execute(self, userdata):
         if self.ros_pointcloud is None or self.ros_rgb_image is None or self.camera_model is None:
@@ -279,10 +271,54 @@ class UserPromptForRetry(State):
 
         # import pdb; pdb.set_trace()
 
-        # NOTE: No extra filtering or ranking on our part. Just take the first one
+
         # As the arm_tool0 is 20cm in length w.r.t tip of suction cup thus adding 0.2m offset
-        # grasp_pose = self.add_offset(-0.22, grasp_pose)
+        grasp_pose = add_offset(-0.20, grasp_pose)
 
         userdata['human_grasp_pose'] = grasp_pose
 
+        # adding 0.12m offset for pre grasp pose to prepare it for grasp pose which is use to pick the object
+        pregrasp_pose = add_offset(-self.pre_grasp_offset, grasp_pose)
+
+        userdata['human_pre_grasp_pose'] = pregrasp_pose
+
         return "retry"
+
+
+
+def prompt_for_confirmation(prompt):
+    valid_signal = False
+    while not rospy.is_shutdown() and not valid_signal:
+        user_input = input(f"{prompt}\nProceed [y/n]?")
+        if user_input == "y":
+            return True
+        elif user_input == "n":
+            return False
+
+
+class AskForHumanAction(State):
+    def __init__(self, default_prompt=None):
+        State.__init__(self, outcomes=['succeeded', 'aborted'], input_keys=["prompt"])
+        self.prompt = default_prompt
+
+    def execute(self, userdata):
+        prompt = self.prompt
+        if not self.prompt:
+            prompt = userdata["prompt"]
+        confirmed = prompt_for_confirmation(prompt)
+        if confirmed:
+            return "succeeded"
+        else:
+            return "aborted"
+
+
+class WaitForKeyPress(State):
+    def __init__(self):
+        State.__init__(self, outcomes=['signalled', 'not_signalled', 'aborted'])
+
+    def execute(self, userdata):
+        try:
+            user_input = input("Press any key to start\n")
+            return 'signalled'
+        except KeyboardInterrupt:
+            return 'aborted'

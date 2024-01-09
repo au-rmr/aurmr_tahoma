@@ -1,0 +1,4 @@
+<?xml version="1.0" ?>
+<launch>
+    <node name="pick_logger" pkg="aurmr_tasks" type="pick_logger" args="-d $(find tahoma_description)/config/view_model.rviz"/>
+</launch>

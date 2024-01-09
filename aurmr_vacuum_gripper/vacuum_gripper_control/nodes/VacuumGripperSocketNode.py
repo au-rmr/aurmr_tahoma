@@ -2,7 +2,7 @@
 # Driver for Schmalz vacuum ejectors. Manual can be found at chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.schmalz.com/site/binaries/content/assets/media/01_vacuum-technology-automation/SCTSi/en/BAL_10.02.99.10501_en-EN_02.pdf
 
 import os
-from pycomm3 import CIPDriver, Services, configure_default_logger, LOG_VERBOSE, exceptions, SINT, UINT, USINT
+from pycomm3 import CIPDriver, Services, configure_default_logger, LOG_VERBOSE, exceptions, SINT, UINT, USINT, CommError
 from logging import WARNING
 import socket
 from vacuum_gripper_control.msg import vacuum_gripper_input, vacuum_gripper_output
@@ -321,7 +321,10 @@ def mainLoop(ur_address, gripper_type):
   while not rospy.is_shutdown():
     # Get and publish the Gripper status
     # gripper.set_SetPointH1(850)
-    status = gripper.getStatus()
+    try:
+        status = gripper.getStatus()
+    except CommError:
+        rospy.logerr("Communication error while getting status. Ignoring and looping")
     pub.publish(status)
     # Wait a little
     rospy.sleep(0.1)
