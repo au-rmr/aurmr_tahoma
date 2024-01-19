@@ -161,8 +161,8 @@ if __name__ == '__main__':
     print(bin_DM_pixel_coords)
 
     bin_DM_pixel_coords = {k[5:].upper(): v for k, v in bin_DM_pixel_coords.items()}
-    with open('/tmp/calibration_pixel_coords_pod.yaml', 'w') as f:
-        yaml.dump(bin_DM_pixel_coords, f)
+    with open('/tmp/bin_bounds.yaml', 'w') as f:
+        yaml.dump({"bin_bounds": bin_DM_pixel_coords}, f)
 
-    # cv2.imshow("rgb", rgb_img)
-    # cv2.waitKey(0)
+    cv2.imshow("rgb", rgb_img)
+    cv2.waitKey(0)
