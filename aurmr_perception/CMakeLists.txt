@@ -13,6 +13,7 @@ catkin_python_setup()
 
 add_service_files(
   FILES
+  ActOnBins.srv
   CaptureObject.srv
   RemoveObject.srv
   GetObjectPoints.srv

@@ -1,0 +1,6 @@
+string[] bin_ids
+string[] asins
+string[] actions
+---
+bool success
+string message

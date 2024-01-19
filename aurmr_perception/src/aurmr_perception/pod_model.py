@@ -7,7 +7,7 @@ from unittest import result
 from aurmr_perception.bin_model import BinModel
 import cv2
 import matplotlib
-from aurmr_perception.srv import CaptureObject, RemoveObject, GetObjectPoints, ResetBin, LoadDataset
+from aurmr_perception.srv import ActOnBins, CaptureObject, RemoveObject, GetObjectPoints, ResetBin, LoadDataset
 
 
 from skimage.color import label2rgb
@@ -85,23 +85,21 @@ class PodPerceptionROS:
             self.camera_depth_subscriber, self.camera_rgb_subscriber, self.camera_info_subscriber], 3, .1)
         self.camera_synchronizer.registerCallback(self.camera_callback)
 
-
         self.wait_for_camera_data()
 
         self.trigger_capture = rospy.Service('~capture_object', CaptureObject, self.capture_object_callback)
         self.trigger_empty_pod = rospy.Service('~capture_empty_pod', Trigger, self.empty_pod_callback)
         self.trigger_pick = rospy.Service('~pick_object', CaptureObject, self.pick_object_callback)
         self.trigger_stow = rospy.Service('~stow_object', CaptureObject, self.stow_object_callback)
+        self.act_on_bins_srv = rospy.Service('~act_on_bins', ActOnBins, self.act_on_bins_callback)
         self.trigger_update = rospy.Service('~update_bin', CaptureObject, self.update_object_callback)
         self.trigger_retrieve = rospy.Service('~get_object_points', GetObjectPoints, self.get_object_callback)
         self.trigger_reset = rospy.Service('~reset_bin', ResetBin, self.reset_callback)
         self.load_dataset_srv = rospy.Service('~load_dataset', LoadDataset, self.load_dataset_callback)
 
-
         self.masks_pub = rospy.Publisher('~detected_masks', Image, queue_size=1, latch=True)
         self.labels_pub = rospy.Publisher('~labeled_images', Image, queue_size=1, latch=True)
         self.color_image_pub = rospy.Publisher('~colored_images', Image, queue_size=1, latch=True)
-
 
 
     def wait_for_camera_data(self):
@@ -145,13 +143,20 @@ class PodPerceptionROS:
         return rospy.wait_for_message(f'/camera_lower_right/points2', PointCloud2)
 
     def load_dataset_callback(self, request):
-        dataset = DatasetReader.load(request.dataset_path)
+        dataset = DatasetReader(request.dataset_path).load()
 
         self.model.initialize_with_data(dataset)
 
         self.dataset_path = request.dataset_path
 
-        return {"success": True, "message": f"load dataset {dataset.path}"}
+        return {"success": True, "message": f"loaded dataset {request.dataset_path}"}
+
+    def act_on_bins_callback(self, request):
+        rgb_image, depth_image = self.capture_image()
+        actions = zip(request.bin_ids, request.asins, request.actions)
+        result, message = self.model.act_on_bins(actions, rgb_image, depth_image, self.camera_info.K)
+        self.dataset_writer.write(self.model.dataset)
+        return result, message
 
     def capture_object_callback(self, request):
         if not request.bin_id or not request.object_id:
@@ -335,6 +340,9 @@ class PodModel:
     def capture_object(self, bin_id, asin, rgb_image, depth_image, camera_intrinsics):
         raise NotImplementedError()
 
+    def act_on_bins(self, actions: Tuple[str, str, str], rgb_image, depth_image, camera_intrinsics):
+        raise NotImplementedError()
+
     def add_object(self, bin_id, asin, rgb_image, depth_image, camera_intrinsics, points_msg):
         raise NotImplementedError()
 
@@ -358,15 +366,22 @@ class DummyPodModel(PodModel):
     def capture_object(self, bin_id, asin, rgb_image, depth_image, camera_intrinsics):
         return True
 
+    def act_on_bins(self, actions: Tuple[str, str, str], rgb_image, depth_image, camera_intrinsics):
+        to_record = []
+        for bin_id, asin, action_type in actions:
+            to_record.append(Action(action_type, Item(asin, self.dataset.next_item_seq(bin_id, asin)), bin_id, "success"))
+        self.dataset.add(to_record, rgb_image=rgb_image, depth_image=depth_image)
+        return True, ""
+
     def add_object(self, bin_id, asin, rgb_image, depth_image, camera_intrinsics, points_msg):
-        self.dataset.add([Action("stow", bin_id,Item(asin, self.dataset.next_item_seq(bin_id, asin)))], rgb_image=rgb_image, depth_image=depth_image)
+        self.dataset.add([Action("stow", Item(asin, self.dataset.next_item_seq(bin_id, asin)))], bin_id, rgb_image=rgb_image, depth_image=depth_image)
         return True, "", None
 
     def get_object(self, bin_id, asin, points_msg, im_shape):
         return True, ""
 
     def remove_object(self, bin_id, asin, rgb_image, depth_image, camera_intrinsics, points_msg):
-        self.dataset.add([Action("pick", bin_id, Item(asin, self.dataset.next_item_seq(bin_id, asin)), "success")], rgb_image=rgb_image, depth_image=depth_image)
+        self.dataset.add([Action("pick", Item(asin, self.dataset.next_item_seq(bin_id, asin)), bin_id, "success")], rgb_image=rgb_image, depth_image=depth_image)
         return True, ""
 
     def update(self, bin_id, rgb_image, depth_image, camera_intrinsics, points_msg):
