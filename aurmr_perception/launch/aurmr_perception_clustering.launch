@@ -8,8 +8,8 @@
   <!-- normal or centroid for grasp type -->
   <arg name="grasp_type" default="normal" />
 
-
-  <node name="demo_service" pkg="aurmr_unseen_object_clustering" type="demo_service.py" output="screen" />
+  <!-- These are short-lived parameters which need to be configured using the `pod_calibration` scripts-->
+  <rosparam file="/tmp/bin_bounds.yaml" />
 
   <node name="aurmr_perception" pkg="aurmr_perception" type="aurmr_perception" output="screen">
     <param name="camera_name"                   value="$(arg camera)" />
