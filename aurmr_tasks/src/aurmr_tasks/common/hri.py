@@ -20,6 +20,8 @@ from geometry_msgs.msg import PoseStamped, Quaternion, Pose, Point
 from visualization_msgs.msg import Marker
 import image_geometry
 
+from aurmr_tasks.pod import BIN_CODE_TO_BIN_ID
+
 from aurmr_tasks.util import add_offset
 
 from enum import Enum
@@ -266,6 +268,71 @@ class UserPromptForRetry(State):
         return "retry"
 
 
+class Sound(str, Enum):
+    # Hack around StrEnum only being in Python 3.11
+    BELL = "/usr/share/sounds/freedesktop/stereo/bell.oga"
+    CAMERA = "/usr/share/sounds/freedesktop/stereo/camera-shutter.oga"
+    COMPLETE = "/usr/share/sounds/freedesktop/stereo/complete.oga"
+    # This is a good "dot dot dot" sound
+    DIALOG_INFORMATION = "/usr/share/sounds/freedesktop/stereo/dialog-information.oga"
+    DIALOG_WARNING = "/usr/share/sounds/freedesktop/stereo/dialog-warning.oga"
+    SERVICE_LOGIN = "/usr/share/sounds/freedesktop/stereo/service-login.oga"
+    TRASH_EMPTY = "/usr/share/sounds/freedesktop/stereo/trash-empty.oga"
+
+
+def play_sound(sound: Sound, blocking=True):
+    if blocking:
+        try:
+            subprocess.call(['mplayer', sound], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except Exception as e:
+            rospy.logwarn("Couldn't play sound")
+            rospy.logwarn(e)
+    else:
+        subprocess.Popen(["mplayer", sound], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+import sys
+import select
+import termios
+import tty
+
+
+def read_with_timeout(t:float, max_char_delay=0.2, should_play_sound=True):
+    buf = ""
+    # Disable line buffering in the terminal. Specific to Unix
+    settings = termios.tcgetattr(sys.stdin)
+
+    sound_i = 0
+    try:
+        tty.setraw(sys.stdin.fileno())
+        patience = max(t, max_char_delay)
+        while not rospy.is_shutdown():
+            rlist, _, _ = select.select([sys.stdin], [], [], .5)
+            if rlist:
+                key = sys.stdin.read(1)
+                if key:
+                    if key == '\x03':
+                        # Raw disables ctrl-c, check for it manually
+                        rospy.signal_shutdown("keyboard interrupt")
+                        raise KeyboardInterrupt()
+                    buf += key
+                    # We set a shorter fuse to get trailing chars
+                    patience = max_char_delay
+                else:
+                    break  # EOF reached
+            else:
+                if should_play_sound and sound_i % 6 == 0:
+                    play_sound(Sound.SERVICE_LOGIN, blocking=False)
+                sound_i += 1
+                patience -= 1
+                if patience < 0:
+                    break
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
+
+    finally:
+        termios.tcsetattr(sys.stdin, termios.TCSANOW, settings)
+
+    return buf
+
 
 def prompt_for_confirmation(prompt):
     valid_signal = False
@@ -323,13 +390,78 @@ class WaitForKeyPress(State):
         except KeyboardInterrupt:
             return 'aborted'
 
+
 class GetASINAndBinScans(State):
     def __init__(self):
         State.__init__(self, outcomes=['succeeded', 'preempted', 'aborted'], output_keys=["asin", "bin_id"])
 
     def execute(self, userdata):
-        asin = input(f"Scan ASIN\n")
+        print("Scan ASIN\n")
+        asin = read_with_timeout(120)
+        if not asin:
+            return "aborted"
+        print()
+        asin = asin.rstrip()
+        if asin == "123456789012":
+            play_sound(Sound.TRASH_EMPTY, blocking=False)
+            return "aborted"
         userdata["asin"] = asin
-        bin_id = input(f"Scan bin\n")
-        userdata["bin_id"] = bin_id
+        play_sound(Sound.BELL)
+        while not rospy.is_shutdown():
+            print("Scan bin\n")
+            bin_id = read_with_timeout(120)
+            if not bin_id:
+                # timed out
+                return "aborted"
+            print()
+            bin_id = bin_id.rstrip()
+            if bin_id == "123456789012":
+                play_sound(Sound.TRASH_EMPTY, blocking=False)
+                return "aborted"
+            # We don't know about this bin
+            if bin_id not in BIN_CODE_TO_BIN_ID.keys():
+                play_sound(Sound.DIALOG_WARNING)
+                print("Bin not in system", bin_id)
+                continue
+            break
+        play_sound(Sound.COMPLETE, blocking=False)
+        userdata["bin_id"] = BIN_CODE_TO_BIN_ID[bin_id]
+        return "succeeded"
+
+# Use this for generating barcodes:
+#https://www.nayuki.io/page/1d-barcode-generator-javascript
+class CheckForScanSignal(State):
+    def __init__(self, signal):
+        State.__init__(self, outcomes=['succeeded', 'aborted'], input_keys=["first_scan", "second_scan"])
+        self.signal = signal
+
+    def execute(self, userdata):
+        if not (userdata["first_scan"] == userdata["second_scan"] == self.signal):
+            return "aborted"
+
+        play_sound(Sound.BELL)
+        return "succeeded"
+
+
+class WaitForScan(State):
+    def __init__(self, matching=None, timeout=10.0, prompt=None):
+        State.__init__(self, outcomes=['succeeded', 'preempted', 'aborted'], input_keys=["prompt"], output_keys=["scanned_text"])
+        self.prompt = prompt
+        self.matching = matching
+        self.timeout = timeout
+
+    def execute(self, userdata):
+        prompt = self.prompt
+        if not self.prompt:
+            prompt = userdata["prompt"]
+        print(prompt)
+        play_sound(Sound.DIALOG_INFORMATION)
+        scanned_text = read_with_timeout(self.timeout)
+        if not scanned_text:
+            # Timed out
+            return "aborted"
+        # The scanner can have a tab delimiter
+        userdata["scanned_text"] = scanned_text.rstrip()
+        if self.matching and scanned_text.rstrip() != self.match:
+            return "aborted"
         return "succeeded"
