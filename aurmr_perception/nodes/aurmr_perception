@@ -10,12 +10,6 @@ from aurmr_perception.diff_pod_model import DiffPodModel
 from aurmr_dataset.dataset import Dataset
 from aurmr_dataset.io import DatasetReader
 
-from aurmr_setup.utils.workspace_utils import get_active_workspace_path
-workspace_path = get_active_workspace_path()
-
-import pickle
-with open('/tmp/calibration_pixel_coords_pod.pkl', 'rb') as f:
-    bin_bounds = pickle.load(f)
 
 if __name__ == '__main__':
     rospy.init_node('aurmr_perception')
@@ -33,7 +27,7 @@ if __name__ == '__main__':
     args.camera_type = rospy.get_param("~camera_type", args.camera)
     args.segmentation_method = rospy.get_param("~segmentation_method", args.segmentation_method)
     args.dataset = rospy.get_param("~dataset", args.dataset)
-
+    bin_bounds = rospy.get_param("bin_bounds")
     if os.path.isdir(args.dataset):
         try:
             dataset = DatasetReader(args.dataset).load()
