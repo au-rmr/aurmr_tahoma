@@ -89,6 +89,28 @@ class StowObject(State):
         else:
             return "aborted"
 
+
+class ActOnBins(State):
+    def __init__(self):
+        State.__init__(
+            self,
+            input_keys=['bin_ids', 'asins', 'actions'],
+            outcomes=['succeeded', 'preempted', 'aborted']
+        )
+        self.act_srv = rospy.ServiceProxy('/aurmr_perception/act_on_bins', aurmr_perception.srv.ActOnBins)
+        self.act_srv.wait_for_service(timeout=rospy.Duration(5))
+
+    def execute(self, userdata):
+
+        response = self.act_srv( bin_ids=userdata['bin_ids'],
+            asins=userdata['asins'],
+            actions=userdata["actions"])
+
+        if response.success:
+            return "succeeded"
+        else:
+            return "aborted"
+
 class PickObject(State):
     def __init__(self):
         State.__init__(
