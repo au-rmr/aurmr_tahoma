@@ -20,30 +20,12 @@ from geometry_msgs.msg import PoseStamped, Quaternion, Pose, Point
 from visualization_msgs.msg import Marker
 import image_geometry
 
+from enum import Enum
+import subprocess
 
-# Copied from: https://github.com/au-rmr/aurmr_tahoma/blob/uois_multi_frame_with_service/aurmr_unseen_object_clustering/src/aurmr_unseen_object_clustering/tools/segmentation_net.py#LL65C1-L82C14
-# TODO: Move somewhere shared (or use the upcoming automated process)
-bin_bounds = {
-    '1H':[297*4, 353*4, 315*4, 406*4],
-    '2H':[300*4, 355*4, 409*4, 514*4],
-    '3H':[303*4, 356*4, 515*4, 620*4],
-    '4H':[302*4, 355*4, 619*4, 711*4],
-    '1G':[365*4, 409*4, 315*4, 405*4],
-    '2G':[367*4, 407*4, 407*4, 512*4],
-    '3G':[370*4, 411*4, 513*4, 619*4],
-    '4G':[371*4, 412*4, 619*4, 711*4],
-    '1F':[420*4, 514*4, 314*4, 405*4],
-    '2F':[424*4, 511*4, 407*4, 512*4],
-    '3F':[425*4, 515*4, 515*4, 620*4],
-    '4F':[426*4, 514*4, 621*4, 714*4],
-    '1E':[527*4, 572*4, 311*4, 405*4],
-    '2E':[529*4, 571*4, 407*4, 513*4],
-    '3E':[527*4, 574*4, 515*4, 620*4],
-    '4E':[531*4, 574*4, 622*4, 714*4],
-}
 
 class UserPromptForRetry(State):
-    def __init__(self, tf_buffer, frame_id='base_link', timeout_connection_secs = 10.0, \
+    def __init__(self, bin_bounds, tf_buffer, frame_id='base_link', timeout_connection_secs = 10.0, \
                  timeout_response_secs = 120.0, camera_name = 'camera_lower_right', use_depth=False):
         State.__init__(
             self,
@@ -51,7 +33,7 @@ class UserPromptForRetry(State):
             output_keys=['human_grasp_pose'],
             outcomes=['retry', 'continue']
         )
-
+        self.bin_bounds = bin_bounds
         self.timeout_connection_secs = timeout_connection_secs
         self.timeout_response_secs = timeout_response_secs
         self.camera_name = camera_name
@@ -201,7 +183,7 @@ class UserPromptForRetry(State):
             rospy.loginfo("Pointcloud and RGB image not ready for HRI regrasp")
             return "continue"
 
-        if userdata['target_bin_id'] not in bin_bounds:
+        if userdata['target_bin_id'] not in self.bin_bounds:
             rospy.loginfo(f"No bin configuration found for {userdata['target_bin_id']}")
             return "continue"
 
@@ -212,7 +194,7 @@ class UserPromptForRetry(State):
 
         rgb_image = self.bridge.imgmsg_to_cv2(self.ros_rgb_image)
 
-        bounds = bin_bounds[userdata['target_bin_id']]
+        bounds = self.bin_bounds[userdata['target_bin_id']]
         cropped_rgb_image = rgb_image[bounds[0]:bounds[1], bounds[2]:bounds[3], 0:3]
 
         image_msg = CompressedImage()
