@@ -84,6 +84,7 @@ class GraspDetectionROS:
 
         self.dections_viz_pub = rospy.Publisher("~detected_grasps", MarkerArray, latch=True, queue_size=1)
         self.points_viz_pub = rospy.Publisher("~detected_pts", PointCloud2, latch=True, queue_size=5)
+        # FIXME: These should be synchronized
         self.camera_depth_subscriber = rospy.Subscriber('/camera_lower_right/depth_to_rgb/image_raw', Image, self.depth_callback)
         self.camera_rgb_subscriber = rospy.Subscriber('/camera_lower_right/rgb/image_raw', Image, self.rgb_callback)
         self.depth_img = []
@@ -97,6 +98,7 @@ class GraspDetectionROS:
                                         queue_size=1, latch=True)
 
     def depth_callback(self, data):
+        # FIXME: This is expensive, only copy the data if someone is going to use it
         try:
             self.depth_img = self.bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
             # self.depth_img = np.array(self.depth_img, dtype=np.float32)
