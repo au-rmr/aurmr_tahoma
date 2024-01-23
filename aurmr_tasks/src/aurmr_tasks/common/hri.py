@@ -9,7 +9,7 @@ import cv2
 import math
 import pickle
 
-from smach import State
+from smach import State, StateMachine
 from cv_bridge import CvBridge
 from tf_conversions import transformations
 from aurmr_perception.util import qv_mult, quat_msg_to_vec
@@ -20,40 +20,24 @@ from geometry_msgs.msg import PoseStamped, Quaternion, Pose, Point
 from visualization_msgs.msg import Marker
 import image_geometry
 
+from aurmr_tasks.pod import BIN_CODE_TO_BIN_ID
 
-# Copied from: https://github.com/au-rmr/aurmr_tahoma/blob/uois_multi_frame_with_service/aurmr_unseen_object_clustering/src/aurmr_unseen_object_clustering/tools/segmentation_net.py#LL65C1-L82C14
-# TODO: Move somewhere shared (or use the upcoming automated process)
-#bin_bounds = {
-#    '1H':[297*4, 353*4, 315*4, 406*4],
-#    '2H':[300*4, 355*4, 409*4, 514*4],
-#    '3H':[303*4, 356*4, 515*4, 620*4],
-#    '4H':[302*4, 355*4, 619*4, 711*4],
-#    '1G':[365*4, 409*4, 315*4, 405*4],
-#    '2G':[367*4, 407*4, 407*4, 512*4],
-#    '3G':[370*4, 411*4, 513*4, 619*4],
-#    '4G':[371*4, 412*4, 619*4, 711*4],
-#    '1F':[420*4, 514*4, 314*4, 405*4],
-#    '2F':[424*4, 511*4, 407*4, 512*4],
-#    '3F':[425*4, 515*4, 515*4, 620*4],    
-#    '4F':[426*4, 514*4, 621*4, 714*4],
-#    '1E':[527*4, 572*4, 311*4, 405*4],
-#    '2E':[529*4, 571*4, 407*4, 513*4],
-#    '3E':[527*4, 574*4, 515*4, 620*4],
-#    '4E':[531*4, 574*4, 622*4, 714*4],
-#}
-with open('/tmp/calibration_pixel_coords_pod.pkl', 'rb') as f:
-    bin_bounds = pickle.load(f)
+from aurmr_tasks.util import add_offset
+
+from enum import Enum
+import subprocess
+
 
 class UserPromptForRetry(State):
-    def __init__(self, tf_buffer, frame_id='base_link', timeout_connection_secs = 10.0, \
+    def __init__(self, bin_bounds, tf_buffer, frame_id='base_link', timeout_connection_secs = 10.0, \
                  timeout_response_secs = 120.0, camera_name = 'camera_lower_right', use_depth=False):
         State.__init__(
             self,
             input_keys=['target_bin_id', 'target_object_id', 'target_object_asin', 'grasp_pose'],
-            output_keys=['human_grasp_pose'],
+            output_keys=['human_grasp_pose', "human_pre_grasp_pose"],
             outcomes=['retry', 'continue']
         )
-
+        self.bin_bounds = bin_bounds
         self.timeout_connection_secs = timeout_connection_secs
         self.timeout_response_secs = timeout_response_secs
         self.camera_name = camera_name
@@ -84,14 +68,6 @@ class UserPromptForRetry(State):
         self.camera_model.fromCameraInfo(msg)
         self.camera_info_sub.unregister() #Only subscribe once
 
-    def add_offset(self, offset, grasp_pose):
-        v = qv_mult(
-            quat_msg_to_vec(grasp_pose.pose.orientation), (0, 0, offset))
-        offset_pose = deepcopy(grasp_pose)
-        offset_pose.pose.position.x += v[0]
-        offset_pose.pose.position.y += v[1]
-        offset_pose.pose.position.z += v[2]
-        return offset_pose
 
     def visualize_point_in_image(self, rgb_image, x, y):
         rgb_image = cv2.circle(rgb_image,(x, y), 20, (0,255,0), -1)
@@ -140,6 +116,7 @@ class UserPromptForRetry(State):
         marker.lifetime = rospy.rostime.Duration()
 
         self.marker_publisher.publish(marker)
+
     def visualize_point_marker(self, point, frame_id):
         marker2 = Marker()
         # marker2.header.frame_id = self.camera_model.tfFrame()
@@ -150,7 +127,6 @@ class UserPromptForRetry(State):
         marker2.type = Marker.SPHERE
         marker2.action = Marker.ADD
 
-        print(f"publishing {point}")
         marker2.pose.position.x = point[0]
         marker2.pose.position.y = point[1]
         marker2.pose.position.z = point[2]
@@ -197,13 +173,12 @@ class UserPromptForRetry(State):
             closest_point = pc[np.argmin(np.linalg.norm(np.cross(p1-p0, p0-pc, axisb=1), axis=1)/np.linalg.norm(p1-p0))]
             return closest_point
 
-
     def execute(self, userdata):
         if self.ros_pointcloud is None or self.ros_rgb_image is None or self.camera_model is None:
             rospy.loginfo("Pointcloud and RGB image not ready for HRI regrasp")
             return "continue"
 
-        if userdata['target_bin_id'] not in bin_bounds:
+        if userdata['target_bin_id'] not in self.bin_bounds:
             rospy.loginfo(f"No bin configuration found for {userdata['target_bin_id']}")
             return "continue"
 
@@ -214,7 +189,7 @@ class UserPromptForRetry(State):
 
         rgb_image = self.bridge.imgmsg_to_cv2(self.ros_rgb_image)
 
-        bounds = bin_bounds[userdata['target_bin_id']]
+        bounds = self.bin_bounds[userdata['target_bin_id']]
         cropped_rgb_image = rgb_image[bounds[0]:bounds[1], bounds[2]:bounds[3], 0:3]
 
         image_msg = CompressedImage()
@@ -260,7 +235,7 @@ class UserPromptForRetry(State):
         POD_OFFSET = 0.1
         RGB_TO_DEPTH_FRAME_OFFSET = transform.transform.translation.y-0.47
         DEPTH_TILT = -transform.transform.translation.z-0.02
-        
+
         grasp_pose.pose.position.z += DEPTH_TILT
         grasp_pose.pose.position.y -= RGB_TO_DEPTH_FRAME_OFFSET
         grasp_pose.pose.position.x = transform.transform.translation.x - POD_OFFSET
@@ -271,18 +246,222 @@ class UserPromptForRetry(State):
                 pose.position.y,
                 pose.position.z
             ], frame)
-        
+
         # visualize(grasp_pose.pose)
         # import pdb; pdb.set_trace()
-        
+
         # visualize()
 
         # import pdb; pdb.set_trace()
 
-        # NOTE: No extra filtering or ranking on our part. Just take the first one
+
         # As the arm_tool0 is 20cm in length w.r.t tip of suction cup thus adding 0.2m offset
-        # grasp_pose = self.add_offset(-0.22, grasp_pose)
+        grasp_pose = add_offset(-0.20, grasp_pose)
 
         userdata['human_grasp_pose'] = grasp_pose
 
+        # adding 0.12m offset for pre grasp pose to prepare it for grasp pose which is use to pick the object
+        pregrasp_pose = add_offset(-self.pre_grasp_offset, grasp_pose)
+
+        userdata['human_pre_grasp_pose'] = pregrasp_pose
+
         return "retry"
+
+
+class Sound(str, Enum):
+    # Hack around StrEnum only being in Python 3.11
+    BELL = "/usr/share/sounds/freedesktop/stereo/bell.oga"
+    CAMERA = "/usr/share/sounds/freedesktop/stereo/camera-shutter.oga"
+    COMPLETE = "/usr/share/sounds/freedesktop/stereo/complete.oga"
+    # This is a good "dot dot dot" sound
+    DIALOG_INFORMATION = "/usr/share/sounds/freedesktop/stereo/dialog-information.oga"
+    DIALOG_WARNING = "/usr/share/sounds/freedesktop/stereo/dialog-warning.oga"
+    SERVICE_LOGIN = "/usr/share/sounds/freedesktop/stereo/service-login.oga"
+    TRASH_EMPTY = "/usr/share/sounds/freedesktop/stereo/trash-empty.oga"
+
+
+def play_sound(sound: Sound, blocking=True):
+    if blocking:
+        try:
+            subprocess.call(['mplayer', sound], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except Exception as e:
+            rospy.logwarn("Couldn't play sound")
+            rospy.logwarn(e)
+    else:
+        subprocess.Popen(["mplayer", sound], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+import sys
+import select
+import termios
+import tty
+
+
+def read_with_timeout(t:float, max_char_delay=0.2, should_play_sound=True):
+    buf = ""
+    # Disable line buffering in the terminal. Specific to Unix
+    settings = termios.tcgetattr(sys.stdin)
+
+    sound_i = 0
+    try:
+        tty.setraw(sys.stdin.fileno())
+        patience = max(t, max_char_delay)
+        while not rospy.is_shutdown():
+            rlist, _, _ = select.select([sys.stdin], [], [], .5)
+            if rlist:
+                key = sys.stdin.read(1)
+                if key:
+                    if key == '\x03':
+                        # Raw disables ctrl-c, check for it manually
+                        rospy.signal_shutdown("keyboard interrupt")
+                        raise KeyboardInterrupt()
+                    buf += key
+                    # We set a shorter fuse to get trailing chars
+                    patience = max_char_delay
+                else:
+                    break  # EOF reached
+            else:
+                if should_play_sound and sound_i % 6 == 0:
+                    play_sound(Sound.SERVICE_LOGIN, blocking=False)
+                sound_i += 1
+                patience -= 1
+                if patience < 0:
+                    break
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
+
+    finally:
+        termios.tcsetattr(sys.stdin, termios.TCSANOW, settings)
+
+    return buf
+
+
+def prompt_for_confirmation(prompt):
+    valid_signal = False
+    while not rospy.is_shutdown() and not valid_signal:
+        user_input = input(f"{prompt}\nProceed [y/n]?")
+        if user_input == "y":
+            return True
+        elif user_input == "n":
+            return False
+
+
+class AskForHumanAction(State):
+    def __init__(self, default_prompt=None):
+        State.__init__(self, outcomes=['succeeded', 'aborted'], input_keys=["prompt"])
+        self.prompt = default_prompt
+
+    def execute(self, userdata):
+        prompt = self.prompt
+        if not self.prompt:
+            prompt = userdata["prompt"]
+        confirmed = prompt_for_confirmation(prompt)
+        if confirmed:
+            return "succeeded"
+        else:
+            return "aborted"
+
+
+
+class Formatter(State):
+    def __init__(self, template, input_keys, output_key):
+        State.__init__(self, outcomes=["succeeded", "aborted"], input_keys=input_keys,
+                        output_keys=[output_key])
+        self.ordered_input_keys = input_keys
+        self.template = template
+
+    def execute(self, ud):
+        try:
+            args = [ud[input_key] for input_key in self.ordered_input_keys]
+            ud[self.get_registered_output_keys()[0]] = self.template.format(*args)
+            return "succeeded"
+        except Exception as e:
+            # Catch any fumbled templates
+            rospy.logerr("Bad formulate_ud_str: {}, {}, {}".format(self.template, self.ordered_input_keys, self.get_registered_output_keys()[0]))
+            return "aborted"
+
+
+class WaitForKeyPress(State):
+    def __init__(self):
+        State.__init__(self, outcomes=['signalled', 'not_signalled', 'aborted'])
+
+    def execute(self, userdata):
+        try:
+            user_input = input("Press any key to start\n")
+            return 'signalled'
+        except KeyboardInterrupt:
+            return 'aborted'
+
+
+class GetASINAndBinScans(State):
+    def __init__(self):
+        State.__init__(self, outcomes=['succeeded', 'preempted', 'aborted'], output_keys=["asin", "bin_id"])
+
+    def execute(self, userdata):
+        print("Scan ASIN\n")
+        asin = read_with_timeout(120)
+        if not asin:
+            return "aborted"
+        print()
+        asin = asin.rstrip()
+        if asin == "123456789012":
+            play_sound(Sound.TRASH_EMPTY, blocking=False)
+            return "aborted"
+        userdata["asin"] = asin
+        play_sound(Sound.BELL)
+        while not rospy.is_shutdown():
+            print("Scan bin\n")
+            bin_id = read_with_timeout(120)
+            if not bin_id:
+                # timed out
+                return "aborted"
+            print()
+            bin_id = bin_id.rstrip()
+            if bin_id == "123456789012":
+                play_sound(Sound.TRASH_EMPTY, blocking=False)
+                return "aborted"
+            # We don't know about this bin
+            if bin_id not in BIN_CODE_TO_BIN_ID.keys():
+                play_sound(Sound.DIALOG_WARNING)
+                print("Bin not in system", bin_id)
+                continue
+            break
+        play_sound(Sound.COMPLETE, blocking=False)
+        userdata["bin_id"] = BIN_CODE_TO_BIN_ID[bin_id]
+        return "succeeded"
+
+# Use this for generating barcodes:
+#https://www.nayuki.io/page/1d-barcode-generator-javascript
+class CheckForScanSignal(State):
+    def __init__(self, signal):
+        State.__init__(self, outcomes=['succeeded', 'aborted'], input_keys=["first_scan", "second_scan"])
+        self.signal = signal
+
+    def execute(self, userdata):
+        if not (userdata["first_scan"] == userdata["second_scan"] == self.signal):
+            return "aborted"
+
+        play_sound(Sound.BELL)
+        return "succeeded"
+
+
+class WaitForScan(State):
+    def __init__(self, matching=None, timeout=10.0, prompt=None):
+        State.__init__(self, outcomes=['succeeded', 'preempted', 'aborted'], input_keys=["prompt"], output_keys=["scanned_text"])
+        self.prompt = prompt
+        self.matching = matching
+        self.timeout = timeout
+
+    def execute(self, userdata):
+        prompt = self.prompt
+        if not self.prompt:
+            prompt = userdata["prompt"]
+        print(prompt)
+        play_sound(Sound.DIALOG_INFORMATION)
+        scanned_text = read_with_timeout(self.timeout)
+        if not scanned_text:
+            # Timed out
+            return "aborted"
+        # The scanner can have a tab delimiter
+        userdata["scanned_text"] = scanned_text.rstrip()
+        if self.matching and scanned_text.rstrip() != self.match:
+            return "aborted"
+        return "succeeded"

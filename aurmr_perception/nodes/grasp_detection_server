@@ -29,5 +29,5 @@ if __name__ == '__main__':
     else:
         raise RuntimeError(f"Unknown grasp detector requested: {detector_name}")
 
-    grasp_detection_server = GraspDetectionROS(detector, grasp_method)
+    grasp_detection_server = GraspDetectionROS(detector)
     rospy.spin()

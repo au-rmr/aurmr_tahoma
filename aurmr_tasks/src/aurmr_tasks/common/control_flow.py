@@ -96,6 +96,23 @@ def splat_auto(name, input_key, output_keys, transitions=None):
     StateMachine.add_auto(name, Splat(input_key, output_keys),["succeeded"], transitions=transitions)
 
 
+class AccumulateUserdata(smach.State):
+    def __init__(self, input_keys=[], output_keys=None):
+        if output_keys is None:
+            output_keys = [key + "s" for key in input_keys]
+        smach.State.__init__(self, outcomes=['succeeded'], input_keys=input_keys, output_keys=output_keys)
+        # output keys need to be ordered, smach turns them into sets (unordered) save them here as a list
+        self.input_keys_list = input_keys
+        self.output_key_list = output_keys
+
+    def execute(self, userdata):
+        for input_key, output_key in zip(self.input_keys_list, self.output_key_list):
+            if output_key in userdata:
+                userdata[output_key] = userdata[output_key].extend(userdata[input_key])
+            else:
+                userdata[output_key] = [userdata[input_key]]
+        return 'succeeded'
+
 def chain_states(*args):
     class ChainedStates(smach.State):
         def __init__(self):
@@ -116,16 +133,6 @@ def chain_states(*args):
             return outcome
 
     return ChainedStates()
-
-
-class Sleep(smach.State):
-    def __init__(self, seconds):
-        self.seconds = seconds
-        smach.State.__init__(self, outcomes=['succeeded'])
-
-    def execute(self, userdata):
-        rospy.sleep(self.seconds)
-        return 'succeeded'
 
 
 def retry_n(state, n, failure_status='aborted'):
@@ -314,12 +321,3 @@ def enqueue(name, from_key, to_key, transitions={}):
             return "succeeded"
 
     StateMachine.add(name, Enqueue(), transitions=transitions)
-
-
-class BreakGoal(State):
-    def __init__(self):
-        State.__init__(self, outcomes=["succeeded"], input_keys=["goal"], output_keys=["parameters"])
-
-    def execute(self, ud):
-        ud.parameters = ud.goal.parameters
-        return 'succeeded'

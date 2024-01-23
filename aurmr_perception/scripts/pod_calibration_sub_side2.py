@@ -1,10 +1,7 @@
-#!/usr/bin/env python  
+#!/usr/bin/env python
 import rospy
 
-import math
 import tf2_ros
-import geometry_msgs.msg
-import turtlesim.srv
 import numpy as np
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
@@ -13,14 +10,15 @@ from sensor_msgs.msg import Image, CameraInfo
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs import point_cloud2
 import pickle
+import yaml
 
-POD_FACE_C = ['pod_bin_1h', 'pod_bin_2h', 'pod_bin_3h', 'pod_bin_4h',
-              'pod_bin_1g', 'pod_bin_2g', 'pod_bin_3g', 'pod_bin_4g',
-              'pod_bin_1f', 'pod_bin_2f', 'pod_bin_3f', 'pod_bin_4f',
-              'pod_bin_1e', 'pod_bin_2e', 'pod_bin_3e', 'pod_bin_4e',]
+
+POD_FACE_C = ['pod_bin_1e', 'pod_bin_2e', 'pod_bin_3e',
+              'pod_bin_1d', 'pod_bin_2d', 'pod_bin_3d',
+              'pod_bin_1c', 'pod_bin_2c', 'pod_bin_3c',]
 
 POD_FACE_C_FROM_MARKER_X = [0, 0]
-POD_FACE_C_FROM_MARKER_Y = {'h': 0.195, 'g': 0.085, 'f': 0.11, 'e': 0.165}
+POD_FACE_C_FROM_MARKER_Y = {'e': 0.22, 'd': 0.195, 'c': 0.22}
 
 bin_DM_coords_base_link = {}
 bin_DM_coords = {}
@@ -76,8 +74,8 @@ def distorted_point(pt, mtx, dist):
     r6 = r2*r4
     k1, k2, p1, p2, k3 = dist.flatten()
     # Radial distortion
-    x_d = x_u * (1 + k1*r2 + k2*r4 + k3*r6) 
-    y_d = y_u * (1 + k1*r2 + k2*r4 + k3*r6) 
+    x_d = x_u * (1 + k1*r2 + k2*r4 + k3*r6)
+    y_d = y_u * (1 + k1*r2 + k2*r4 + k3*r6)
     # Tangential distortion
     x_d = x_d + (2*p1*x_u*y_u + p2*(r2 + 2*x_u**2))
     y_d = y_d + (p1*(r2 + 2*y_u**2) + 2*p2*x_u*y_u)
@@ -97,13 +95,13 @@ if __name__ == '__main__':
             try:
                 trans_top_left_base_link = tfBuffer.lookup_transform('base_link', bin, rospy.Time())
                 trans_right_bottom_base_link = tfBuffer.lookup_transform('base_link', bin, rospy.Time())
-                trans_top_left_base_link = np.array([trans_top_left_base_link.transform.translation.x, trans_top_left_base_link.transform.translation.y, trans_top_left_base_link.transform.translation.z]) 
+                trans_top_left_base_link = np.array([trans_top_left_base_link.transform.translation.x, trans_top_left_base_link.transform.translation.y, trans_top_left_base_link.transform.translation.z])
                 trans_right_bottom_base_link = np.array([trans_right_bottom_base_link.transform.translation.x, trans_right_bottom_base_link.transform.translation.y, trans_right_bottom_base_link.transform.translation.z])
                 bin_DM_coords_base_link[bin] = trans_top_left_base_link
 
                 trans_top_left = tfBuffer.lookup_transform('rgb_camera_link', bin, rospy.Time())
                 trans_right_bottom = tfBuffer.lookup_transform('rgb_camera_link', bin, rospy.Time())
-                trans_top_left = np.array([trans_top_left.transform.translation.x, trans_top_left.transform.translation.y, trans_top_left.transform.translation.z]) 
+                trans_top_left = np.array([trans_top_left.transform.translation.x, trans_top_left.transform.translation.y, trans_top_left.transform.translation.z])
                 trans_right_bottom = np.array([trans_right_bottom.transform.translation.x, trans_right_bottom.transform.translation.y, trans_right_bottom.transform.translation.z])
                 bin_DM_coords[bin] = trans_top_left
                 # break
@@ -112,12 +110,6 @@ if __name__ == '__main__':
         if(len(bin_DM_coords) == len(POD_FACE_C)):
             break
     print(bin_DM_coords)
-
-    with open('/tmp/calibration_xyz_coords_pod_base_link.pkl', 'wb') as f:
-        pickle.dump(bin_DM_coords_base_link, f)
-
-    with open('/tmp/calibration_xyz_coords_pod.pkl', 'wb') as f:
-        pickle.dump(bin_DM_coords, f)
 
     rgb_img = fetch_rgb_img()
     rgb_img_undistort = rgb_img
@@ -129,7 +121,7 @@ if __name__ == '__main__':
 
     trans_kinect_base_ink = tfBuffer.lookup_transform('base_link', 'depth_camera_link', rospy.Time())
     # trans_kinect_base_ink = np.array([trans_kinect_base_ink.transform.translation.x, trans_kinect_base_ink.transform.translation.y, trans_kinect_base_ink.transform.translation.z])
-    
+
     rgb_img = cv2.resize(rgb_img_undistort, (int(rgb_img_undistort.shape[1]/4), int(rgb_img_undistort.shape[0]/4)), interpolation = cv2.INTER_AREA)
 
     for bin in POD_FACE_C:
@@ -141,7 +133,7 @@ if __name__ == '__main__':
 
         if(bin[8] == '1'):
             kinect_3F[0] += 0.025
-        
+
         kinect_3F[1] -= 0.025
 
         u1,v1 = convert_xyz_point_to_uv_point(kinect_3F, fx, cx, fy, cy)
@@ -150,13 +142,13 @@ if __name__ == '__main__':
 
         if(bin[8] == '1'):
             kinect_3F[1] -= POD_FACE_C_FROM_MARKER_Y[bin_id]
-            kinect_3F[0] += 0.23
+            kinect_3F[0] += 0.31
             kinect_3F[0] -= 0.025
         else:
             kinect_3F[1] -= POD_FACE_C_FROM_MARKER_Y[bin_id]
-            kinect_3F[0] += 0.23
-        
-        if(bin[8] == '4'):
+            kinect_3F[0] += 0.31
+
+        if(bin[8] == '3'):
             kinect_3F[0] -= 0.025
 
         u2,v2 = convert_xyz_point_to_uv_point(kinect_3F, fx, cx, fy, cy)
@@ -166,11 +158,25 @@ if __name__ == '__main__':
 
         bin_DM_pixel_coords[bin[3:]] = np.array([int(v2), int(v1), int(u1), int(u2)])
 
-    print(bin_DM_pixel_coords)
+
 
     bin_DM_pixel_coords = {k[5:].upper(): v for k, v in bin_DM_pixel_coords.items()}
-    with open('/tmp/calibration_pixel_coords_pod.pkl', 'wb') as f:
-        pickle.dump(bin_DM_pixel_coords, f)
-    
+    print(bin_DM_pixel_coords)
+
+    with open('/tmp/bin_bounds.yaml', 'w') as f:
+        yaml.dump({"bin_bounds": bin_DM_pixel_coords}, f)
+
     # cv2.imshow("rgb", rgb_img)
     # cv2.waitKey(0)
+
+    # pub = rospy.Publisher('/kinect/points2', PointCloud2, queue_size=10)
+    # while not rospy.is_shutdown():
+    #     depth_array = np.array(depth_img_undistort, dtype=np.float32)/1000.0
+    #     point_cloud = depth_to_point_cloud(depth_array, fx, cx, fy, cy)
+    #     point_cloud = point_cloud.reshape(-1, 3)
+    #     header = rospy.Header()
+    #     header.stamp = rospy.Time.now()
+    #     header.frame_id = 'rgb_camera_link'
+    #     pc_msg = point_cloud2.create_cloud_xyz32(header, point_cloud)
+    #     pub.publish(pc_msg)
+    #     rospy.sleep(1)

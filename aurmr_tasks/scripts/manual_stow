@@ -1,0 +1,51 @@
+#!/usr/bin/env python
+import smach_ros
+from smach import State, StateMachine
+
+from typing import List
+import rospy
+
+import aurmr_tasks.common.control_flow as cf
+
+from aurmr_tasks.common import hri, perception, states
+
+
+def main():
+    rospy.init_node("aurmr_demo")
+    simulation = rospy.get_param("/use_sim_time", False)
+
+    demo_sm = StateMachine(["succeeded", "aborted", "preempted"], input_keys=[], output_keys=[])
+
+    single_stow_sm = StateMachine(["succeeded", "preempted", "aborted"], output_keys=["bin_id", "asin"])
+    multi_stow_sm = StateMachine(["succeeded", "preempted", "aborted"], output_keys=["bin_ids", "asins"])
+
+
+    with demo_sm:
+        with single_stow_sm:
+            StateMachine.add_auto("GET_SCANS", hri.GetASINAndBinScans(), ["succeeded"])
+            StateMachine.add_auto("WAIT", states.Wait(4), ["succeeded"])
+            StateMachine.add_auto("POST_STOW_PERCEPTION", perception.StowObject(), ["succeeded"], remapping={"target_bin_id":"bin_id", "target_object_id": "asin"})
+
+        with multi_stow_sm:
+            cf.inject_userdata_auto("SET_STOWING", "action", "stow")
+            StateMachine.add_auto("GET_SCANS", hri.GetASINAndBinScans(), ["succeeded"], {"aborted": "RETRY_SCAN"})
+            cf.inject_userdata("CLEAR_COUNTER", "ACCUMULATE_SCANS", "index", 0, )
+            StateMachine.add("RETRY_SCAN", cf.RepeatN(2), {"done": "POST_STOWING_PERCEPTION", "repeat": "GET_SCANS"})
+            StateMachine.add("ACCUMULATE_SCANS", cf.AccumulateUserdata(["bin_id", "asin", "action"]), {"succeeded": "GET_SCANS"})
+            StateMachine.add_auto("POST_STOWING_PERCEPTION", perception.ActOnBins(), ["succeeded"])
+
+        StateMachine.add_auto("CAPTURE_EMPTY_POD", perception.CaptureEmptyPod(),  ["succeeded"])
+        #StateMachine.add("STOW", single_stow_sm, {"succeeded": "STOW"})
+        StateMachine.add("MULTI_STOW", multi_stow_sm, {"succeeded": "MULTI_STOW"})
+
+    rospy.loginfo('Starting state machine')
+
+    sis = smach_ros.IntrospectionServer('demo_sm', demo_sm, '/task')
+    sis.start()
+
+    outcome = demo_sm.execute()
+    sis.stop()
+
+
+if __name__ == '__main__':
+    main()
