@@ -24,8 +24,8 @@ from std_msgs.msg import Header
 from std_srvs.srv import Trigger
 # from aurmr_unseen_object_clustering.tools.run_network import clustering_network
 # from aurmr_unseen_object_clustering.tools.match_masks import match_masks
-from aurmr_dataset.io import DatasetReader, DatasetWriter
-from aurmr_dataset.dataset import Dataset, Item, Action
+from aurmr_dataset.io import DatasetReader, DatasetWriter, DatasetAppender
+from aurmr_dataset.dataset import Dataset, Item, Action, CameraData, CameraConfig
 import pickle
 
 import scipy.ndimage as spy
@@ -59,7 +59,7 @@ class PodPerceptionROS:
         self.model = model
 
         self.dataset_path = dataset_path
-        self.dataset_writer = DatasetWriter(dataset_path)
+        self.dataset_writer = DatasetAppender(dataset_path)
 
         self.tf2_buffer = tf2_ros.Buffer()
         self.tf2_listener = tf2_ros.TransformListener(self.tf2_buffer)
@@ -172,11 +172,11 @@ class PodPerceptionROS:
         prev_bin_bounds = self.model.dataset.metadata["bin_bounds"]
         new_dataset = Dataset()
         new_dataset.metadata["bin_bounds"] = prev_bin_bounds
-        new_dataset.camera_info = {"K": self.camera_info.K, "D": self.camera_info.D, "R": self.camera_info.R, "P": self.camera_info.P}
-        new_dataset.add([], rgb_image=rgb_image, depth_image=depth_image)
+        new_dataset.camera_configs = {self.camera_info.name: CameraConfig(intrinsics={"K": self.camera_info.K, "D": self.camera_info.D, "R": self.camera_info.R, "P": self.camera_info.P})}
+        new_dataset.add([], {self.camera_info.name: CameraData(rgb_image=rgb_image, depth_image=depth_image)})
         self.model.initialize_with_data(new_dataset)
         # FIXME: this will fail if the user initialized with a specific dataset
-        self.dataset_writer = DatasetWriter(self.dataset_path)
+        self.dataset_writer = DatasetAppender(self.dataset_path)
         self.dataset_writer.write(self.model.dataset)
         return {"success": True, "message": "empty bin captured"}
 
@@ -306,21 +306,41 @@ class PodPerceptionROS:
 
 class PodModel:
 
-    def __init__(self, dataset) -> None:
+    def __init__(self, dataset, camera_name) -> None:
         self.dataset = dataset
         self.bin_bounds = self.dataset.metadata["bin_bounds"]
         self.bin_names = self.bin_bounds.keys()
         self.bins = {}
         self.H = None
         self.W = None
+        self.camera_name = camera_name
 
     def initialize_with_data(self, dataset: Dataset):
         self.dataset = dataset
         bin_bounds = dataset.metadata["bin_bounds"]
+        self.bin_bounds = bin_bounds
+        self.bin_names = self.bin_bounds.keys()
         for bin in self.bin_names:
             self.bins[bin] = BinModel(dataset, bin, bounds=bin_bounds[bin])
 
-        self.H, self.W = self.dataset.entries[-1].depth_image.shape
+
+        for entry in dataset.entries:
+
+            camera_data = entry.camera_data[self.camera_name]
+
+            rgb_image = camera_data.rgb_image
+            depth_image = camera_data.depth_image
+            points_msg = None
+            camera_info = None #dataset.metadata[]
+
+            for action in entry.actions:
+                if action.action_type == "stow":
+                    self.add_object(action.item.bin_id, action.item.asin_id, rgb_image, depth_image, camera_info, points_msg)
+                else:
+                    print("ERROR ACTION NOT SUPPORTED")
+
+
+        self.H, self.W = self.dataset.entries[-1].camera_data[self.camera_name].depth_image.shape
 
     def get_masks(self):
        """ Retrieves the mask with bin product id obj_id from the full camera reference frame"""
@@ -360,8 +380,8 @@ class PodModel:
 
 
 class DummyPodModel(PodModel):
-    def __init__(self, dataset) -> None:
-        super().__init__(dataset)
+    def __init__(self, dataset, camera_name) -> None:
+        super().__init__(dataset, camera_name)
 
     def capture_object(self, bin_id, asin, rgb_image, depth_image, camera_intrinsics):
         return True
@@ -369,19 +389,21 @@ class DummyPodModel(PodModel):
     def act_on_bins(self, actions: Tuple[str, str, str], rgb_image, depth_image, camera_intrinsics):
         to_record = []
         for bin_id, asin, action_type in actions:
-            to_record.append(Action(action_type, Item(asin, self.dataset.next_item_seq(bin_id, asin)), bin_id, "success"))
-        self.dataset.add(to_record, rgb_image=rgb_image, depth_image=depth_image)
+            to_record.append(Action(action_type, Item(asin, self.dataset.next_item_seq(bin_id, asin)), bin_id))
+        self.dataset.add(to_record, {self.camera_name: CameraData(rgb_image=rgb_image, depth_image=depth_image)})
         return True, ""
 
     def add_object(self, bin_id, asin, rgb_image, depth_image, camera_intrinsics, points_msg):
-        self.dataset.add([Action("stow", Item(asin, self.dataset.next_item_seq(bin_id, asin)))], bin_id, rgb_image=rgb_image, depth_image=depth_image)
+        actions = [Action("stow", Item(asin, self.dataset.next_item_seq(bin_id, asin)), bin_id)]
+        self.dataset.add(actions, {self.camera_name: CameraData(rgb_image=rgb_image, depth_image=depth_image)})
         return True, "", None
 
     def get_object(self, bin_id, asin, points_msg, im_shape):
         return True, ""
 
     def remove_object(self, bin_id, asin, rgb_image, depth_image, camera_intrinsics, points_msg):
-        self.dataset.add([Action("pick", Item(asin, self.dataset.next_item_seq(bin_id, asin)), bin_id, "success")], rgb_image=rgb_image, depth_image=depth_image)
+        actions = [Action("pick", Item(asin, self.dataset.next_item_seq(bin_id, asin)), bin_id)]
+        self.dataset.add(actions, {self.camera_name: CameraData(rgb_image=rgb_image, depth_image=depth_image)})
         return True, ""
 
     def update(self, bin_id, rgb_image, depth_image, camera_intrinsics, points_msg):

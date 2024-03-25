@@ -5,7 +5,7 @@ from fileinput import filename
 from typing import Any, Dict, List, Set, Tuple
 from unittest import result
 from aurmr_perception.bin_model import BinModel
-from aurmr_tahoma.aurmr_perception.src.aurmr_perception.pod_model import PodModel
+from aurmr_perception.pod_model import PodModel
 import cv2
 import matplotlib
 from aurmr_perception.srv import CaptureObject, RemoveObject, GetObjectPoints, ResetBin, LoadDataset
@@ -27,7 +27,7 @@ from std_srvs.srv import Trigger
 # from aurmr_unseen_object_clustering.tools.match_masks import match_masks
 from aurmr_unseen_object_clustering.tools.segmentation_net import SegNet, NO_OBJ_STORED, UNDERSEGMENTATION, OBJ_NOT_FOUND, MATCH_FAILED, IN_BAD_BINS
 from aurmr_dataset.io import DatasetReader, DatasetWriter
-from aurmr_dataset.dataset import Dataset, Item, Entry, Stow, Pick
+from aurmr_dataset.dataset import Dataset
 import pickle
 
 import scipy.ndimage as spy
@@ -36,15 +36,15 @@ from aurmr_perception.util import compute_xyz, mask_pointcloud
 
 class SegNetPodModel(PodModel):
 
-    def __init__(self, dataset: Dataset) -> None:
-        super().__init__(dataset)
+    def __init__(self, dataset: Dataset, camera_name: str) -> None:
+        super().__init__(dataset, camera_name)
         self.net = None
         self.occluded_table = {}
 
     def initialize_with_data(self, dataset: Dataset):
         super().initialize_with_data(dataset)
         depth_img = dataset.entries[-1].depth_image
-        camera_intrinsics = dataset.camera_info.K.reshape(3,3
+        camera_intrinsics = dataset.camera_info.K.reshape(3,3)
         self.net = SegNet(init_depth=depth_img, init_info=camera_intrinsics)
 
 

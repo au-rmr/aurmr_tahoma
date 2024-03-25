@@ -43,7 +43,7 @@ if __name__ == '__main__':
         model = DummyPodModel(dataset)
     elif args.segmentation_method == "clustering":
         from aurmr_perception.segnet_pod_model import SegNetPodModel
-        model = SegNetPodModel(dataset)
+        model = SegNetPodModel(dataset, args.camera_name)
     elif args.segmentation_method == "pixel_difference":
         model = DiffPodModel(dataset, args.diff_threshold, args.segmentation_method)
     else:
