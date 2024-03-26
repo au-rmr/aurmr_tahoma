@@ -22,7 +22,9 @@ from std_msgs.msg import Header
 from std_srvs.srv import Trigger
 # from aurmr_unseen_object_clustering.tools.run_network import clustering_network
 # from aurmr_unseen_object_clustering.tools.match_masks import match_masks
-from aurmr_unseen_object_clustering.tools.segmentation_net import SegNet, NO_OBJ_STORED, UNDERSEGMENTATION, OBJ_NOT_FOUND, MATCH_FAILED, IN_BAD_BINS
+from aurmr_unseen_object_clustering.tools.segmentation_net import SegNet, NO_OBJ_STORED, UNDERSEGMENTATION, OBJ_NOT_FOUND, MATCH_FAILED, IN_BAD_BINS, def_config
+from copy import deepcopy
+
 
 class PodPerceptionROS:
     def __init__(self, model, camera_name, visualize, camera_type):
@@ -80,13 +82,44 @@ class PodPerceptionROS:
 
     def load_dataset(self, request):
         from aurmr_dataset.io import DatasetReader
-        dataset = DatasetReader.load()
 
-        K  = np.asarray(dataset.camera_info['depth_to_rgb']['K'] ).reshape((3, 3))
+        bin_mapping = {
+            "P-9-H051H030": "1H",
+            "P-6-H835J238": "1G",
+            "P-8-H758H650": "1F",
+            "P-8-H588H170": "1E",
+            "P-9-H051H031": "2H",
+            "P-6-H835J239": "2G",
+            "P-8-H758H651": "2F",
+            "P-8-H588H171": "2E",
+            "P-9-H051H032": "3H",
+            "P-6-H835J240": "3G",
+            "P-8-H758H652": "3F",
+            "P-8-H588H172": "3E",
+            "P-9-H051H033": "4H",
+            "P-6-H835J241": "4G",
+            "P-8-H758H653": "4F",
+            "P-8-H588H173": "4E",
+
+            "P-9-M223R307": "1D",
+            "P-9-M223R831": "1E",
+            "P-9-M503R832": "2E",
+            "P-9-M095R784": "2C"
+
+        }
+        dataset = DatasetReader(request.dataset_path).load()
+
+        K  = np.asarray(dataset.camera_info['K'] ).reshape((3, 3))
 
         first_entry = dataset.entries[0]
-
-        self.net = SegNet(init_depth=first_entry.depth_image, init_info=intrinsics_3x3)
+        first_depth = first_entry.camera_data[self.camera_name].depth_image
+        updated_config = deepcopy(def_config)
+        new_bounds = {}
+        # Take the fully-identified bin bounds and simplify to pass to SegNet
+        for bin_id, bounds in dataset.metadata["bin_bounds"].items():
+            new_bounds[bin_mapping[bin_id]] = bounds
+        updated_config["bounds"] = new_bounds
+        self.net = SegNet(config=updated_config, init_depth=first_depth, init_info=K)
         self.model.net = self.net
 
         for entry in dataset.entries[1:]:
@@ -95,7 +128,7 @@ class PodPerceptionROS:
             for i in entry.inventory():
                 pass
 
-        return {"success": True, "message": f"load dataset {dataset.path}"}
+        return {"success": True, "message": f"loaded dataset {request.dataset_path} with {len(dataset.inventory())} objects in inventory"}
 
 
     def capture_object_callback(self, request):
