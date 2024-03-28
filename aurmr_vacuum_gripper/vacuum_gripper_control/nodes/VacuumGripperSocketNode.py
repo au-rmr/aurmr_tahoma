@@ -355,7 +355,10 @@ def mainLoop(ur_address, gripper_type):
   while not rospy.is_shutdown():
     # Get and publish the Gripper status
     # gripper.set_SetPointH1(850)
-    status = gripper.getStatus()
+    try:
+        status = gripper.getStatus()
+    except exceptions.CommError:
+        rospy.logerr("Communication error while getting status. Ignoring and looping")
     pub.publish(status)
     # Wait a little
     rospy.sleep(0.1)
