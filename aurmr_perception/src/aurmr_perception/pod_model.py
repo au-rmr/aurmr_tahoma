@@ -109,34 +109,36 @@ class PodPerceptionROS:
         }
         dataset = DatasetReader(request.dataset_path).load()
 
-        K  = np.asarray(dataset.camera_info['K'] ).reshape((3, 3))
+        camera_name = f"{self.camera_name}_depth"
+
+        K  = np.asarray(dataset.camera_info[camera_name]['K'] ).reshape((3, 3))
 
         first_entry = dataset.entries[0]
         first_depth = first_entry.camera_data[self.camera_name].depth_image
         updated_config = deepcopy(def_config)
-        new_bounds = {}
-        # Take the fully-identified bin bounds and simplify to pass to SegNet
-        for bin_id, bounds in dataset.metadata["bin_bounds"].items():
-            new_bounds[bin_mapping[bin_id]] = bounds
-        updated_config["bounds"] = new_bounds
+        updated_config["bounds"] = dataset.metadata["bin_bounds"]
+        first_depth = first_depth.astype(np.float32)
+
+
         self.net = SegNet(config=updated_config, init_depth=first_depth, init_info=K)
         self.model.net = self.net
-
-
 
         for entry in dataset.entries:
 
             camera_data = entry.camera_data[self.camera_name]
 
-            rgb_image = camera_data.rgb_image
+            rgb_image = camera_data.rgb_image[:,:,::-1]
             depth_image = camera_data.depth_image
             points_msg = None
             camera_info = dataset.camera_info
 
+
+            depth_image = depth_image.astype(np.float32)
+
             for action in entry.actions:
                 # Hack so we can keep changes isolated from rest of file
                 class MockCameraInfo():
-                    def __init__(self, K) -> None:
+                    def __init__(self) -> None:
                         self.K = K
                 if action.action_type == "stow":
                     simple_bin_id = bin_mapping.get(action.item.bin_id, None)
@@ -144,7 +146,7 @@ class PodPerceptionROS:
                         print("Can't simplify bin id ", action.item.bin_id)
                         continue
                     print(action.item.bin_id, simple_bin_id)
-                    self.model.add_object(simple_bin_id, action.item.asin_id, rgb_image, depth_image, MockCameraInfo(camera_info["K"]), points_msg)
+                    self.model.add_object(simple_bin_id, action.item.asin_id, rgb_image, depth_image, MockCameraInfo(), points_msg)
                 else:
                     print("ERROR ACTION NOT SUPPORTED")
 
