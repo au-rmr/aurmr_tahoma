@@ -26,7 +26,7 @@ import threading
 
 # This is an internal high-capacity drive, so we should only need to clear it once before the runs
 # /data is a network crossmount (see /etc/fstab). If it's not mounted, `sudo mount -a`
-BAG_STORAGE_PATH = "/data/datasets/2023-03-nick-logging"
+BAG_STORAGE_PATH = "/data/datasets/2024-03-nick-logging"
 BACKUP_RECORDING_PATH = "/home/aurmr/bag_recording_failover"
 
 TOPICS_TO_RECORD = [
