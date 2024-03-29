@@ -26,7 +26,7 @@ import threading
 
 # This is an internal high-capacity drive, so we should only need to clear it once before the runs
 # /data is a network crossmount (see /etc/fstab). If it's not mounted, `sudo mount -a`
-BAG_STORAGE_PATH = "/data/datasets/2023-12-nick-logging"
+BAG_STORAGE_PATH = "/data/datasets/2023-03-nick-logging"
 BACKUP_RECORDING_PATH = "/home/aurmr/bag_recording_failover"
 
 TOPICS_TO_RECORD = [
@@ -58,6 +58,16 @@ TOPICS_TO_RECORD = [
 
 record_state_windows = [("MOVE_TO_PRE_GRASP", "PICTURE_WAIT")]
 
+def convert_to_mcap_handler(bag_path):
+    bag_name = os.path.basename(bag_path)
+    mcap_name = bag_name.split(".")[0] + ".mcap"
+    cmd = f"mcap convert {bag_name} {mcap_name}"
+    rospy.loginfo("Converting bag to mcap at " + os.path.dirname(bag_path) + "/" + mcap_name)
+    subprocess.Popen(
+        cmd, stdin=subprocess.PIPE, shell=True, cwd=os.path.dirname(bag_path)
+    )
+
+
 class ROSBagRecorder:
     """
     Recorder for rosbag
@@ -85,7 +95,7 @@ class ROSBagRecorder:
             cmd, stdin=subprocess.PIPE, shell=True, cwd=self.path
         )
         # Prevent runaway bags
-        self._timeout = threading.Timer(30.0, self.stop).start()
+        self._timeout = threading.Timer(50.0, self.stop).start()
         return True
     
     @property
@@ -183,7 +193,7 @@ def main(path, config_file):
     # Store all bags for this run in a timestamped dir inside the configured path
     launch_timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     bags_path = os.path.join(path, launch_timestamp)
-    os.makedirs(bags_path)
+    os.makedirs(bags_path, exist_ok=True)
     rospy.loginfo(f"Started new logging directory at {bags_path}")
 
     i = 0
@@ -193,7 +203,7 @@ def main(path, config_file):
         i += 1
         if not os.path.isdir(path):
             path_to_use = os.path.join(BACKUP_RECORDING_PATH, launch_timestamp)
-        return ROSBagRecorder(f"{i}", path_to_use, TOPICS_TO_RECORD)
+        return ROSBagRecorder(f"{i}", path_to_use, TOPICS_TO_RECORD, finished_handler=convert_to_mcap_handler)
 
     trigger = StatemachineTrigger(make_recorder)
 
