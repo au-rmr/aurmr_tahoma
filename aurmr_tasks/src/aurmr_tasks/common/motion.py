@@ -345,7 +345,7 @@ class MoveIntoJointLimits(State):
             return "succeeded"
         else:
             return "aborted"
-        
+
 class MoveEndEffectorToPose(State):
     def __init__(self, robot, default_pose=None):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
@@ -612,7 +612,7 @@ class BlowOffGripper(State):
     def execute(self, ud):
         self.robot.blow_off_gripper(return_before_done=self.return_before_done)
         return "succeeded"
-    
+
 
 class CheckGripperItem(State):
     def __init__(self, robot):
@@ -877,20 +877,20 @@ class AddFullPodCollisionGeometryDropHide(State):
         HALF_POD_SIZE = POD_SIZE / 2
         WALL_WIDTH = 0.003
         SIDE_WALL_WIDTH = 0.033
-        
+
         self.robot.scene.add_box("front_frame", PoseStamped(header=Header(frame_id="pod_base_link"),
                                                     pose=Pose(position=Point(x=POD_SIZE/2, y=0., z=1.34),
                                                               orientation=I_QUAT)), (1.8, .05, 3.0))
-        
+
         self.robot.scene.add_box("left_side_frame", PoseStamped(header=Header(frame_id="base_link"),
                                                     pose=Pose(position=Point(x=0.25, y=1.00, z=1.34),
                                                               orientation=I_QUAT)), (2.00, .05, 3.0))
-        
+
         self.robot.scene.add_box("right_side_frame", PoseStamped(header=Header(frame_id="base_link"),
                                                     pose=Pose(position=Point(x=0.25, y=-1.00, z=1.34),
                                                               orientation=I_QUAT)), (2.00, .05, 3.0))
 
-        
+
         number_collision_box = 3
 
         start = rospy.get_time()
@@ -922,20 +922,20 @@ class AddFullPodCollisionGeometry(State):
         HALF_POD_SIZE = POD_SIZE / 2
         WALL_WIDTH = 0.003
         SIDE_WALL_WIDTH = 0.033
-        
+
         self.robot.scene.add_box("front_frame", PoseStamped(header=Header(frame_id="pod_base_link"),
                                                     pose=Pose(position=Point(x=POD_SIZE/2, y=0., z=1.34),
                                                               orientation=I_QUAT)), (1.8, .05, 3.0))
-        
+
         self.robot.scene.add_box("left_side_frame", PoseStamped(header=Header(frame_id="base_link"),
                                                     pose=Pose(position=Point(x=0.25, y=1.00, z=1.34),
                                                               orientation=I_QUAT)), (2.00, .05, 3.0))
-        
+
         self.robot.scene.add_box("right_side_frame", PoseStamped(header=Header(frame_id="base_link"),
                                                     pose=Pose(position=Point(x=0.25, y=-1.00, z=1.34),
                                                               orientation=I_QUAT)), (2.00, .05, 3.0))
 
-        
+
         number_collision_box = 3
         print("target bin id", ud['target_bin_id'])
         try:
@@ -956,11 +956,11 @@ class AddFullPodCollisionGeometry(State):
                     # self.robot.scene.add_box("horizontal_plane", PoseStamped(header=Header(frame_id="base_link"),
                     #                                             pose=Pose(position=Point(x=0.75, y=0.0, z=z_coordinate),
                     #                                                     orientation=I_QUAT)), (0.5, 1.5, 0.02))
-                    
+
                     # self.robot.scene.add_box("vertical_plane_1", PoseStamped(header=Header(frame_id="base_link"),
                     #                                             pose=Pose(position=Point(x=0.72, y=y_coordinate+0.18, z=1.2),
                     #                                                     orientation=I_QUAT)), (0.5, 0.01, 3.0))
-                    
+
                     # self.robot.scene.add_box("vertical_plane_2", PoseStamped(header=Header(frame_id="base_link"),
                     #                                             pose=Pose(position=Point(x=0.72, y=y_coordinate-0.18, z=1.2),
                     #                                                     orientation=I_QUAT)), (0.5, 0.01, 3.0))
