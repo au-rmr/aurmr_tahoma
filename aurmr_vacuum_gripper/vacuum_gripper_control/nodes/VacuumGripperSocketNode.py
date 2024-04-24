@@ -228,7 +228,6 @@ class VacuumGripper:
 
     def get_system_vacuum(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SYSTEM_VACUUM, attribute=5)
-        print("TESTING")
         try:
             # output = UINT.decode(msg.value[0:2])
             output = UINT.decode(msg.value[4:6])
