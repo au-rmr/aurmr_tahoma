@@ -40,3 +40,6 @@
 [submodule "third-party/trac_ik"]
 	path = third-party/trac_ik
 	url = https://bitbucket.org/traclabs/trac_ik.git
+[submodule "third-party/usb_cam"]
+	path = third-party/usb_cam
+	url = git@github.com:ros-drivers/usb_cam.git

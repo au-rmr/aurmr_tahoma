@@ -1,4 +1,4 @@
-# Create a symlink for a particular model of USB webcam which we
+# Create a symlink for a Logitech C270 USB webcam which we
 # mount to Tahoma's stand.
 #
 # INSTALLATION
@@ -30,4 +30,4 @@
 # http://www.linuxfromscratch.org/lfs/view/6.2/chapter07/symlinks.html
 #
 
-KERNEL=="video*", ATTRS{serial}=="5D27A600", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0825", MODE:="0777", SYMLINK+="tahoma-stand-camera"
+KERNEL=="video*", SUBSYSTEM=="video4linux", ATTRS{bInterfaceNumber}=="00", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="0825", MODE:="0777", SYMLINK+="tahoma-stand-camera"
