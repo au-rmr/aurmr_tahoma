@@ -37,3 +37,6 @@
 [submodule "third-party/Azure_Kinect_ROS_Driver"]
 	path = third-party/Azure_Kinect_ROS_Driver
 	url = git@github.com:au-rmr/Azure_Kinect_ROS_Driver.git
+[submodule "third-party/trac_ik"]
+	path = third-party/trac_ik
+	url = https://bitbucket.org/traclabs/trac_ik.git
