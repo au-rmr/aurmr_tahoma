@@ -347,9 +347,10 @@ class MoveIntoJointLimits(State):
             return "aborted"
         
 class MoveEndEffectorToPose(State):
-    def __init__(self, robot):
+    def __init__(self, robot, default_pose=None):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
+        self.default_pose = default_pose
         self.target_pose_visualizer = rospy.Publisher("end_effector_target", geometry_msgs.msg.PoseStamped,
                                                       queue_size=1, latch=True)
 
