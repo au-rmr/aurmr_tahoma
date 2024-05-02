@@ -193,7 +193,7 @@ def main():
                             {"succeeded": "PUBLISH_PICK_STATUS", "aborted": "PUBLISH_PICK_STATUS", "preempted": "PUBLISH_PICK_STATUS"})
             StateMachine.add("UPDATE_BIN_MASKS", perception.UpdateBin(),
                             {"succeeded": "USER_PROMPT_FOR_RETRY", "aborted": "USER_PROMPT_FOR_RETRY", "preempted": "USER_PROMPT_FOR_RETRY"})
-            StateMachine.add('USER_PROMPT_FOR_RETRY', UserPromptForRetry(robot.tf2_buffer, timeout_connection_secs=5.0), {'retry': 'GET_GRASP_POSE', 'continue': 'PUBLISH_PICK_STATUS'})
+            StateMachine.add('USER_PROMPT_FOR_RETRY', UserPromptForRetry(rospy.get_param("bin_bounds"), robot.tf2_buffer, timeout_connection_secs=5.0), {'retry': 'GET_GRASP_POSE', 'continue': 'PUBLISH_PICK_STATUS'})
             StateMachine.add_auto("PUBLISH_PICK_STATUS", PublishStatus(status_pub), ["succeeded"])
             StateMachine.add("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot, return_before_done=True), {"succeeded": "BLOW_OFF_GRIPPER", "aborted": "BLOW_OFF_GRIPPER", "preempted": "BLOW_OFF_GRIPPER"})
             StateMachine.add("BLOW_OFF_GRIPPER", motion.BlowOffGripper(robot, return_before_done=True), {"succeeded": "done", "aborted": "done", "preempted": "done"})
