@@ -9,6 +9,7 @@ from sensor_msgs.msg import Image
 from sensor_msgs.msg import Image, CameraInfo
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs import point_cloud2
+import pickle
 import yaml
 
 
@@ -18,7 +19,7 @@ POD_FACE_C = ['pod_bin_1h', 'pod_bin_2h', 'pod_bin_3h', 'pod_bin_4h',
               'pod_bin_1e', 'pod_bin_2e', 'pod_bin_3e', 'pod_bin_4e',]
 
 POD_FACE_C_FROM_MARKER_X = [0, 0]
-POD_FACE_C_FROM_MARKER_Y = {'h': 0.195, 'g': 0.085, 'f': 0.11, 'e': 0.165}
+POD_FACE_C_FROM_MARKER_Y = {'h': 0.195, 'g': 0.095, 'f': 0.115, 'e': 0.165}
 
 bin_DM_coords_base_link = {}
 bin_DM_coords = {}
@@ -110,6 +111,12 @@ if __name__ == '__main__':
         if(len(bin_DM_coords) == len(POD_FACE_C)):
             break
     print(bin_DM_coords)
+    #
+    with open('/tmp/calibration_xyz_coords_pod_base_link.pkl', 'wb') as f:
+        pickle.dump(bin_DM_coords_base_link, f)
+
+    with open('/tmp/calibration_xyz_coords_pod.pkl', 'wb') as f:
+        pickle.dump(bin_DM_coords, f)
 
     rgb_img = fetch_rgb_img()
     rgb_img_undistort = rgb_img
@@ -134,7 +141,10 @@ if __name__ == '__main__':
         if(bin[8] == '1'):
             kinect_3F[0] += 0.025
 
-        kinect_3F[1] -= 0.025
+        kinect_3F[1] -= 0.01
+
+        if(bin[9] == 'e'):
+            kinect_3F[1] += 0.01
 
         u1,v1 = convert_xyz_point_to_uv_point(kinect_3F, fx, cx, fy, cy)
         # u1,v1 = distorted_point((u1,v1), mtx, dist)
@@ -156,13 +166,34 @@ if __name__ == '__main__':
         # rgb_img = cv2.circle(rgb_img, (int(u2/4), int(v2/4)), 2, (255,0,0), 3)
         cv2.rectangle(rgb_img, (int(u2/4), int(v2/4)), (int(u1/4), int(v1/4)), (128, 0, 0), 2)
 
-        bin_DM_pixel_coords[bin[3:]] = [int(v2), int(v1), int(u1), int(u2)]
+        '''
+        Need to add other diagonal points which are upper left and bottom right points but the TF which is provided in the urdf is of the other diagonal
+        The coordinate system in the urdf of the pod is flipped with respect to the perception peipline used in segmetnation_net.py file
+        '''
+        bin_DM_pixel_coords[bin[3:]] = np.array([int(v2), int(v1), int(u1), int(u2)])
 
     print(bin_DM_pixel_coords)
 
+
     bin_DM_pixel_coords = {k[5:].upper(): v for k, v in bin_DM_pixel_coords.items()}
+    print(bin_DM_pixel_coords)
+    with open('/tmp/calibration_pixel_coords_pod.pkl', 'wb') as f:
+        pickle.dump(bin_DM_pixel_coords, f)
+
     with open('/tmp/bin_bounds.yaml', 'w') as f:
         yaml.dump({"bin_bounds": bin_DM_pixel_coords}, f)
 
     cv2.imshow("rgb", rgb_img)
     cv2.waitKey(0)
+
+    # pub = rospy.Publisher('/kinect/points2', PointCloud2, queue_size=10)
+    # while not rospy.is_shutdown():
+    #     depth_array = np.array(depth_img_undistort, dtype=np.float32)/1000.0
+    #     point_cloud = depth_to_point_cloud(depth_array, fx, cx, fy, cy)
+    #     point_cloud = point_cloud.reshape(-1, 3)
+    #     header = rospy.Header()
+    #     header.stamp = rospy.Time.now()
+    #     header.frame_id = 'rgb_camera_link'
+    #     pc_msg = point_cloud2.create_cloud_xyz32(header, point_cloud)
+    #     pub.publish(pc_msg)
+    #     rospy.sleep(1)
