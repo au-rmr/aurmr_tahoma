@@ -8,6 +8,8 @@ from geometry_msgs.msg import PoseStamped
 from moveit_commander.conversions import pose_to_list
 from smach import State, StateMachine
 
+from aurmr_perception.util import qv_mult, quat_msg_to_vec
+
 
 def apply_offset_to_pose(pose, offset, offset_frame=None, tf_buffer=None):
     if not isinstance(pose, PoseStamped):
@@ -24,7 +26,7 @@ def apply_offset_to_pose(pose, offset, offset_frame=None, tf_buffer=None):
     offset_pose = tf_buffer.transform(offset_pose, pose.header.frame_id, rospy.Duration(1))
     return offset_pose
 
-def add_offset(self, offset, grasp_pose):
+def add_offset(offset, grasp_pose):
     v = qv_mult(
         quat_msg_to_vec(grasp_pose.pose.orientation), (0, 0, offset))
     offset_pose = deepcopy(grasp_pose)
