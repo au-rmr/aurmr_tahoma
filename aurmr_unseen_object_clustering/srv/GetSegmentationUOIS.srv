@@ -1,4 +1,4 @@
-string bin_id
+sensor_msgs/Image[] image_sequence
 ---
 int16[] out_label
 float64[] embeddings
