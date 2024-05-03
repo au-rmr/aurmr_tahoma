@@ -100,7 +100,22 @@ class PodPerceptionROS:
             "P-6-H835J241": "4G",
             "P-8-H758H653": "4F",
             "P-8-H588H173": "4E",
-
+            "P-8-H588H494" : "1E",
+            "P-8-H588H495" : "2E",
+            "P-8-H588H496" : "3E",
+            "P-8-H588H497" : "4E",
+            "P-8-H758H974" : "1F",
+            "P-8-H758H975" : "2F",
+            "P-8-H758H976" : "3F",
+            "P-8-H758H977" : "4F",
+            "P-8-H888H454" : "1G",
+            "P-8-H888H455" : "2G",
+            "P-8-H888H456" : "3G",
+            "P-8-H888H457" : "4G",
+            "P-9-H051H354" : "1H",
+            "P-9-H051H355" : "2H",
+            "P-9-H051H356" : "3H",
+            "P-9-H051H357" : "4H",
             "P-9-M223R307": "1D",
             "P-9-M223R831": "1E",
             "P-9-M503R832": "2E",
@@ -129,7 +144,7 @@ class PodPerceptionROS:
 
             rgb_image = camera_data.rgb_image[:,:,::-1]
             depth_image = camera_data.depth_image
-            points_msg = None
+            points_msg = ros_numpy.point_cloud2.array_to_pointcloud2(camera_data.np_xyz_points)
             camera_info = dataset.camera_info
 
 
@@ -390,7 +405,8 @@ class DiffPodModel:
         return points
 
     def mask_pointcloud(self, points, mask):
-        points = ros_numpy.numpify(points)
+        # Points may or may not be (points x 1), so we flatten to be sure
+        points = ros_numpy.numpify(points).flatten()
         np.save("/tmp/points1.npy", points)
         points_seg = points[mask.flatten() > 0]
         points_seg = np.vstack((points_seg['x'],points_seg['y'],points_seg['z']))
