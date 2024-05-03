@@ -1,5 +1,6 @@
 string bin_id
 string object_id
 string object_asin
+string object_name
 ---
 bool success

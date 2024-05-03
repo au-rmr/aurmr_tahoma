@@ -89,6 +89,7 @@ class PickStowQueue:
             r.object_id = requests.object_ids[i]
             r.bin_id = requests.bin_ids[i]
             r.object_asin = requests.object_asins[i]
+            r.object_name = requests.object_names[i]
             self.task_queue.put_nowait(r)
         # We don't want to leave the service call hanging for multiple minutes,
         # so we don't report success with multi pick
