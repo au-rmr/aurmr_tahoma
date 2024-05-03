@@ -22,9 +22,9 @@ from aurmr_unseen_object_clustering.srv import GetSegmentationUOIS
 import rospy
 import imutils
 import pickle
-
+import ros_numpy
 from aurmr_setup.utils.workspace_utils import get_active_workspace_path
-
+import sensor_msgs
 
 rectangle = None
 
@@ -256,7 +256,23 @@ class SegNet:
         rospy.wait_for_service('segmentation_with_embeddings')
         try:
             uois_client = rospy.ServiceProxy('segmentation_with_embeddings', GetSegmentationUOIS)
-            req = uois_client(bin_id)
+
+            path = f"{workspace_path}/src/uois_service_multi_demo/dataset/"
+            sequence = path+str(bin_id)+"/"
+            file_list = os.listdir(sequence)
+            image_list = [f for f in file_list if f.endswith('.npy')]
+            image_list.sort()
+            frame_names = [os.path.join(sequence, f) for f in image_list]
+            sequence_imgs = []
+            for frame_idx, frame_path in enumerate(frame_names):
+                img = np.load(frame_path)
+                # cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
+                # cv2.imshow(WINDOW_NAME, img)
+                # cv2.waitKey(0)
+                # img = read_image(frame_path, format="RGB")
+                sequence_imgs.append(ros_numpy.msgify(sensor_msgs.msg.Image, img, 'rgb8'))
+
+            req = uois_client(sequence_imgs)
             return req.out_label, req.embeddings
         except rospy.ServiceException as e:
             print("Service call failed: %s"%e)
@@ -400,16 +416,11 @@ class SegNet:
             mask_crop_f[mask_crop == index] = i
 
         mask_crop = mask_crop_f
-        
+
         mask_crop = cv2.resize(mask_crop, (bin.bounds[3] - bin.bounds[2], bin.bounds[1] - bin.bounds[0]), interpolation=cv2.INTER_AREA)
 
-        if self.visualize:
-            try:
-                cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/soofiyan_mask.png", mask_crop)
-            except:
-                pass
         return mask_crop, embed
-  
+
     # Returns a best-guess matching between masks in frame 0 and masks in frame 1
     #       Returns a list, where the j - 1th element stores the recommended frame 1 ID of the mask with frame 0 ID j
     def match_masks_using_embeddings(self, im1, im2, mask1, mask2, embed1, embed2):
