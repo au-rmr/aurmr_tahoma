@@ -844,7 +844,7 @@ class Tahoma:
                     rospy.loginfo("Stopping movement due to force feedback")
                     early_stop = True
                     break
-                elif use_gripper and self.object_detected:
+                elif use_gripper and self.check_gripper_item():
                     self.move_group.stop()
                     rospy.loginfo("Stopping movement due to object detection")
                     early_stop = True
