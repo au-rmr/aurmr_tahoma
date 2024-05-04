@@ -237,10 +237,10 @@ def main():
 
         StateMachine.add_auto("CLEAR_SCENE", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
         StateMachine.add_auto("SETUP_COLLISION_SCENE", motion.AddFullPodCollisionGeometryDropHide(robot), ["succeeded", "aborted"])
-        StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "drop_hide"),  ["succeeded", "aborted"])
+        StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "drop_hide"),  ["succeeded"], {"aborted": "done"})
         StateMachine.add_auto("CHECK_GRIPPER_CLOSE", motion.CloseGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
         StateMachine.add_auto("CHECK_GRIPPER_OPEN", motion.OpenGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
-        StateMachine.add_auto("CAPTURE_EMPTY_POD", perception.CaptureEmptyPod(),  ["succeeded"])
+        StateMachine.add_auto("CAPTURE_EMPTY_POD", perception.CaptureEmptyPod(),  ["succeeded"], {"aborted": "done"})
         StateMachine.add("WAIT_FOR_COMMAND", WaitForPickStow(task_queue), {"stow": "STOW", "pick":"PICK"})
         StateMachine.add("PICK", pick_sm, {"done": "REPORT_OUTCOME"})
         StateMachine.add("STOW", stow_sm, {"done": "REPORT_OUTCOME"})
