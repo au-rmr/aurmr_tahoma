@@ -1,5 +1,6 @@
 import os
 from operator import truediv
+import shutil
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
@@ -212,6 +213,7 @@ class SegNet:
         init_xyz = self.compute_xyz(init_depth, init_info)
         for bin in bin_names:
             self.bins[bin] = Bin(bin, bounds=config['bounds'][bin], init_depth=init_xyz)
+
 
         self.H, self.W = None, None
 
