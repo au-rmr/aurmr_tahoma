@@ -165,6 +165,10 @@ if __name__ == '__main__':
 
     with open('/tmp/bin_bounds.yaml', 'w') as f:
         yaml.dump({"bin_bounds": bin_DM_pixel_coords}, f)
+        
+    import pickle
+    with open('/tmp/calibration_pixel_coords_pod.pkl', 'wb') as f:
+        pickle.dump(bin_DM_pixel_coords, f)
 
     # cv2.imshow("rgb", rgb_img)
     # cv2.waitKey(0)
