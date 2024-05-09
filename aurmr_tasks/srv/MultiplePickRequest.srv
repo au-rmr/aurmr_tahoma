@@ -3,4 +3,4 @@ string[] object_ids
 string[] object_asins
 string[] object_names
 ---
-bool success
+uint8[] outcomes
