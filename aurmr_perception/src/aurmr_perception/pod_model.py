@@ -134,7 +134,12 @@ class PodPerceptionROS:
         updated_config["bounds"] = dataset.metadata["bin_bounds"]
         first_depth = first_depth.astype(np.float32)
 
+        from aurmr_setup.utils.workspace_utils import get_active_workspace_path
 
+        workspace_path = get_active_workspace_path()
+        import shutil
+        rospy.loginfo("Removing directory of cropped bin images...")
+        shutil.rmtree(f"{workspace_path}/src/uois_service_multi_demo/dataset/", ignore_errors=True)
         self.net = SegNet(config=updated_config, init_depth=first_depth, init_info=K)
         self.model.net = self.net
 
