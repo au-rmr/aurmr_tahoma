@@ -3,4 +3,10 @@ string object_id
 string object_asin
 string object_name
 ---
-bool success
+uint8 outcome
+uint8 OUTCOME_SUCCESS=0
+uint8 OUTCOME_UNKNOWN_FAILURE=1
+uint8 OUTCOME_PERCEPTION_FAILURE=2
+uint8 OUTCOME_PLANNING_FAILURE=3
+uint8 OUTCOME_MANIPULATION_FAILURE=4
+uint8 OUTCOME_PREEMPTED=128
