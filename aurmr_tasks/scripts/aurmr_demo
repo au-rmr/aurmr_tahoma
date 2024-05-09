@@ -16,7 +16,7 @@ from tf_conversions import transformations
 import aurmr_tasks.common.control_flow as cf
 from aurmr_tasks.pod import load_sm
 
-from aurmr_tasks.srv import StowRequest, PickRequest, StowRequestRequest, PickRequestRequest, MultiplePickRequest, MultiplePickRequestRequest
+from aurmr_tasks.srv import StowRequest, PickRequest, StowRequestRequest, PickRequestRequest, PickRequestResponse, MultiplePickRequest, MultiplePickRequestRequest
 from aurmr_tasks.msg import PickStatus
 from aurmr_perception.util import vec_to_quat_msg, I_QUAT
 from aurmr_tasks.common.states import Wait
@@ -53,21 +53,13 @@ class PublishStatus(State):
         rospy.sleep(self.wait_time)
         return "succeeded"
 
-class RecordTime(State):
-    def __init__(self):
-        State.__init__(self, outcomes=['succeeded'], output_keys=["start_time"])
-
-    def execute(self, userdata):
-        now = rospy.get_rostime()
-        userdata["start_time"] = now.secs + now.nsecs*1E-9
-        return "succeeded"
 
 class PickStowQueue:
     def __init__(self) -> None:
         self.stow_service = rospy.Service('~stow', StowRequest, self.stow_cb)
         self.pick_service = rospy.Service('~pick', PickRequest, self.pick_cb)
         self.multi_pick_service = rospy.Service('~multiple_pick', MultiplePickRequest, self.multiple_pick_cb)
-        self.status_pub = rospy.Publisher("/demo_status", PickStatus, queue_size=5, latch=True)
+        self.pick_status_pub = rospy.Publisher("~pick_status", PickStatus, queue_size=1, latch=True)
         self.task_queue = Queue()
         self.result_queue = Queue()
 
@@ -80,7 +72,7 @@ class PickStowQueue:
                 result = self.result_queue.get(False)
             except Empty:
                 rospy.sleep(.1)
-        return {"success": result}
+        return {"outcome": result}
 
     def multiple_pick_cb(self, requests: MultiplePickRequestRequest):
         for i in range(len(requests.bin_ids)):
@@ -91,11 +83,11 @@ class PickStowQueue:
             r.object_name = requests.object_names[i]
             self.task_queue.put_nowait(r)
         # We don't want to leave the service call hanging for multiple minutes,
-        # so we don't report success with multi pick
+        # so we don't report outcomes with multi pick
         return True
 
     def pick_cb(self, request: PickRequestRequest):
-        rospy.loginfo("PICK REQUEST: " + str(request))
+        self.pick_status_pub.publish(object_id=request.object_id, bin_id=request.bin_id, object_asin=request.object_asin, object_name=request.object_name)
         self.task_queue.put_nowait(request)
         result = None
         while result is None and not rospy.is_shutdown():
@@ -103,7 +95,7 @@ class PickStowQueue:
                 result = self.result_queue.get(False)
             except Empty:
                 rospy.sleep(.1)
-        return {"success": result}
+        return {"outcome": result}
 
 
 class WaitForPickStow(State):
@@ -139,9 +131,7 @@ class ReportPickStowOutcome(State):
         self.task_queue = task_queue
 
     def execute(self, userdata):
-        # TODO: This report should include the request info
-        result = userdata["status"] == True
-        self.task_queue.result_queue.put_nowait(result)
+        self.task_queue.result_queue.put_nowait(userdata["status"])
         return "succeeded"
 
 
@@ -161,17 +151,21 @@ def main():
     with demo_sm:
 
         with pick_sm:
-            StateMachine.add_auto("RECORD_TIME", RecordTime(), ["succeeded"])
+            # These are pre-terminating states that note what went wrong in the userdata. This avoids
+            # encoding the same information in an explosion of named state transitions
+
             cf.splat_auto("SPLAT_PICK", "request", ["target_bin_id", "target_object_id", "target_object_asin"])
             # StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX_PRE_GRASP", planning_scene.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=.015),
                             {"succeeded": "REMAP_PRE_GRASP_POSE", "aborted":"NOTE_PASS", "preempted":"NOTE_PASS"})
-            cf.inject_userdata("NOTE_PASS", "done", "status", "passed")
+            cf.inject_userdata("NOTE_PASS", "done", "status", PickRequestResponse.OUTCOME_PERCEPTION_FAILURE)
+
             StateMachine.add_auto("REMAP_PRE_GRASP_POSE", cf.input_to_output("pre_grasp_pose", "pose"), ["succeeded"])
             StateMachine.add_auto("CLEAR_SCENE_PREMOVE", planning_scene.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_PREMOVE", planning_scene.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
 
-            StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPoseManipulable(robot), ["succeeded", "aborted", "preempted"])
+            StateMachine.add("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPoseManipulable(robot), {"succeeded": "CLEAR_SCENE_PREGRASP", "preempted": "NOTE_PREEMPTION", "aborted": "NOTE_PLANNING_FAILURE"})
+            cf.inject_userdata("NOTE_PLANNING_FAILURE", "done", "status", PickRequestResponse.OUTCOME_PLANNING_FAILURE)
             StateMachine.add_auto("CLEAR_SCENE_PREGRASP", planning_scene.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_PREGRASP", planning_scene.AddPartialPodCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("MOVE_TO_GRASP", motion.grasp_move_to_offset(robot, (0, 0, 0.5)), ["succeeded", "aborted", "preempted"])
@@ -188,6 +182,9 @@ def main():
             StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "drop_hide"), ["succeeded", "aborted"])
             StateMachine.add("CHECK_FOR_GRIPPER_ITEM", motion.CheckGripperItem(robot),
                             {"item_detected": "POST_PICK_SUCCESS_CLEANUP", "no_item_detected": "RETRY"})
+            cf.inject_userdata("NOTE_SUCCESS", "POST_PICK_SUCCESS_CLEANUP", "status", PickRequestResponse.OUTCOME_SUCCESS)
+            cf.inject_userdata("NOTE_MANIPULATION_FAILURE_AND_RETRY", "RETRY", "status", PickRequestResponse.OUTCOME_MANIPULATION_FAILURE)
+            cf.inject_userdata("NOTE_PREEMPTION", "done", "status", PickRequestResponse.OUTCOME_PREEMPTED)
 
 
             with pick_success_cleanup_sm:
@@ -224,10 +221,8 @@ def main():
 
         StateMachine.add_auto("CLEAR_SCENE", planning_scene.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
         StateMachine.add_auto("SETUP_COLLISION_SCENE", planning_scene.AddFullPodCollisionGeometryDropHide(robot), ["succeeded", "aborted"])
-        StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "drop_hide"),  ["succeeded", "aborted"])
-        StateMachine.add_auto("CHECK_GRIPPER_CLOSE", motion.CloseGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
-        StateMachine.add_auto("CHECK_GRIPPER_OPEN", motion.OpenGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
-        StateMachine.add_auto("CAPTURE_EMPTY_POD", perception.CaptureEmptyPod(),  ["succeeded"])
+        StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "drop_hide"),  ["succeeded"], {"aborted": "done"})
+        StateMachine.add_auto("CAPTURE_EMPTY_POD", perception.CaptureEmptyPod(),  ["succeeded"], {"aborted": "done"})
         StateMachine.add("WAIT_FOR_COMMAND", WaitForPickStow(task_queue), {"stow": "STOW", "pick":"PICK"})
         StateMachine.add("PICK", pick_sm, {"done": "REPORT_OUTCOME"})
         StateMachine.add("STOW", stow_sm, {"done": "REPORT_OUTCOME"})
