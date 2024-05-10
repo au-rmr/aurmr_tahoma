@@ -10,9 +10,7 @@ from sensor_msgs.msg import Image, CameraInfo
 
 import pickle
 import yaml
-
-columns = [1, 2, 3, 4]
-rows = ['h', 'g', 'f', 'e']
+import argparse
 
 
 bin_DM_coords_base_link = {}
@@ -84,10 +82,21 @@ def distorted_point(pt, mtx, dist):
 
 
 if __name__ == '__main__':
-    rospy.init_node('bin_bound_maker_pod_1')
+    rospy.init_node('bin_bound_calculation')
 
     tf_buffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tf_buffer)
+    args = argparse.ArgumentParser()
+    args.add_argument("pod", choices=[1,2], type=int)
+    args = args.parse_args()
+
+    if args.pod == 1:
+        columns = [1, 2, 3, 4]
+        rows = ['h', 'g', 'f', 'e']
+    else:
+        columns = [1, 2, 3]
+        rows = ['e', 'd', 'c']
+
 
     while not rospy.is_shutdown():
         for row in rows:
@@ -124,7 +133,7 @@ if __name__ == '__main__':
     fx, cx, fy, cy, dist_c = fetch_camera_info()
     for row in rows:
         for col in columns:
-            bin_id = f"{str(row).upper()}{col}"
+            bin_id = f"{col}{str(row).upper()}"
             bl, tl, br = bin_DM_coords[(row, col)]
 
             # Crop out steel frame
@@ -151,7 +160,7 @@ if __name__ == '__main__':
             Need to add other diagonal points which are upper left and bottom right points but the TF which is provided in the urdf is of the other diagonal
             The coordinate system in the urdf of the pod is flipped with respect to the perception peipline used in segmetnation_net.py file
             '''
-            bin_DM_pixel_coords[bin_id] = np.array([int(v2), int(v1), int(u1), int(u2)])
+            bin_DM_pixel_coords[bin_id] = np.array([int(v2), int(v1), int(u2), int(u1)])
 
     print(bin_DM_pixel_coords)
 
@@ -163,4 +172,12 @@ if __name__ == '__main__':
         yaml.dump({"bin_bounds": {k: v.tolist() for k, v in bin_DM_pixel_coords.items()}}, f)
 
     cv2.imshow("rgb", rgb_img)
-    cv2.waitKey(0)
+
+    while True:
+        k = cv2.waitKey(100)
+        if k > 0:
+            cv2.destroyAllWindows()
+            break
+        if cv2.getWindowProperty('rgb',cv2.WND_PROP_VISIBLE) < 1:
+            break
+    cv2.destroyAllWindows()

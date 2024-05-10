@@ -31,7 +31,7 @@ generate_messages(
 catkin_package(
 )
 
-catkin_install_python(PROGRAMS nodes/aurmr_perception nodes/grasp_detection_server
+catkin_install_python(PROGRAMS nodes/aurmr_perception nodes/grasp_detection_server scripts/bin_bound_calculation
         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 include_directories(
