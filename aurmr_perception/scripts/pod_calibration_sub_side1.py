@@ -7,18 +7,13 @@ import cv2
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import Image, CameraInfo
-from sensor_msgs.msg import PointCloud2
-from sensor_msgs import point_cloud2
+
+import pickle
 import yaml
 
+columns = [1, 2, 3, 4]
+rows = ['h', 'g', 'f', 'e']
 
-POD_FACE_C = ['pod_bin_1h', 'pod_bin_2h', 'pod_bin_3h', 'pod_bin_4h',
-              'pod_bin_1g', 'pod_bin_2g', 'pod_bin_3g', 'pod_bin_4g',
-              'pod_bin_1f', 'pod_bin_2f', 'pod_bin_3f', 'pod_bin_4f',
-              'pod_bin_1e', 'pod_bin_2e', 'pod_bin_3e', 'pod_bin_4e',]
-
-POD_FACE_C_FROM_MARKER_X = [0, 0]
-POD_FACE_C_FROM_MARKER_Y = {'h': 0.195, 'g': 0.085, 'f': 0.11, 'e': 0.165}
 
 bin_DM_coords_base_link = {}
 bin_DM_coords = {}
@@ -26,6 +21,9 @@ bin_DM_pixel_coords = {}
 
 bridge = CvBridge()
 
+
+def transform_to_array(trans):
+    return np.array([trans.transform.translation.x, trans.transform.translation.y, trans.transform.translation.z])
 
 def fetch_rgb_img(camera='/camera_lower_right/rgb'):
     msg = rospy.wait_for_message(camera + "/image_raw", Image, timeout=None)
@@ -84,30 +82,30 @@ def distorted_point(pt, mtx, dist):
     y_d = y_d * mtx[1, 1] + mtx[1, 2]
     return x_d, y_d
 
-if __name__ == '__main__':
-    rospy.init_node('DM_tf_listener')
 
-    tfBuffer = tf2_ros.Buffer()
-    listener = tf2_ros.TransformListener(tfBuffer)
+if __name__ == '__main__':
+    rospy.init_node('bin_bound_maker_pod_1')
+
+    tf_buffer = tf2_ros.Buffer()
+    listener = tf2_ros.TransformListener(tf_buffer)
 
     while not rospy.is_shutdown():
-        for bin in POD_FACE_C:
-            try:
-                trans_top_left_base_link = tfBuffer.lookup_transform('base_link', bin, rospy.Time())
-                trans_right_bottom_base_link = tfBuffer.lookup_transform('base_link', bin, rospy.Time())
-                trans_top_left_base_link = np.array([trans_top_left_base_link.transform.translation.x, trans_top_left_base_link.transform.translation.y, trans_top_left_base_link.transform.translation.z])
-                trans_right_bottom_base_link = np.array([trans_right_bottom_base_link.transform.translation.x, trans_right_bottom_base_link.transform.translation.y, trans_right_bottom_base_link.transform.translation.z])
-                bin_DM_coords_base_link[bin] = trans_top_left_base_link
+        for row in rows:
+            for col in columns:
+                try:
 
-                trans_top_left = tfBuffer.lookup_transform('rgb_camera_link', bin, rospy.Time())
-                trans_right_bottom = tfBuffer.lookup_transform('rgb_camera_link', bin, rospy.Time())
-                trans_top_left = np.array([trans_top_left.transform.translation.x, trans_top_left.transform.translation.y, trans_top_left.transform.translation.z])
-                trans_right_bottom = np.array([trans_right_bottom.transform.translation.x, trans_right_bottom.transform.translation.y, trans_right_bottom.transform.translation.z])
-                bin_DM_coords[bin] = trans_top_left
-                # break
-            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-                continue
-        if(len(bin_DM_coords) == len(POD_FACE_C)):
+                    trans_bottom_left = tf_buffer.lookup_transform('rgb_camera_link', f"pod_bin_{col}{row}_left", rospy.Time())
+                    if col < 4:
+                        trans_bottom_right = tf_buffer.lookup_transform('rgb_camera_link', f"pod_bin_{col + 1}{row}_left", rospy.Time())
+                    else:
+                        trans_bottom_right = tf_buffer.lookup_transform('rgb_camera_link', f"pod_bin_{col}{row}_right", rospy.Time())
+
+                    trans_top_left = tf_buffer.lookup_transform('rgb_camera_link', f"pod_bin_{col}{row}_top", rospy.Time())
+                    bin_DM_coords[(row, col)] = (transform_to_array(trans_bottom_left), transform_to_array(trans_top_left), transform_to_array(trans_bottom_right))
+
+                except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+                    continue
+        if(len(bin_DM_coords) == len(rows) * len(columns)):
             break
     print(bin_DM_coords)
 
@@ -119,50 +117,50 @@ if __name__ == '__main__':
     depth_img_undistort = depth_img
     # print(depth_img_undistort.shape)
 
-    trans_kinect_base_ink = tfBuffer.lookup_transform('base_link', 'depth_camera_link', rospy.Time())
+    trans_kinect_base_ink = tf_buffer.lookup_transform('base_link', 'depth_camera_link', rospy.Time())
     # trans_kinect_base_ink = np.array([trans_kinect_base_ink.transform.translation.x, trans_kinect_base_ink.transform.translation.y, trans_kinect_base_ink.transform.translation.z])
 
     rgb_img = cv2.resize(rgb_img_undistort, (int(rgb_img_undistort.shape[1]/4), int(rgb_img_undistort.shape[0]/4)), interpolation = cv2.INTER_AREA)
+    fx, cx, fy, cy, dist_c = fetch_camera_info()
+    for row in rows:
+        for col in columns:
+            bin_id = f"{str(row).upper()}{col}"
+            bl, tl, br = bin_DM_coords[(row, col)]
 
-    for bin in POD_FACE_C:
-        bin_id = bin[-1]
-        kinect_3F = bin_DM_coords[bin]
+            # Crop out steel frame
+            if col == 1:
+                bl[0] += 0.03
+                tl[0] += 0.03
+            elif col == 4:
+                br[0] -= 0.03
 
-        fx, cx, fy, cy, dist_c = fetch_camera_info()
-        u,v = convert_xyz_point_to_uv_point(kinect_3F, fx, cx, fy, cy)
+            # Crop out flap
+            bl[1] -= 0.02
+            br[1] -= 0.02
 
-        if(bin[8] == '1'):
-            kinect_3F[0] += 0.025
+            u1,v1 = convert_xyz_point_to_uv_point(br, fx, cx, fy, cy)
+            # u1,v1 = distorted_point((u1,v1), mtx, dist)
+            # rgb_img = cv2.circle(rgb_img, (int(u1/4), int(v1/4)), 2, (255,255,0), 3)
 
-        kinect_3F[1] -= 0.025
+            u2,v2 = convert_xyz_point_to_uv_point(tl, fx, cx, fy, cy)
+            # u2,v2 = distorted_point((u2,v2), mtx, dist)
+            # rgb_img = cv2.circle(rgb_img, (int(u2/4), int(v2/4)), 2, (255,0,0), 3)
+            cv2.rectangle(rgb_img, (int(u2/4), int(v2/4)), (int(u1/4), int(v1/4)), (128, 0, 0), 2)
 
-        u1,v1 = convert_xyz_point_to_uv_point(kinect_3F, fx, cx, fy, cy)
-        # u1,v1 = distorted_point((u1,v1), mtx, dist)
-        # rgb_img = cv2.circle(rgb_img, (int(u1/4), int(v1/4)), 2, (255,255,0), 3)
-
-        if(bin[8] == '1'):
-            kinect_3F[1] -= POD_FACE_C_FROM_MARKER_Y[bin_id]
-            kinect_3F[0] += 0.23
-            kinect_3F[0] -= 0.025
-        else:
-            kinect_3F[1] -= POD_FACE_C_FROM_MARKER_Y[bin_id]
-            kinect_3F[0] += 0.23
-
-        if(bin[8] == '4'):
-            kinect_3F[0] -= 0.025
-
-        u2,v2 = convert_xyz_point_to_uv_point(kinect_3F, fx, cx, fy, cy)
-        # u2,v2 = distorted_point((u2,v2), mtx, dist)
-        # rgb_img = cv2.circle(rgb_img, (int(u2/4), int(v2/4)), 2, (255,0,0), 3)
-        cv2.rectangle(rgb_img, (int(u2/4), int(v2/4)), (int(u1/4), int(v1/4)), (128, 0, 0), 2)
-
-        bin_DM_pixel_coords[bin[3:]] = [int(v2), int(v1), int(u1), int(u2)]
+            '''
+            Need to add other diagonal points which are upper left and bottom right points but the TF which is provided in the urdf is of the other diagonal
+            The coordinate system in the urdf of the pod is flipped with respect to the perception peipline used in segmetnation_net.py file
+            '''
+            bin_DM_pixel_coords[bin_id] = np.array([int(v2), int(v1), int(u1), int(u2)])
 
     print(bin_DM_pixel_coords)
 
-    bin_DM_pixel_coords = {k[5:].upper(): v for k, v in bin_DM_pixel_coords.items()}
+
+    with open('/tmp/calibration_pixel_coords_pod.pkl', 'wb') as f:
+        pickle.dump(bin_DM_pixel_coords, f)
+
     with open('/tmp/bin_bounds.yaml', 'w') as f:
-        yaml.dump({"bin_bounds": bin_DM_pixel_coords}, f)
+        yaml.dump({"bin_bounds": {k: v.tolist() for k, v in bin_DM_pixel_coords.items()}}, f)
 
     cv2.imshow("rgb", rgb_img)
     cv2.waitKey(0)
