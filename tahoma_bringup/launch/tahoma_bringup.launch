@@ -1,8 +1,8 @@
 <?xml version="1.0" ?>
 <launch>
     <arg name="gui" default="True" />
-    <arg name="pod_id" default="2" />
-    <arg name="pod_face" default="2A" />
+    <arg name="pod_id" default="1" />
+    <arg name="pod_face" default="1C" />
     
     <!-- <include file="$(find tahoma_bringup)/launch/calibration.launch"/> -->
 
@@ -64,7 +64,7 @@
     <include file="$(find robotiq_2f_gripper_action_server)/launch/robotiq_2f_gripper_socket_action_server.launch">
       <arg name="gripper_type" default="$(arg gripper_type)" />
     </include> -->
-    
+  
     <arg name="gripper_type" default="vacuum" />
     <include file="$(find vacuum_gripper_control)/launch/vacuum_gripper_socket.launch">
       <arg name="gripper_type" default="$(arg gripper_type)" />
@@ -72,6 +72,13 @@
     <include file="$(find vacuum_gripper_action_server)/launch/vacuum_gripper_socket_action_server.launch">
       <arg name="gripper_type" default="$(arg gripper_type)" />
     </include>
+
+    <!-- <include file="$(find vacuum_gripper_control)/launch/vacuum_gripper_socket.launch">
+      <arg name="gripper_type" default="$(arg gripper_type)" />
+    </include>
+    <include file="$(find vacuum_gripper_action_server)/launch/vacuum_gripper_socket_action_server.launch">
+      <arg name="gripper_type" default="$(arg gripper_type)" />
+    </include> -->
 
     <node pkg="nodelet" type="nodelet" name="nodelet_manager" args="manager" />
 
@@ -88,5 +95,4 @@
      <arg name="port" value="9090"/>
   </include>
 
-    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tahoma_description)/config/view_model.rviz"/>
 </launch>

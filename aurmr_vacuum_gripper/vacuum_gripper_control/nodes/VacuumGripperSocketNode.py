@@ -170,6 +170,16 @@ class VacuumGripper:
         except AttributeError:
             print('No such attribute found. You may need to open a connection first.') 
 
+    def blow_off(self, number):
+        try:
+            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000000] + [0b00000000] + [0b00000010] + [0b00000010] + [0b00000000]*12))
+            # self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000010] + [0b00000000]*15))
+        except exceptions.CommError:
+            if not self.open_connection():
+                raise exceptions.CommError
+        except AttributeError:
+            print('No such attribute found. You may need to open a connection first.') 
+
     def get_device_status(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=DEVICE_STATUS, attribute=5)
         return USINT.decode(msg.value) 
@@ -261,6 +271,30 @@ class VacuumGripper:
         self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5,request_data = bytearray([0b11111010, 0b00]*16))
 
     
+    def get_SetPointH1(self):
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5) 
+        # if set at default, this returns --> /xee/x02 ..repeated 16 times to fill 32 bytes
+        #/x02ee = 750 which is the H1 default value
+        #0b11101110 = 0xee and 0b00000010 = 0x02
+        #value[1]<<8 | value[0]
+        #1000000000 | 11101110 = 1011101110
+        setPointH1 = (msg.value[1] << 8) | msg.value[0]
+        return setPointH1
+    def get_Hysteresis_h1(self):
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5)
+        hysteresis_h1 = (msg.value[1] << 8) | msg.value[0]
+        return hysteresis_h1
+    
+    def set_SetPointH1(self, value):
+        # value = 750
+        # in hex: 0x02ee
+        # in binary: 1011101110
+        # hex(value >> 8) --> 1011101110 >> 8 --> 0000000010 --> 0x02
+        # hex(value & 0xFF) --> 1011101110 & 11111111 --> 11101110 --> 0xee
+        new = bytearray([hex(value & 0xFF), hex(value >> 8)] * 16)
+        msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5, request_data = new)
+
+    
     # CHECK: Does this set the vacuum range and correctly? 
     # def set_vacuum_range(self, pressure):
     #     if (pressure > 998):
@@ -321,7 +355,10 @@ def mainLoop(ur_address, gripper_type):
   while not rospy.is_shutdown():
     # Get and publish the Gripper status
     # gripper.set_SetPointH1(850)
-    status = gripper.getStatus()
+    try:
+        status = gripper.getStatus()
+    except exceptions.CommError:
+        rospy.logerr("Communication error while getting status. Ignoring and looping")
     pub.publish(status)
     # Wait a little
     rospy.sleep(0.1)
