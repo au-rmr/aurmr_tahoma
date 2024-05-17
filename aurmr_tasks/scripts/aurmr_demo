@@ -32,27 +32,6 @@ quat_obj = Quaternion(x=0, y=0.707, z=0, w=0.707)
 # quat_obj = Quaternion(0, 0.7071068, 0, 0.7071068)
 TOTE_APPROACH_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=-0.05, y=-0.45,z=1.05), orientation=align_to_bin_quat ))
 
-# TOTE_APPROACH_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=.108, y=-.514,z=0.884), orientation=align_to_bin_quat))
-
-class PublishStatus(State):
-    def __init__(self, task_queue, wait_time=0):
-        State.__init__(self, outcomes=['succeeded'], input_keys=["status", "start_time", "target_object_id"])
-        self.task_queue = task_queue
-        self.wait_time = wait_time
-
-    def execute(self, userdata):
-        now = rospy.get_rostime()
-        now = now.secs + now.nsecs*1E-9
-        time_delta = now - userdata["start_time"]
-
-        msg = PickStatus()
-        msg.status = userdata["status"]
-        msg.object_id = userdata["target_object_id"]
-        msg.time = time_delta
-        self.task_queue.status_pub.publish(msg)
-        rospy.sleep(self.wait_time)
-        return "succeeded"
-
 
 class PickStowQueue:
     def __init__(self) -> None:
@@ -95,6 +74,8 @@ class PickStowQueue:
                 result = self.result_queue.get(False)
             except Empty:
                 rospy.sleep(.1)
+        if result is None:
+            result = PickRequestResponse.OUTCOME_UNKNOWN_FAILURE
         return {"outcome": result}
 
 
@@ -142,8 +123,8 @@ def main():
     robot = Tahoma(simulation)
     demo_sm = StateMachine(["done"], input_keys=[], output_keys=[])
     pick_sm = StateMachine(["done"], input_keys=["request"], output_keys=["status"])
-    pick_success_cleanup_sm = StateMachine(["succeeded"], input_keys=['target_bin_id', 'target_object_id', 'target_object_asin', "start_time"], output_keys=[])
-    pick_retry_sm = StateMachine(["retry", "continue"], input_keys=['target_bin_id', 'target_object_id', 'target_object_asin', 'grasp_pose', "start_time"], output_keys=['grasp_pose'])
+    pick_success_cleanup_sm = StateMachine(["succeeded"], input_keys=['target_bin_id', 'target_object_id', 'target_object_asin'], output_keys=[])
+    pick_retry_sm = StateMachine(["retry", "continue"], input_keys=['target_bin_id', 'target_object_id', 'target_object_asin', 'grasp_pose'], output_keys=['grasp_pose'])
 
     stow_sm = StateMachine(["done"], input_keys=["request"], output_keys=["status"])
     task_queue = PickStowQueue()
@@ -153,7 +134,6 @@ def main():
         with pick_sm:
             # These are pre-terminating states that note what went wrong in the userdata. This avoids
             # encoding the same information in an explosion of named state transitions
-
             cf.splat_auto("SPLAT_PICK", "request", ["target_bin_id", "target_object_id", "target_object_asin"])
             # StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX_PRE_GRASP", planning_scene.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=.015),
@@ -181,7 +161,7 @@ def main():
 
             StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "drop_hide"), ["succeeded", "aborted"])
             StateMachine.add("CHECK_FOR_GRIPPER_ITEM", motion.CheckGripperItem(robot),
-                            {"item_detected": "POST_PICK_SUCCESS_CLEANUP", "no_item_detected": "RETRY"})
+                            {"item_detected": "POST_PICK_SUCCESS_CLEANUP", "no_item_detected": "NOTE_MANIPULATION_FAILURE_AND_RETRY"})
             cf.inject_userdata("NOTE_SUCCESS", "POST_PICK_SUCCESS_CLEANUP", "status", PickRequestResponse.OUTCOME_SUCCESS)
             cf.inject_userdata("NOTE_MANIPULATION_FAILURE_AND_RETRY", "RETRY", "status", PickRequestResponse.OUTCOME_MANIPULATION_FAILURE)
             cf.inject_userdata("NOTE_PREEMPTION", "done", "status", PickRequestResponse.OUTCOME_PREEMPTED)
