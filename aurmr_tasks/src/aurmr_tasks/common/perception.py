@@ -154,11 +154,9 @@ class GetGraspPose(State):
         self.get_grasp.wait_for_service(timeout=5)
         self.frame_id = frame_id
         self.pre_grasp_offset = pre_grasp_offset
-        self.pose_viz = rospy.Publisher("selected_grasp_pose", geometry_msgs.msg.PoseStamped,
+        self.pose_viz = rospy.Publisher("~selected_grasp_pose", geometry_msgs.msg.PoseStamped,
                                                       queue_size=1, latch=True)
-        self.percep_pose_viz = rospy.Publisher("selected_grasp_pose_perception", geometry_msgs.msg.PoseStamped,
-                                                      queue_size=1, latch=True)
-        self.pre_grasp_viz = rospy.Publisher("selected_pre_grasp_pose", geometry_msgs.msg.PoseStamped,
+        self.pre_grasp_viz = rospy.Publisher("~selected_pre_grasp_pose", geometry_msgs.msg.PoseStamped,
                                         queue_size=1, latch=True)
         self.grasp_to_arm_tool0 = tf_buffer.lookup_transform("arm_tool0", "gripper_equilibrium_grasp", rospy.Time(0),
                                                rospy.Duration(1)).transform

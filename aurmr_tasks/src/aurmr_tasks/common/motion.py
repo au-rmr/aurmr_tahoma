@@ -17,279 +17,7 @@ from geometry_msgs.msg import PoseStamped, WrenchStamped
 from robotiq_2f_gripper_control.msg import vacuum_gripper_input as VacuumGripperStatus
 from control_msgs.msg import FollowJointTrajectoryAction, GripperCommandAction, GripperCommandGoal
 from moveit_msgs.msg import Constraints, JointConstraint
-class MoveEndEffectorToPose_Storm(State):
-    def __init__(self, default_pose=None):
-        State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
-        self.default_pose = default_pose
-        # self.target_pose_visualizer = rospy.Publisher("end_effector_target", geometry_msgs.msg.PoseStamped, queue_size=1, latch=True)
-        self.goal_finished = False
-
-        self.GOAL_POSE = '/goal_pose'
-        self.STROM_RESULT = '/storm_info/result'
-        self.ACTIVATE_CONTROL = '/activate_control'
-        rospy.Subscriber(self.STROM_RESULT, Bool, self.callback)
-        self.goal_pub = rospy.Publisher(self.GOAL_POSE, geometry_msgs.msg.PoseStamped, queue_size=1)
-        self.AC_pub = rospy.Publisher(self.ACTIVATE_CONTROL, Bool, queue_size=1)
-
-
-    def callback(self, msg):
-        self.goal_finished = msg.data
-        #print("Get STROM_RESULT msg", self.goal_finished )
-
-    def execute(self, userdata):
-        if self.default_pose:
-            pose = self.default_pose
-        else:
-            pose = userdata["pose"]
-        # print("Start executing storm")
-        # self.target_pose_visualizer.publish(pose)
-        self.goal_finished = False
-
-        while not(self.goal_finished):
-            # print("The robot is still moving to: ", pose)
-            self.goal_pub.publish(pose)
-            self.AC_pub.publish(Bool(data=True))
-            # print("Goal has not reached yet")
-            rospy.sleep(1)
-
-        self.AC_pub.publish(Bool(data=False))
-        # rospy.loginfo("Finish a waypoint", pose)
-        success = self.goal_finished
-        if success:
-            return "succeeded"
-        else:
-            return "aborted"
-
-class MoveEndEffectorInLine_Storm(State):
-    def __init__(self, start_pose=None, goal_pose=None, use_force=False, use_gripper=False):
-        State.__init__(self,outcomes=['succeeded', 'preempted', 'aborted'])
-        self.start_pose = start_pose
-        self.goal_pose = goal_pose
-        self.use_force = use_force
-        self.use_gripper = use_gripper
-        self.goal_finished = False
-        self.object_detected = False
-        self.force_msg = 0
-        self.torque_msg = 0
-
-        self.GOAL_POSE = '/goal_pose'
-        self.STROM_RESULT = '/storm_info/result'
-        self.ACTIVATE_CONTROL = '/activate_control'
-        self.GRIPPER_ACTION_SERVER = '/gripper_controller/gripper_cmd'
-        self.CURRENT_POSE = '/goal_pose/storm'
-
-        self._gripper_client = actionlib.SimpleActionClient(self.GRIPPER_ACTION_SERVER, GripperCommandAction)
-        self.goal_pub = rospy.Publisher(self.GOAL_POSE, PoseStamped, queue_size=1)
-        self.AC_pub = rospy.Publisher(self.ACTIVATE_CONTROL, Bool, queue_size=1)
-        self.goal_listener = rospy.Subscriber(self.STROM_RESULT, Bool, self.goal_finish_cb)
-        self.wrench_listener = rospy.Subscriber("/wrench", WrenchStamped, self.wrench_cb)
-        self.gripper_status_listener = rospy.Subscriber("/gripper_control/status", VacuumGripperStatus, self.gripper_status_cb)
-        self.curr_pose_listener = rospy.Subscriber(self.CURRENT_POSE, PoseStamped, self.curr_pose_cb)
-
-    def curr_pose_cb(self, msg: PoseStamped):
-        if self.start_pose is None:
-            self.start_pose = msg
-
-    def close_gripper(self, return_before_done=False):
-        goal = GripperCommandGoal()
-        goal.command.position = 0.83
-        goal.command.max_effort = 1
-        self._gripper_client.send_goal(goal)
-        # rospy.loginfo("Waiting for gripper" + str(return_before_done))
-        if not return_before_done:
-            rospy.loginfo("Waiting for gripper. \n")
-            self._gripper_client.wait_for_result()
-
-    def open_gripper(self, return_before_done=False):
-        goal = GripperCommandGoal()
-        goal.command.position = 0
-        goal.command.max_effort = 1
-        self._gripper_client.send_goal(goal)
-        if not return_before_done:
-            self._gripper_client.wait_for_result()
-
-    def wrench_cb(self, msg: WrenchStamped):
-        self.force_msg = math.sqrt(msg.wrench.force.x**2 + msg.wrench.force.y**2+ msg.wrench.force.z**2)
-        self.torque_msg = math.sqrt(msg.wrench.torque.x**2 + msg.wrench.torque.y**2+ msg.wrench.torque.z**2)
-
-    def gripper_status_cb(self, msg: VacuumGripperStatus):
-        self.object_detected = (msg.gPO < 95)
-
-    def goal_finish_cb(self, msg):
-        self.goal_finished = msg.data
-        #print("Get STROM_RESULT msg", self.goal_finished )
-
-    def execute(self, userdata):
-        if self.start_pose is None:
-            print('Waiting for start_pose')
-            rospy.sleep(0.5)
-        poses = []
-        diff_x = self.goal_pose.pose.position.x - self.start_pose.pose.position.x
-        diff_y = self.goal_pose.pose.position.y - self.start_pose.pose.position.y
-        diff_z = self.goal_pose.pose.position.z - self.start_pose.pose.position.z
-        segment_num = int(((diff_x**2 + diff_y**2 + diff_z**2)**(1/2))/0.02)
-        # print("number of dividen:", segment_num)
-        for i in range(segment_num):
-            pose = copy.deepcopy(self.start_pose)
-            pose.pose.position.x += (i/segment_num)*diff_x
-            pose.pose.position.y += (i/segment_num)*diff_y
-            pose.pose.position.z += (i/segment_num)*diff_z
-            poses.append(pose)
-        poses.append(self.goal_pose)
-
-        time_out = 5
-        force_limit = 50
-        if self.use_gripper:
-            self.close_gripper(return_before_done=True)
-        for pose in poses:
-            self.goal_finished = False
-            steps = 0.0
-            while not(self.goal_finished):
-                self.goal_pub.publish(pose)
-                self.AC_pub.publish(Bool(data=True))
-                if self.use_force and self.force_msg > force_limit:
-                    self.AC_pub.publish(Bool(data=False))
-                    rospy.loginfo("Stopping movement due to force feedback")
-                    return "succeeded"
-                elif self.use_gripper and self.object_detected:
-                    self.AC_pub.publish(Bool(data=False))
-                    rospy.loginfo("Stopping movement due to object detection")
-                    return "succeeded"
-                rospy.sleep(0.05)
-                steps = steps + 0.05
-                if steps>time_out:
-                    # self.AC_pub.publish(Bool(data=False))
-                    rospy.loginfo("Time_out in cartesian movement")
-                    # early_stop = True
-                    break
-
-            self.AC_pub.publish(Bool(data=False))
-            # print("Finish waypoint: ", pose)
-        # if self.use_gripper:
-        #     self.open_gripper(return_before_done=True)
-
-        if self.goal_finished:
-            return "succeeded"
-        else:
-            return "aborted"
-
-
-class CloseGripperStorm(State):
-    def __init__(self, return_before_done=False):
-        State.__init__(self, outcomes=['succeeded', 'preempted', 'aborted'])
-        self.return_before_done = return_before_done
-        self.GRIPPER_ACTION_SERVER = '/gripper_controller/gripper_cmd'
-        self._gripper_client = actionlib.SimpleActionClient(self.GRIPPER_ACTION_SERVER, GripperCommandAction)
-
-    def close_gripper(self, return_before_done=False):
-        goal = GripperCommandGoal()
-        goal.command.position = 0.83
-        goal.command.max_effort = 1
-        self._gripper_client.send_goal(goal)
-        # rospy.loginfo("Waiting for gripper" + str(return_before_done))
-        if not return_before_done:
-            rospy.loginfo("Waiting for gripper. \n")
-            self._gripper_client.wait_for_result()
-
-
-    def execute(self, ud):
-        self.close_gripper(return_before_done=self.return_before_done)
-        return "succeeded"
-
-
-class OpenGripperStorm(State):
-    def __init__(self, return_before_done=False):
-        State.__init__(self, outcomes=['succeeded', 'preempted', 'aborted'])
-        self.return_before_done = return_before_done
-        self.GRIPPER_ACTION_SERVER = '/gripper_controller/gripper_cmd'
-        self._gripper_client = actionlib.SimpleActionClient(self.GRIPPER_ACTION_SERVER, GripperCommandAction)
-
-    def open_gripper(self, return_before_done=False):
-        goal = GripperCommandGoal()
-        goal.command.position = 0
-        goal.command.max_effort = 1
-        self._gripper_client.send_goal(goal)
-        if not return_before_done:
-            self._gripper_client.wait_for_result()
-
-    def execute(self, ud):
-        self.open_gripper(return_before_done=self.return_before_done)
-        return "succeeded"
-
-class MoveToBinHome(State):
-    def __init__(self, robot):
-        State.__init__(self, input_keys=["target_bin_id"], outcomes=['succeeded', 'aborted', 'pass'])
-        self.robot = robot
-        self.join_config_1f = 'home_1f'
-        self.join_config_2f = 'home_2f'
-        self.join_config_3f = 'home_3f'
-        self.join_config_4f = 'home_4f'
-        self.join_config_1g = 'home_1g'
-        self.join_config_2g = 'home_2g'
-        self.join_config_3g = 'home_3g'
-        self.join_config_1h = 'home_1h'
-        self.join_config_2h = 'home_2h'
-        self.join_config_3h = 'home_3h'
-        self.join_config_4h = 'home_4h'
-        self.join_config_4g = 'home_4g'
-        self.join_config_1e = 'home_1e'
-        self.join_config_2e = 'home_2e'
-        self.join_config_3e = 'home_3e'
-        self.join_config_4e = 'home_4e'
-
-
-
-    def execute(self, ud):
-        if ud['target_bin_id'] == '1F':
-            success = self.robot.move_to_joint_angles(self.join_config_1f)
-            return 'succeeded' if success else 'aborted'
-        elif ud['target_bin_id'] == '2F':
-            success = self.robot.move_to_joint_angles(self.join_config_2f)
-            return 'succeeded' if success else 'aborted'
-        elif ud['target_bin_id'] == '3F':
-            success = self.robot.move_to_joint_angles(self.join_config_3f)
-            return 'succeeded' if success else 'aborted'
-        elif ud['target_bin_id'] == '4F':
-            success = self.robot.move_to_joint_angles(self.join_config_4f)
-            return 'succeeded' if success else 'aborted'
-        elif ud['target_bin_id'] == '1E':
-            success = self.robot.move_to_joint_angles(self.join_config_1e)
-            return 'succeeded' if success else 'aborted'
-        elif ud['target_bin_id'] == '2E':
-            success = self.robot.move_to_joint_angles(self.join_config_2e)
-            return 'succeeded' if success else 'aborted'
-        elif ud['target_bin_id'] == '3E':
-            success = self.robot.move_to_joint_angles(self.join_config_3e)
-            return 'succeeded' if success else 'aborted'
-        elif ud['target_bin_id'] == '4E':
-            success = self.robot.move_to_joint_angles(self.join_config_4e)
-            return 'succeeded' if success else 'aborted'
-        elif ud['target_bin_id'] == '1G':
-            success = self.robot.move_to_joint_angles(self.join_config_1g)
-            return 'succeeded' if success else 'aborted'
-        elif ud['target_bin_id'] == '2G':
-            success = self.robot.move_to_joint_angles(self.join_config_2g)
-            return 'succeeded' if success else 'aborted'
-        elif ud['target_bin_id'] == '3G':
-            success = self.robot.move_to_joint_angles(self.join_config_3g)
-            return 'succeeded' if success else 'aborted'
-        elif ud['target_bin_id'] == '4G':
-            success = self.robot.move_to_joint_angles(self.join_config_4g)
-            return 'succeeded' if success else 'aborted'
-        elif ud['target_bin_id'] == '1H':
-            success = self.robot.move_to_joint_angles(self.join_config_1h)
-            return 'succeeded' if success else 'aborted'
-        elif ud['target_bin_id'] == '2H':
-            success = self.robot.move_to_joint_angles(self.join_config_2h)
-            return 'succeeded' if success else 'aborted'
-        elif ud['target_bin_id'] == '3H':
-            success = self.robot.move_to_joint_angles(self.join_config_3h)
-            return 'succeeded' if success else 'aborted'
-        elif ud['target_bin_id'] == '4H':
-            success = self.robot.move_to_joint_angles(self.join_config_4h)
-            return 'succeeded' if success else 'aborted'
-        else:
-            return 'pass'
+from aurmr_tasks.util import all_close, pose_dist
 
 
 class MoveToJointAngles(State):
@@ -347,19 +75,17 @@ class MoveIntoJointLimits(State):
             return "aborted"
 
 class MoveEndEffectorToPose(State):
-    def __init__(self, robot):
+    def __init__(self, robot, default_pose=None):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
-        self.target_pose_visualizer = rospy.Publisher("end_effector_target", geometry_msgs.msg.PoseStamped,
-                                                      queue_size=1, latch=True)
+        self.default_pose = default_pose
+
 
     def execute(self, userdata):
         if self.default_pose:
             pose = self.default_pose
         else:
             pose = userdata["pose"]
-
-        self.target_pose_visualizer.publish(pose)
         success = self.robot.move_to_pose(
                           pose,
                           allowed_planning_time=25.0,
@@ -380,8 +106,6 @@ class MoveEndEffectorToPoseManipulable(State):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
         self.default_pose = default_pose
-        self.target_pose_visualizer = rospy.Publisher("end_effector_target", geometry_msgs.msg.PoseStamped,
-                                                      queue_size=1, latch=True)
 
     def execute(self, userdata):
         if self.default_pose:
@@ -389,7 +113,6 @@ class MoveEndEffectorToPoseManipulable(State):
         else:
             pose = userdata["pose"]
 
-        self.target_pose_visualizer.publish(pose)
         success = self.robot.move_to_pose_manipulable(
                           pose,
                           allowed_planning_time=25.0,

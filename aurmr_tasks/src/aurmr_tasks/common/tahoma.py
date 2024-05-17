@@ -165,7 +165,7 @@ class Tahoma:
         self._controller_switcher = rospy.ServiceProxy("/controller_manager/switch_controller", SwitchController)
         self.servo_to_pose_client = SimpleActionClient("/servo_server/servo_to_pose", ServoToPoseAction)
 
-        self.grasp_pose_pub = rospy.Publisher("~grasp_pose", PoseStamped)
+        self.target_pose_pub = rospy.Publisher("~end_effector_target", PoseStamped, queue_size=1, latch=True)
 
         planning_frame = self.move_group.get_planning_frame()
         eef_link = self.move_group.get_end_effector_link()
@@ -523,7 +523,7 @@ class Tahoma:
         """
 
         pose_stamped = from_msg_msg(pose_stamped )
-
+        self.target_pose_pub.publish(pose_stamped)
         goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.move_group.get_planning_frame(),
                                        rospy.Duration(1))
 
@@ -606,6 +606,7 @@ class Tahoma:
         """
 
         pose_stamped = from_msg_msg(pose_stamped )
+        self.target_pose_pub.publish(pose_stamped)
 
         goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.move_group.get_planning_frame(),
                                        rospy.Duration(1))
@@ -739,6 +740,7 @@ class Tahoma:
         """
 
         pose_stamped = from_msg_msg(pose_stamped )
+        self.target_pose_pub.publish(pose_stamped)
 
         goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.move_group.get_planning_frame(),
                                        rospy.Duration(1))
@@ -809,11 +811,10 @@ class Tahoma:
         Returns:
             string describing the error if an error occurred, else None.
         """
+        self.target_pose_pub.publish(pose_stamped)
         prev_force_limit = self.force_mag
         self.move_group.set_end_effector_link("arm_tool0")
         goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.planning_frame, rospy.Duration(1))
-
-        self.grasp_pose_pub.publish(pose_stamped)
 
         waypoints = [goal_in_planning_frame.pose]
         (plan, fraction) = self.move_group.compute_cartesian_path(
