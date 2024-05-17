@@ -11,7 +11,6 @@ from moveit_msgs.msg import Constraints, JointConstraint
 from aurmr_tasks.util import all_close, pose_dist
 
 
-
 class MoveToJointAngles(State):
     def __init__(self, robot, default_position=None):
         State.__init__(self, input_keys=["position"], outcomes=['succeeded', 'aborted'])
@@ -75,16 +74,13 @@ class MoveEndEffectorToPose(State):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
         self.default_pose = default_pose
-        self.target_pose_visualizer = rospy.Publisher("end_effector_target", geometry_msgs.msg.PoseStamped,
-                                                      queue_size=1, latch=True)
+
 
     def execute(self, userdata):
         if self.default_pose:
             pose = self.default_pose
         else:
             pose = userdata["pose"]
-
-        self.target_pose_visualizer.publish(pose)
         success = self.robot.move_to_pose(
                           pose,
                           allowed_planning_time=15.0,
@@ -104,8 +100,6 @@ class MoveEndEffectorToPoseManipulable(State):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
         self.default_pose = default_pose
-        self.target_pose_visualizer = rospy.Publisher("end_effector_target", geometry_msgs.msg.PoseStamped,
-                                                      queue_size=1, latch=True)
 
     def execute(self, userdata):
         if self.default_pose:
@@ -113,7 +107,6 @@ class MoveEndEffectorToPoseManipulable(State):
         else:
             pose = userdata["pose"]
 
-        self.target_pose_visualizer.publish(pose)
         success = self.robot.move_to_pose_manipulable(
                           pose,
                           allowed_planning_time=15.0,
