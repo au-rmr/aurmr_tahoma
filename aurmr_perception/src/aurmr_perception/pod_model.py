@@ -22,9 +22,7 @@ from std_msgs.msg import Header
 from std_srvs.srv import Trigger
 # from aurmr_unseen_object_clustering.tools.run_network import clustering_network
 # from aurmr_unseen_object_clustering.tools.match_masks import match_masks
-from aurmr_unseen_object_clustering.tools.segmentation_net import SegNet, NO_OBJ_STORED, UNDERSEGMENTATION, OBJ_NOT_FOUND, MATCH_FAILED, IN_BAD_BINS, def_config
-from copy import deepcopy
-
+from aurmr_unseen_object_clustering.tools.segmentation_net import SegNet, NO_OBJ_STORED, UNDERSEGMENTATION, OBJ_NOT_FOUND, MATCH_FAILED, IN_BAD_BINS
 
 class PodPerceptionROS:
     def __init__(self, model, camera_name, visualize, camera_type):
@@ -82,76 +80,22 @@ class PodPerceptionROS:
 
     def load_dataset(self, request):
         from aurmr_dataset.io import DatasetReader
+        dataset = DatasetReader.load()
 
-        bin_mapping = {
-            "P-9-H051H030": "1H",
-            "P-6-H835J238": "1G",
-            "P-8-H758H650": "1F",
-            "P-8-H588H170": "1E",
-            "P-9-H051H031": "2H",
-            "P-6-H835J239": "2G",
-            "P-8-H758H651": "2F",
-            "P-8-H588H171": "2E",
-            "P-9-H051H032": "3H",
-            "P-6-H835J240": "3G",
-            "P-8-H758H652": "3F",
-            "P-8-H588H172": "3E",
-            "P-9-H051H033": "4H",
-            "P-6-H835J241": "4G",
-            "P-8-H758H653": "4F",
-            "P-8-H588H173": "4E",
-
-            "P-9-M223R307": "1D",
-            "P-9-M223R831": "1E",
-            "P-9-M503R832": "2E",
-            "P-9-M095R784": "2C"
-
-        }
-        dataset = DatasetReader(request.dataset_path).load()
-
-        camera_name = f"{self.camera_name}_depth"
-
-        K  = np.asarray(dataset.camera_info[camera_name]['K'] ).reshape((3, 3))
+        K  = np.asarray(dataset.camera_info['depth_to_rgb']['K'] ).reshape((3, 3))
 
         first_entry = dataset.entries[0]
-        first_depth = first_entry.camera_data[self.camera_name].depth_image
-        updated_config = deepcopy(def_config)
-        updated_config["bounds"] = dataset.metadata["bin_bounds"]
-        first_depth = first_depth.astype(np.float32)
 
-
-        self.net = SegNet(config=updated_config, init_depth=first_depth, init_info=K)
+        self.net = SegNet(init_depth=first_entry.depth_image, init_info=intrinsics_3x3)
         self.model.net = self.net
 
-        for entry in dataset.entries:
+        for entry in dataset.entries[1:]:
+            rgb_image = entry.rgb_image
+            depth_image = entry.depth_image
+            for i in entry.inventory():
+                pass
 
-            camera_data = entry.camera_data[self.camera_name]
-
-            rgb_image = camera_data.rgb_image[:,:,::-1]
-            depth_image = camera_data.depth_image
-            points_msg = None
-            camera_info = dataset.camera_info
-
-
-            depth_image = depth_image.astype(np.float32)
-
-            for action in entry.actions:
-                # Hack so we can keep changes isolated from rest of file
-                class MockCameraInfo():
-                    def __init__(self) -> None:
-                        self.K = K
-                if action.action_type == "stow":
-                    simple_bin_id = bin_mapping.get(action.item.bin_id, None)
-                    if simple_bin_id is None:
-                        print("Can't simplify bin id ", action.item.bin_id)
-                        continue
-                    print(action.item.bin_id, simple_bin_id)
-                    self.model.add_object(simple_bin_id, action.item.asin_id, rgb_image, depth_image, MockCameraInfo(), points_msg)
-                else:
-                    print("ERROR ACTION NOT SUPPORTED")
-
-
-        return {"success": True, "message": f"loaded dataset {request.dataset_path} with {len(dataset.inventory())} objects in inventory"}
+        return {"success": True, "message": f"load dataset {dataset.path}"}
 
 
     def capture_object_callback(self, request):
