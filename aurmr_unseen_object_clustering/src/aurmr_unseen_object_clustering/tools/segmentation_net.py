@@ -975,8 +975,7 @@ class SegNet:
         except:
             pass
 
-        # if undersegmentation is detected, it should revert to the previous detected mask
-        # currently, something is preventing this from happening despite current and last is reset
+        # if undersegmentation is detected, it should revert to the previous detected mask and reset bin updates
         if mask_crop is None:
             bin.abort_update()
             self.current = self.last
