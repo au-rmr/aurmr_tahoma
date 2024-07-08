@@ -123,8 +123,13 @@ class Bin:
         self.last = {'rgb':None, 'depth':None, 'mask':None, 'embeddings':np.array([])}
         self.init_depth = init_depth[bounds[0]:bounds[1], bounds[2]:bounds[3]]
         self.bg_mask = np.ones(self.init_depth.shape, dtype=np.uint8)
+        self.prev = {}
 
     def update_current(self, current):
+        self.prev["last"] = self.last.copy()
+        self.prev["current"] = self.current.copy()
+        self.prev["bg_mask"] = self.bg_mask.copy()
+
         self.last = self.current.copy()
 
         rgb = current['rgb']
@@ -138,6 +143,10 @@ class Bin:
         # plt.show()
         self.current['mask'] = None
 
+    def abort_update(self):
+        self.last = self.prev["last"]
+        self.current = self.prev["current"]
+        self.bg_mask = self.prev["bg_mask"]
     def new_object_detected(self, current):
         # Crop the current depth down to bin size
         r1,r2,c1,c2 = self.bounds
@@ -971,7 +980,10 @@ class SegNet:
         except:
             pass
 
+        # if undersegmentation is detected, it should revert to the previous detected mask
+        # currently, something is preventing this from happening despite current and last is reset
         if mask_crop is None:
+            bin.abort_update()
             self.current = self.last
             return UNDERSEGMENTATION
 
