@@ -24,6 +24,12 @@ from std_srvs.srv import Trigger
 # from aurmr_unseen_object_clustering.tools.match_masks import match_masks
 from aurmr_unseen_object_clustering.tools.segmentation_net import SegNet, NO_OBJ_STORED, UNDERSEGMENTATION, OBJ_NOT_FOUND, MATCH_FAILED, IN_BAD_BINS
 
+NO_OBJ_STORED = 1
+UNDERSEGMENTATION = 2
+OBJ_NOT_FOUND = 3
+MATCH_FAILED = 4
+IN_BAD_BINS = 5
+
 class PodPerceptionROS:
     def __init__(self, model, camera_name, visualize, camera_type):
         self.visualize = visualize
@@ -576,7 +582,9 @@ class DiffPodModel:
         print("CALLBACK2")
         intrinsics_3x3 = np.reshape(camera_intrinsics.K, (3,3))
         # self.net.update(bin_id, rgb_image, self.numpify_pointcloud(points_msg, rgb_image.shape))
-        self.net.update(bin_id, rgb_image, depth_raw=depth_image, info=intrinsics_3x3)
+        res = self.net.update(bin_id, rgb_image, depth_raw=depth_image, info=intrinsics_3x3)
+        if res == UNDERSEGMENTATION:
+            return False, f"Segmentation in {bin_id} undersegmented. Causes not limited to model failure, potential result of occlusion, object fell out during manip"
         print("DONE UPDATING")
         if bin_id not in self.net.bad_bins:
             for o_id in self.points_table[bin_id].keys():
