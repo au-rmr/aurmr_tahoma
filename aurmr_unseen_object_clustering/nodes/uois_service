@@ -28,6 +28,10 @@ from mask2former_group import (
 import cv2
 from aurmr_unseen_object_clustering.srv import GetSegmentationUOIS
 import rospy
+import cProfile
+import cProfile, pstats, io
+from pstats import SortKey
+
 
 WINDOW_NAME = "mask2former demo"
 class uois_multi_frame():
@@ -128,22 +132,21 @@ class uois_multi_frame():
         return full_mask, embedded_array
 
 def return_mask_and_embeddings(req):
-    full_mask, embeddings = object.inference(req.image_sequence)
-    full_mask = full_mask.reshape(-1)
-    embeddings = np.array(embeddings).reshape(-1)
+
+    with cProfile.Profile() as pr:
+        full_mask, embeddings = object.inference(req.image_sequence)
+        full_mask = full_mask.reshape(-1)
+        embeddings = np.array(embeddings).reshape(-1)
+    #s = io.StringIO()
+    #sortby = SortKey.CUMULATIVE
+    #ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    #ps.print_stats()
+    #print(s.getvalue())
     return full_mask, embeddings
 
 
 if __name__ == "__main__":
-    rospy.init_node('service_for_seg_mask_and_embeddings')
+    rospy.init_node('uois_service')
     object = uois_multi_frame()
     uois_multi_frame_service = rospy.Service('segmentation_with_embeddings', GetSegmentationUOIS, return_mask_and_embeddings)
     rospy.spin()
-
-# object = uois_multi_frame()
-# full_mask, embeddings_array = object.inference("3F")
-# print(full_mask)
-# print(embeddings_array)
-# cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
-# cv2.imshow(WINDOW_NAME, full_mask*50)
-# cv2.waitKey(0)
