@@ -11,7 +11,7 @@
 
 
 
-  <node name="demo_service" pkg="aurmr_unseen_object_clustering" type="uois_service" output="screen" />
+  <node name="uois_service" pkg="aurmr_unseen_object_clustering" type="uois_service" output="screen" />
   <!-- These are short-lived parameters which need to be configured using the `pod_calibration` scripts-->
   <rosparam file="/tmp/bin_bounds.yaml" />
 
@@ -30,4 +30,6 @@
   <node name="grasp_detection" pkg="aurmr_perception" type="grasp_detection_server" output="screen">
   </node>
 
+  <include file="$(find tahoma_bringup)/launch/usb_camera.launch">
+  </include>
 </launch>
