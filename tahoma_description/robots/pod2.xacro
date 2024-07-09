@@ -1,7 +1,0 @@
-<?xml version="1.0"?>
-<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="pod2">
-  <xacro:include filename="$(find tahoma_description)/urdf/pod2.xacro"/>
-  <!-- Current Values are from pod2_recipe_790-00265-022.txt "bindDimensions" : A1-A8
-       with minor changes to correspond the reality -->  
-  <xacro:pod prefix="pod_" recipe_a="${[0.346, 0.295, 0.250, 0.225, 0.250, 0.275, 0.325, 0.275]}"/>
-</robot>

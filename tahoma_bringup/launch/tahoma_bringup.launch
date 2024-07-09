@@ -2,7 +2,7 @@
 <launch>
     <arg name="gui" default="True" />
     <arg name="pod_id" doc="1 for little bins, 2 for big bins"/>
-    <arg name="pod_face" doc="1A/1C are the sides we normally use on 1, and 2A/2C for Pod 2"/>
+    <arg name="pod_face" doc="A/C are the sides we normally use on 1, and A/C for Pod 2"/>
 
     <arg name="gripper_type" default="vacuum" />
 
@@ -38,8 +38,7 @@
 
     <group if="$(eval pod_id > 0)">
       <include file="$(find tahoma_description)/launch/load_pod.launch">
-        <arg name="id" value="$(arg pod_id)"/>
-        <arg name="pod_id" value="$(arg pod_face)"/>
+        <arg name="pod_id" value="$(arg pod_id)$(arg pod_face)"/>
       </include>
       <include file="$(find tahoma_description)/launch/pod_transform.launch"/>
     </group>

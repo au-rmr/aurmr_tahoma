@@ -1,6 +1,5 @@
 <?xml version="1.0" ?>
 <launch>
-    <arg name="id" doc="ID number for pod to load" />
     <arg name="pod_id" doc="ID number for pod to load" />
     <arg name="include_flaps" default="true" doc="Adds bin flaps into urdf model" />
 
