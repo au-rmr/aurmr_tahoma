@@ -22,7 +22,7 @@ class TFSlider:
         self.offset_x = 0.0
         self.offset_y = 0.0
         self.offset_z = 0.0
-        
+
         # Initial offsets for rotation (RPY)
         self.offset_roll = 0.0
         self.offset_pitch = 0.0
@@ -30,7 +30,7 @@ class TFSlider:
 
         # Fetch initial transformation
         self.fetch_initial_tf()
-        
+
         self.timer = rospy.Timer(rospy.Duration(0.1), self.publish_tf)
         self.is_locked = False
 
@@ -57,7 +57,7 @@ class TFSlider:
 
         self.lock_button = tk.Button(self.root, text="Lock TF", command=self.lock_tf)
         self.lock_button.pack(padx=10, pady=10)
-            
+
         self.root.mainloop()
 
     def init_sliders(self):
@@ -84,7 +84,7 @@ class TFSlider:
         # Slider for yaw rotation offset
         self.yaw_slider = Scale(self.root, from_=-15, to=15, resolution=0.1, orient=tk.HORIZONTAL, label='Yaw Offset (Degrees)', command=self.update_yaw)
         self.yaw_slider.pack(fill=tk.X, padx=10, pady=10)
-    
+
     def update_x(self, value):
         self.offset_x = float(value)
 
@@ -104,12 +104,12 @@ class TFSlider:
         self.offset_yaw = math.radians(float(value))
 
     def publish_tf(self, event):
-        modified_trans = [self.original_trans[0] + self.offset_x, 
-                          self.original_trans[1] + self.offset_y, 
+        modified_trans = [self.original_trans[0] + self.offset_x,
+                          self.original_trans[1] + self.offset_y,
                           self.original_trans[2] + self.offset_z]
-        
+
         original_roll, original_pitch, original_yaw = tf.transformations.euler_from_quaternion(self.original_rot)
-        
+
         modified_rot = tf.transformations.quaternion_from_euler(original_roll + self.offset_roll,
                                                                 original_pitch + self.offset_pitch,
                                                                 original_yaw + self.offset_yaw)
@@ -119,7 +119,7 @@ class TFSlider:
                               rospy.Time.now(),
                               "pod_base_link",
                               "base_link")
-    
+
     def lock_tf(self):
         if not self.is_locked:
             # If not already locked, lock it
@@ -133,7 +133,7 @@ class TFSlider:
             self.roll_slider.config(state=tk.DISABLED)
             self.pitch_slider.config(state=tk.DISABLED)
             self.yaw_slider.config(state=tk.DISABLED)
-            
+
             # Start the thread that continuously publishes the transform
             threading.Thread(target=self.lock_thread).start()
 
@@ -158,16 +158,19 @@ class TFSlider:
 
     def lock_thread(self):
         while self.is_locked and not rospy.is_shutdown():
-            modified_trans = [self.original_trans[0] + self.offset_x, 
-                            self.original_trans[1] + self.offset_y, 
+            modified_trans = [self.original_trans[0] + self.offset_x,
+                            self.original_trans[1] + self.offset_y,
                             self.original_trans[2] + self.offset_z]
-            
-            original_roll, original_pitch, original_yaw = tf.transformations.euler_from_quaternion(self.original_rot)
-            
-            modified_rot = tf.transformations.quaternion_from_euler(original_roll + self.offset_roll,
-                                                                    original_pitch + self.offset_pitch,
-                                                                    original_yaw + self.offset_yaw)
 
+
+            original_roll, original_pitch, original_yaw = tf.transformations.euler_from_quaternion(self.original_rot)
+
+            modified_rot = [original_roll + self.offset_roll,
+                                    original_pitch + self.offset_pitch,
+                                    original_yaw + self.offset_yaw]
+            modified_rot = tf.transformations.quaternion_from_euler(*modified_rot)
+
+            rospy.loginfo_throttle_identical(120, f"New pod transform: {modified_trans[0]:.3f} {modified_trans[1]:.3f} {modified_trans[2]:.3f} {modified_rot[2]:.3f} {modified_rot[1]:.3f} {modified_rot[0]:.3f}")
             self.br.sendTransform(modified_trans,
                                 modified_rot,
                                 rospy.Time.now(),
