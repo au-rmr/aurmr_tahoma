@@ -5,6 +5,7 @@ from functools import wraps
 from turtle import pos
 import numpy as np
 
+
 from actionlib import SimpleActionClient
 from actionlib_msgs.msg import GoalStatusArray, GoalStatus
 from control_msgs.msg import FollowJointTrajectoryAction, GripperCommandAction, GripperCommandGoal
@@ -21,7 +22,8 @@ import rospy
 
 from tf2_geometry_msgs import from_msg_msg
 from geometry_msgs.msg import PoseStamped, WrenchStamped
-from robotiq_2f_gripper_control.msg import vacuum_gripper_input as VacuumGripperStatus
+from robotiq_2f_gripper_control.msg import vacuum_gripper_input as VacuumGripperStatus # does this need to be changed to the vacuum_gripper_contol.msg, do we need "as"
+from vacuum_gripper_control.msg import vacuum_gripper_input, vacuum_gripper_output
 from aurmr_tasks.util import all_close, pose_dist
 from moveit_msgs.msg import MoveItErrorCodes, MoveGroupAction, DisplayTrajectory, Constraints, JointConstraint
 from moveit_msgs.srv import GetPositionIK, GetPositionIKRequest
@@ -29,6 +31,7 @@ from moveit_msgs.srv import GetPositionIK, GetPositionIKRequest
 import moveit_commander
 from controller_manager_msgs.srv import ListControllers, SwitchController
 from tahoma_moveit_config.msg import ServoToPoseAction, ServoToPoseGoal
+import numpy as np
 
 
 
@@ -135,7 +138,7 @@ class Tahoma:
         self.commander = moveit_commander.RobotCommander()
         self.scene = moveit_commander.PlanningSceneInterface(synchronous=True)
         self.move_group = moveit_commander.MoveGroupCommander(ARM_GROUP_NAME)
-        self.MAX_VEL_FACTOR = .2
+        self.MAX_VEL_FACTOR = .3
         self.MAX_ACC_FACTOR = .5
         self.move_group.set_max_velocity_scaling_factor(self.MAX_VEL_FACTOR)
         self.move_group.set_max_acceleration_scaling_factor(self.MAX_ACC_FACTOR)
@@ -169,11 +172,14 @@ class Tahoma:
         group_names = self.commander.get_group_names()
 
         self.wrench_listener = rospy.Subscriber("/wrench", WrenchStamped, self.wrench_cb)
-        self.gripper_status_listener = rospy.Subscriber("/gripper_control/status", VacuumGripperStatus, self.gripper_status_cb)
+        #self.gripper_status_listener = rospy.Subscriber("/gripper_control/status", vacuum_gripper_input, self.gripper_status_cb)
+        self.custom_gripper_status_listener = rospy.Subscriber("/vacuum_gripper_control/status", vacuum_gripper_input, self.custom_gripper_status_cb)
+        self.custom_gripper_blowoff_listener = rospy.Subscriber("/vacuum_gripper_control/status", vacuum_gripper_input, self.custom_gripper_blowoff_cb)
         self.traj_status_listener = rospy.Subscriber("/scaled_pos_joint_traj_controller/follow_joint_trajectory/status", GoalStatusArray, self.goal_status_cb)
         self.force_mag = 0
         self.torque_mag = 0
         self.object_detected = False
+        self.object_detected_blowoff = False
         self.goal_finished = True
         self.goal_stamp = 0
         # Misc variables
@@ -188,8 +194,14 @@ class Tahoma:
         self.force_mag = math.sqrt(msg.wrench.force.x**2 + msg.wrench.force.y**2+ msg.wrench.force.z**2)
         self.torque_mag = math.sqrt(msg.wrench.torque.x**2 + msg.wrench.torque.y**2+ msg.wrench.torque.z**2)
 
-    def gripper_status_cb(self, msg: VacuumGripperStatus):
+    def gripper_status_cb(self, msg: vacuum_gripper_input):
         self.object_detected = (msg.gPO < 95)
+
+    def custom_gripper_status_cb(self, msg: vacuum_gripper_input):
+        self.object_detected = msg.SYSTEM_VACUUM > 450 # because it is in mbar and is returned as an int
+
+    def custom_gripper_blowoff_cb(self, msg: vacuum_gripper_input):
+        self.object_detected_blowoff = msg.SYSTEM_VACUUM > 10 # because it is in mbar and is returned as an int
 
     def goal_status_cb(self, msg: GoalStatusArray):
         latest_time = 0
@@ -267,9 +279,23 @@ class Tahoma:
     def check_gripper_item(self):
         return self.object_detected
 
+    def blow_off_gripper(self, return_before_done=False):
+        goal = GripperCommandGoal()
+        goal.command.position = 2
+        goal.command.max_effort = 1
+        self._gripper_client.send_goal(goal)
+        if not return_before_done:
+            self._gripper_client.wait_for_result()
+        rospy.sleep(3)
+        while self.object_detected_blowoff:
+            pass
+
+        self.open_gripper()
+        return
+
     def close_gripper(self, return_before_done=False):
         goal = GripperCommandGoal()
-        goal.command.position = 0.83
+        goal.command.position = 1
         goal.command.max_effort = 1
         self._gripper_client.send_goal(goal)
         rospy.loginfo("Waiting for gripper" + str(return_before_done))
@@ -320,6 +346,8 @@ class Tahoma:
         values = self.move_group.get_joint_value_target()
         return values
 
+
+
     @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_joint_angles(self,
                            joints,
@@ -368,8 +396,11 @@ class Tahoma:
         #     self.move_group.clear_trajectory_constraints()
         #     self.move_group.set_path_constraints(path_constraints)
         joint_values = joints
+
+        print("######################################",joint_values)
         if isinstance(joints, str):
             joint_values = self.get_joint_values_for_name(joints)
+            print(joint_values)
             self.move_group.set_named_target(joints)
         else:
             self.move_group.set_joint_value_target(joints)
@@ -384,6 +415,7 @@ class Tahoma:
         current_joints = self.move_group.get_current_joint_values()
         return all_close(joint_values, current_joints, tolerance)
 
+
     @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_pose(self,
                           pose_stamped,
@@ -394,6 +426,7 @@ class Tahoma:
                           replan=True,
                           replan_attempts=5,
                           tolerance=0.01):
+
         """Moves the end-effector to a pose, using motion planning.
 
         Args:
@@ -776,7 +809,7 @@ class Tahoma:
         Returns:
             string describing the error if an error occurred, else None.
         """
-
+        prev_force_limit = self.force_mag
         self.move_group.set_end_effector_link("arm_tool0")
         goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.planning_frame, rospy.Duration(1))
 
@@ -815,7 +848,8 @@ class Tahoma:
             steps = 0
             while steps < timeout and not self.goal_finished:
                 # rospy.loginfo("Waiting for feedback or goal finishing")
-                if use_force and self.force_mag > force_limit:
+                if use_force and abs(self.force_mag-prev_force_limit) > force_limit:
+                    rospy.loginfo(f" Force values: {abs(self.force_mag-prev_force_limit)}")
                     self.move_group.stop()
                     rospy.loginfo("Stopping movement due to force feedback")
                     early_stop = True

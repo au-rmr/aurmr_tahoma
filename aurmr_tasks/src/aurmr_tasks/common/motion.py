@@ -216,26 +216,81 @@ class OpenGripperStorm(State):
         self.open_gripper(return_before_done=self.return_before_done)
         return "succeeded"
 
-class AdjustJointPositionsIfBin1F4H4F(State):
+class MoveToBinHome(State):
     def __init__(self, robot):
         State.__init__(self, input_keys=["target_bin_id"], outcomes=['succeeded', 'aborted', 'pass'])
         self.robot = robot
-        self.join_config_1f = 'pre_bin_1f'
-        self.join_config_4h = 'pre_bin_4h'
-        self.join_config_4f = 'pre_bin_4f'
+        self.join_config_1f = 'home_1f'
+        self.join_config_2f = 'home_2f'
+        self.join_config_3f = 'home_3f'
+        self.join_config_4f = 'home_4f'
+        self.join_config_1g = 'home_1g'
+        self.join_config_2g = 'home_2g'
+        self.join_config_3g = 'home_3g'
+        self.join_config_1h = 'home_1h'
+        self.join_config_2h = 'home_2h'
+        self.join_config_3h = 'home_3h'
+        self.join_config_4h = 'home_4h'
+        self.join_config_4g = 'home_4g'
+        self.join_config_1e = 'home_1e'
+        self.join_config_2e = 'home_2e'
+        self.join_config_3e = 'home_3e'
+        self.join_config_4e = 'home_4e'
+
+
 
     def execute(self, ud):
         if ud['target_bin_id'] == '1F':
             success = self.robot.move_to_joint_angles(self.join_config_1f)
             return 'succeeded' if success else 'aborted'
-        elif ud['target_bin_id'] == '4H':
-            success = self.robot.move_to_joint_angles(self.join_config_4h)
+        elif ud['target_bin_id'] == '2F':
+            success = self.robot.move_to_joint_angles(self.join_config_2f)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '3F':
+            success = self.robot.move_to_joint_angles(self.join_config_3f)
             return 'succeeded' if success else 'aborted'
         elif ud['target_bin_id'] == '4F':
             success = self.robot.move_to_joint_angles(self.join_config_4f)
             return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '1E':
+            success = self.robot.move_to_joint_angles(self.join_config_1e)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '2E':
+            success = self.robot.move_to_joint_angles(self.join_config_2e)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '3E':
+            success = self.robot.move_to_joint_angles(self.join_config_3e)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '4E':
+            success = self.robot.move_to_joint_angles(self.join_config_4e)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '1G':
+            success = self.robot.move_to_joint_angles(self.join_config_1g)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '2G':
+            success = self.robot.move_to_joint_angles(self.join_config_2g)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '3G':
+            success = self.robot.move_to_joint_angles(self.join_config_3g)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '4G':
+            success = self.robot.move_to_joint_angles(self.join_config_4g)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '1H':
+            success = self.robot.move_to_joint_angles(self.join_config_1h)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '2H':
+            success = self.robot.move_to_joint_angles(self.join_config_2h)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '3H':
+            success = self.robot.move_to_joint_angles(self.join_config_3h)
+            return 'succeeded' if success else 'aborted'
+        elif ud['target_bin_id'] == '4H':
+            success = self.robot.move_to_joint_angles(self.join_config_4h)
+            return 'succeeded' if success else 'aborted'
         else:
             return 'pass'
+
 
 class MoveToJointAngles(State):
     def __init__(self, robot, default_position=None):
@@ -258,6 +313,38 @@ class MoveToJointAngles(State):
         else:
             return "aborted"
 
+class MoveIntoJointLimits(State):
+    def __init__(self, robot):
+        State.__init__(self, input_keys=[], outcomes=['succeeded', 'aborted'])
+        self.robot = robot
+
+    def execute(self, ud):
+        target_angle = math.pi*.9
+        joint_angles = self.robot.move_group.get_current_joint_values()
+        for i, angle in enumerate(joint_angles):
+            if angle > math.pi:
+                joint_angles[i] = target_angle
+            elif angle < -math.pi:
+                joint_angles[i] = -target_angle
+
+        constraints = self.robot.move_group.get_path_constraints()
+        print("constraints", constraints)
+        constraints.joint_constraints = []
+        for name in self.robot.commander.get_active_joint_names():
+            if name == "arm_elbow_joint":
+                continue
+            new_constraint = JointConstraint()
+            new_constraint.joint_name = name
+            new_constraint.position = 0
+            new_constraint.tolerance_above =  1.5*math.pi
+            new_constraint.tolerance_below = 1.5*math.pi
+            constraints.joint_constraints.append(new_constraint)
+        print(constraints)
+        success = self.robot.move_to_joint_angles(joint_angles, path_constraints=constraints)
+        if success:
+            return "succeeded"
+        else:
+            return "aborted"
 
 class MoveEndEffectorToPose(State):
     def __init__(self, robot):
@@ -275,19 +362,18 @@ class MoveEndEffectorToPose(State):
         self.target_pose_visualizer.publish(pose)
         success = self.robot.move_to_pose(
                           pose,
-                          allowed_planning_time=15.0,
-                          execution_timeout=15.0,
-                          num_planning_attempts=20,
+                          allowed_planning_time=25.0,
+                          execution_timeout=25.0,
+                          num_planning_attempts=40,
                           orientation_constraint=None,
                           replan=True,
-                          replan_attempts=8,
-                          tolerance=0.01)
-        input('check planning frame!!!!!!!!!!!!!!')
+                          replan_attempts=10,
+                          tolerance=0.005)
+        # input('check planning frame!!!!!!!!!!!!!!')
         if success:
             return "succeeded"
         else:
             return "aborted"
-
 
 class MoveEndEffectorToPoseManipulable(State):
     def __init__(self, robot, default_pose=None):
@@ -306,13 +392,13 @@ class MoveEndEffectorToPoseManipulable(State):
         self.target_pose_visualizer.publish(pose)
         success = self.robot.move_to_pose_manipulable(
                           pose,
-                          allowed_planning_time=15.0,
-                          execution_timeout=15.0,
-                          num_planning_attempts=20,
+                          allowed_planning_time=25.0,
+                          execution_timeout=25.0,
+                          num_planning_attempts=40,
                           orientation_constraint=None,
                           replan=True,
-                          replan_attempts=8,
-                          tolerance=0.01)
+                          replan_attempts=10,
+                          tolerance=0.005)
         if success:
             return "succeeded"
         else:
@@ -363,7 +449,7 @@ class MoveEndEffectorToOffset(State):
 
 
 class ServoEndEffectorToPose(State):
-    def __init__(self, robot, to_pose, pos_tolerance=.01, angular_tolerance=.1, frame=None):
+    def __init__(self, robot, to_pose, pos_tolerance=.001, angular_tolerance=.01, frame=None):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
         self.to_pose = to_pose
@@ -384,7 +470,7 @@ class ServoEndEffectorToPose(State):
 
 
 class ServoEndEffectorToOffset(State):
-    def __init__(self, robot, offset, pos_tolerance=0.01, angular_tolerance=0.1, frame=None):
+    def __init__(self, robot, offset, pos_tolerance=0.001, angular_tolerance=0.01, frame=None):
         State.__init__(self, input_keys=['offset'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
         self.offset = offset
@@ -408,6 +494,37 @@ class ServoEndEffectorToOffset(State):
         else:
             return "aborted"
 
+class AdjustRightIfColumn1(State):
+    def __init__(self, robot, offset, frame=None):
+        State.__init__(self, input_keys=["target_bin_id"], outcomes=['succeeded', 'aborted', 'pass'])
+        self.robot = robot
+        self.offset = offset
+        self.frame = frame
+
+    def execute(self, ud):
+        column_1 = ['1E', '1F', '1G', '1H']
+        if ud['target_bin_id'] in column_1:
+            sm = robust_move_to_offset(self.robot, self.offset, self.frame)
+            outcome = sm.execute()
+            return 'succeeded' if outcome == "succeeded" else 'aborted'
+        else:
+            return 'pass'
+
+class AdjustLeftIfColumn4(State):
+    def __init__(self, robot, offset, frame=None):
+        State.__init__(self, input_keys=["target_bin_id"], outcomes=['succeeded', 'aborted', 'pass'])
+        self.robot = robot
+        self.offset = offset
+        self.frame = frame
+
+    def execute(self, ud):
+        column_4 = ['4E', '4F', '4G', '4H']
+        if ud['target_bin_id'] in column_4:
+            sm = robust_move_to_offset(self.robot, self.offset, self.frame)
+            outcome = sm.execute()
+            return 'succeeded' if outcome == "succeeded" else 'aborted'
+        else:
+            return 'pass'
 
 def robust_move_to_offset(robot, offset, frame=None):
     sm = StateMachine(["succeeded", "preempted", "aborted"])
@@ -495,6 +612,7 @@ class BlowOffGripper(State):
         self.robot.blow_off_gripper(return_before_done=self.return_before_done)
         return "succeeded"
 
+
 class CheckGripperItem(State):
     def __init__(self, robot):
         State.__init__(self, input_keys=[], output_keys=["status"], outcomes=['item_detected', 'no_item_detected'])
@@ -556,6 +674,7 @@ class AddInHandCollisionGeometry(State):
                                                  "gripper_right_distal_phalanx", "gripper_left_bar", "gripper_right_bar", "gripper_base_link", "epick_end_effector"])
         start = rospy.get_time()
         seconds = rospy.get_time()
+
         timeout = 5.0
         while (seconds - start < timeout) and not rospy.is_shutdown():
             # Test if the box is in attached objects
@@ -791,7 +910,6 @@ class AddFullPodCollisionGeometryDropHide(State):
         return "aborted"
 
 
-
 class AddFullPodCollisionGeometry(State):
     def __init__(self, robot,):
         State.__init__(self, input_keys=["target_bin_id"], outcomes=['succeeded', 'aborted'])
@@ -834,17 +952,17 @@ class AddFullPodCollisionGeometry(State):
                     number_collision_box = 6
                     z_coordinate = self.bin_2A_heights[bin_id[1]]
                     y_coordinate = self.bin_2A_widths[bin_id[0]]
-                    self.robot.scene.add_box("horizontal_plane", PoseStamped(header=Header(frame_id="base_link"),
-                                                                pose=Pose(position=Point(x=0.75, y=0.0, z=z_coordinate),
-                                                                        orientation=I_QUAT)), (0.5, 1.5, 0.02))
+                    # self.robot.scene.add_box("horizontal_plane", PoseStamped(header=Header(frame_id="base_link"),
+                    #                                             pose=Pose(position=Point(x=0.75, y=0.0, z=z_coordinate),
+                    #                                                     orientation=I_QUAT)), (0.5, 1.5, 0.02))
 
-                    self.robot.scene.add_box("vertical_plane_1", PoseStamped(header=Header(frame_id="base_link"),
-                                                                pose=Pose(position=Point(x=0.72, y=y_coordinate+0.18, z=1.2),
-                                                                        orientation=I_QUAT)), (0.5, 0.01, 3.0))
+                    # self.robot.scene.add_box("vertical_plane_1", PoseStamped(header=Header(frame_id="base_link"),
+                    #                                             pose=Pose(position=Point(x=0.72, y=y_coordinate+0.18, z=1.2),
+                    #                                                     orientation=I_QUAT)), (0.5, 0.01, 3.0))
 
-                    self.robot.scene.add_box("vertical_plane_2", PoseStamped(header=Header(frame_id="base_link"),
-                                                                pose=Pose(position=Point(x=0.72, y=y_coordinate-0.18, z=1.2),
-                                                                        orientation=I_QUAT)), (0.5, 0.01, 3.0))
+                    # self.robot.scene.add_box("vertical_plane_2", PoseStamped(header=Header(frame_id="base_link"),
+                    #                                             pose=Pose(position=Point(x=0.72, y=y_coordinate-0.18, z=1.2),
+                    #                                                     orientation=I_QUAT)), (0.5, 0.01, 3.0))
             except Exception as e:
                 print(e)
 
@@ -880,11 +998,11 @@ class AddPartialPodCollisionGeometry(State):
         #                                            pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.03),
         #                                                      orientation=I_QUAT)), (POD_SIZE, POD_SIZE, 1.5))
         self.robot.scene.add_box("col_01", PoseStamped(header=Header(frame_id="pod_base_link"),
-                                                      pose=Pose(position=Point(x=0.015, y=HALF_POD_SIZE, z=1.45),
+                                                      pose=Pose(position=Point(x=0.0, y=HALF_POD_SIZE, z=1.45),
                                                                 orientation=I_QUAT)), (SIDE_WALL_WIDTH, POD_SIZE, 2.3))
 
         self.robot.scene.add_box("col_05", PoseStamped(header=Header(frame_id="pod_base_link"),
-                                                      pose=Pose(position=Point(x=POD_SIZE-0.025, y=HALF_POD_SIZE, z=1.45),
+                                                      pose=Pose(position=Point(x=POD_SIZE, y=HALF_POD_SIZE, z=1.45),
                                                                 orientation=I_QUAT)), (SIDE_WALL_WIDTH, POD_SIZE, 2.3))
 
         self.robot.scene.add_box("back_frame", PoseStamped(header=Header(frame_id="base_link"),
