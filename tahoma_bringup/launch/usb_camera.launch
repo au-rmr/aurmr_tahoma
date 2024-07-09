@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <launch>
-  <arg name="video_device" default="/dev/tahoma-stand-camera"/>
+  <arg name="video_device" default="/dev/tahoma-gripper-camera"/>
 
   <!-- Use `v4l2-ctl \-\-all` to look at what the camera supports -->
   <!-- Other tips: http://wiki.ros.org/usb_cam/Troubleshooting -->
