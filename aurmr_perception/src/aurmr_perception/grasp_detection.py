@@ -410,7 +410,7 @@ class GraspDetectionROS:
         orientation = r3.as_quat()
         output_pose_stamped.pose.orientation = Quaternion(x=orientation[0], y=orientation[1],
                                         z=orientation[2], w=orientation[3])
-
+        self.visualize_grasps(output_pose_stamped)
         return True, "", [output_pose_stamped]
 
     def detect_dexnet_grasps_cb(self, request):
