@@ -3,6 +3,7 @@ import math
 import sys
 from functools import wraps
 from turtle import pos
+import numpy as np
 
 from actionlib import SimpleActionClient
 from actionlib_msgs.msg import GoalStatusArray, GoalStatus
@@ -319,8 +320,6 @@ class Tahoma:
         values = self.move_group.get_joint_value_target()
         return values
 
-
-
     @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_joint_angles(self,
                            joints,
@@ -548,6 +547,7 @@ class Tahoma:
                           replan=True,
                           replan_attempts=5,
                           tolerance=0.01):
+
         """Moves the end-effector to a pose, using motion planning.
 
         Args:
@@ -589,10 +589,61 @@ class Tahoma:
             success, plan, planning_time, error_code = self.move_group.plan()
             if success:
                 jacobian = self.move_group.get_jacobian_matrix(list(getattr(getattr(getattr(plan,"joint_trajectory"),"points")[-1],"positions")))
-                n = np.matmul(np.matrix(jacobian),np.matrix.transpose(np.matrix(jacobian)))
-                manipulability_index = math.sqrt(np.linalg.det(n))
-                if(manipulability_index>max_manipulability):
-                    max_manipulability = manipulability_index
+                Obstacle_Penalization_Matrix = np.identity(6)
+                joint_angles_target = list(getattr(getattr(getattr(plan,"joint_trajectory"),"points")[-1],"positions"))
+
+                joint_limit = 3.1415926535897931
+                neg_pen_term_joint = np.array([])
+                pos_pen_term_joint = np.array([])
+                hyperoctant_direction = np.array([])
+                current_joint_angles = self.move_group.get_current_joint_values()
+                for i in range(6):
+                    num = (joint_angles_target[i] - (-joint_limit))**2 * (2*joint_angles_target[i] - joint_limit - (-joint_limit))
+                    den = 4 * (joint_limit - joint_angles_target[i])**2 * (joint_angles_target[i] - (-joint_limit))**2
+                    gradient = np.abs(num/den)
+                    # print("gradient", gradient)
+
+                    if(np.abs(joint_angles_target[i] - (-joint_limit)) > np.abs(joint_limit - joint_angles_target[i])):
+                        neg_pen_term_joint = np.append(neg_pen_term_joint, 1)
+                        pos_pen_term_joint = np.append(pos_pen_term_joint, 1/np.sqrt(1+gradient))
+                    else:
+                        neg_pen_term_joint = np.append(neg_pen_term_joint, 1/np.sqrt(1+gradient))
+                        pos_pen_term_joint = np.append(pos_pen_term_joint, 1)
+
+                    if((current_joint_angles[i] - joint_angles_target[i]) > 0):
+                        hyperoctant_direction = np.append(hyperoctant_direction, -1)
+                    else:
+                        hyperoctant_direction = np.append(hyperoctant_direction, 1)
+
+
+                # print("manipuability analysis: ", joint_angles_target, current_joint_angles, hyperoctant_direction)
+                Penalization_Matrix = np.identity(6)
+                for i in range(6):
+                    for j in range(6):
+                        if(jacobian[i][j]*hyperoctant_direction[i] < 0):
+                            Penalization_Matrix[i][j] = neg_pen_term_joint[j]
+                        else:
+                            Penalization_Matrix[i][j] = pos_pen_term_joint[j]
+
+                augmented_jacobian = np.dot(Penalization_Matrix, Obstacle_Penalization_Matrix, jacobian)
+
+                U, S, V = np.linalg.svd(augmented_jacobian, full_matrices=True)
+                extended_inverted_condition_number = np.min(S)/np.max(S)
+                vp = np.array([0, 0, 1, 0, 0, 0])
+
+                qp_joint = np.linalg.norm(np.dot(np.transpose(augmented_jacobian), np.transpose(vp)))
+
+                manipulability_index_new = qp_joint*extended_inverted_condition_number
+
+                try:
+                    n = np.matmul(np.matrix(jacobian),np.matrix.transpose(np.matrix(jacobian)))
+                    manipulability_index = math.sqrt(np.linalg.det(n))
+                except:
+                    manipulability_index = 0.0
+                print("manipubalibity", manipulability_index_new, manipulability_index, joint_angles_target)
+
+                if(manipulability_index_new>max_manipulability):
+                    max_manipulability = manipulability_index_new
                     main_plan = plan
 
         if not success:
