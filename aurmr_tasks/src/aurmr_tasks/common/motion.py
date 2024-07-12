@@ -108,24 +108,29 @@ class MoveEndEffectorToPoseManipulable(State):
         self.default_pose = default_pose
 
     def execute(self, userdata):
-        if self.default_pose:
-            pose = self.default_pose
-        else:
-            pose = userdata["pose"]
+        try:
+            if self.default_pose:
+                pose = self.default_pose
+            else:
+                pose = userdata["pose"]
 
-        success = self.robot.move_to_pose_manipulable(
-                          pose,
-                          allowed_planning_time=25.0,
-                          execution_timeout=25.0,
-                          num_planning_attempts=40,
-                          orientation_constraint=None,
-                          replan=True,
-                          replan_attempts=10,
-                          tolerance=0.005)
-        if success:
-            return "succeeded"
-        else:
-            return "aborted"
+            success = self.robot.move_to_pose_manipulable(
+                            pose,
+                            allowed_planning_time=25.0,
+                            execution_timeout=25.0,
+                            num_planning_attempts=40,
+                            orientation_constraint=None,
+                            replan=True,
+                            replan_attempts=10,
+                            tolerance=0.005)
+            if success:
+                return "succeeded"
+            else:
+                return "aborted"
+        except Exception as e:
+            rospy.logerr(e)
+
+        return "aborted"
 
 class MoveEndEffectorToPoseLinear(State):
     def __init__(self, robot, to_pose):

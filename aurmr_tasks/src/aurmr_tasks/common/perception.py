@@ -103,17 +103,22 @@ class PickObject(State):
         self.capture_object.wait_for_service(timeout=rospy.Duration(5))
 
     def execute(self, userdata):
-        capture_obj_req = CaptureObjectRequest(
-            bin_id=userdata['target_bin_id'],
-            object_id=userdata['target_object_id'],
-        )
-        rospy.loginfo("in CAPTUREOBJECT" + userdata['target_bin_id'])
-        capture_response = self.capture_object(capture_obj_req)
+        try:
+            capture_obj_req = CaptureObjectRequest(
+                bin_id=userdata['target_bin_id'],
+                object_id=userdata['target_object_id'],
+            )
+            rospy.loginfo("in CAPTUREOBJECT" + userdata['target_bin_id'])
+            capture_response = self.capture_object(capture_obj_req)
 
-        if capture_response.success:
-            return "succeeded"
-        else:
-            return "aborted"
+            if capture_response.success:
+                return "succeeded"
+            else:
+                return "aborted"
+        except Exception as e:
+            rospy.logerr(e)
+
+        return "aborted"
 
 class UpdateBin(State):
     def __init__(self):
@@ -126,17 +131,23 @@ class UpdateBin(State):
         self.capture_object.wait_for_service(timeout=rospy.Duration(5))
 
     def execute(self, userdata):
-        capture_obj_req = CaptureObjectRequest(
-            bin_id=userdata['target_bin_id'],
-            object_id=None,
-        )
-        rospy.loginfo("in UPDATEBIN" + userdata['target_bin_id'])
-        capture_response = self.capture_object(capture_obj_req)
+        try:
+            capture_obj_req = CaptureObjectRequest(
+                bin_id=userdata['target_bin_id'],
+                object_id=None,
+            )
+            rospy.loginfo("in UPDATEBIN" + userdata['target_bin_id'])
+            capture_response = self.capture_object(capture_obj_req)
 
-        if capture_response.success:
-            return "succeeded"
-        else:
-            return "aborted"
+            if capture_response.success:
+                return "succeeded"
+            else:
+                return "aborted"
+        except Exception as e:
+            rospy.logerr(e)
+
+        return "aborted"
+
 
 
 class GetGraspPose(State):
@@ -171,48 +182,52 @@ class GetGraspPose(State):
         return offset_pose
 
     def execute(self, userdata):
-        if 'human_grasp_pose' in userdata and userdata['human_grasp_pose'] != None:
-            rospy.loginfo("Using human provided grasp pose")
-            grasp_pose = userdata['human_grasp_pose']
-            userdata["human_grasp_pose"] = None
+        try:
+            if 'human_grasp_pose' in userdata and userdata['human_grasp_pose'] != None:
+                rospy.loginfo("Using human provided grasp pose")
+                grasp_pose = userdata['human_grasp_pose']
+                userdata["human_grasp_pose"] = None
 
-        else:
-            rospy.loginfo("Using perception system to get grasp pose")
-            get_points_req = GetObjectPointsRequest(
-                bin_id=userdata['target_bin_id'],
-                object_id=userdata['target_object_id'],
-                frame_id=self.frame_id
-            )
-            print(get_points_req, get_points_req)
-            points_response = self.get_points(get_points_req)
+            else:
+                rospy.loginfo("Using perception system to get grasp pose")
+                get_points_req = GetObjectPointsRequest(
+                    bin_id=userdata['target_bin_id'],
+                    object_id=userdata['target_object_id'],
+                    frame_id=self.frame_id
+                )
+                print(get_points_req, get_points_req)
+                points_response = self.get_points(get_points_req)
 
-            if not points_response.success:
-                userdata["status"] = "pass"
-                return "aborted"
+                if not points_response.success:
+                    userdata["status"] = "pass"
+                    return "aborted"
 
-            grasp_response = self.get_grasp(points=points_response.points,
-                                            mask=points_response.mask,
-                                            dist_threshold=self.pre_grasp_offset, bin_id=userdata['target_bin_id'])
+                grasp_response = self.get_grasp(points=points_response.points,
+                                                mask=points_response.mask,
+                                                dist_threshold=self.pre_grasp_offset, bin_id=userdata['target_bin_id'])
 
-            if not grasp_response.success:
-                userdata["status"] = "pass"
-                return "aborted"
+                if not grasp_response.success:
+                    userdata["status"] = "pass"
+                    return "aborted"
 
-            # NOTE: No extra filtering or ranking on our part. Just take the first one
-            # As the arm_tool0 is 20cm in length w.r.t tip of suction cup thus adding 0.2m offset
-            grasp_pose = grasp_response.poses[0]
+                # NOTE: No extra filtering or ranking on our part. Just take the first one
+                # As the arm_tool0 is 20cm in length w.r.t tip of suction cup thus adding 0.2m offset
+                grasp_pose = grasp_response.poses[0]
 
-        grasp_pose = self.add_offset(-0.22, grasp_pose)
+            grasp_pose = self.add_offset(-0.20, grasp_pose)
 
-        userdata['grasp_pose'] = grasp_pose
+            userdata['grasp_pose'] = grasp_pose
 
-        # adding 0.12m offset for pre grasp pose to prepare it for grasp pose which is use to pick the object
-        pregrasp_pose = self.add_offset(-self.pre_grasp_offset, grasp_pose)
+            # adding 0.12m offset for pre grasp pose to prepare it for grasp pose which is use to pick the object
+            pregrasp_pose = self.add_offset(-self.pre_grasp_offset, grasp_pose)
 
-        userdata['pre_grasp_pose'] = pregrasp_pose
+            userdata['pre_grasp_pose'] = pregrasp_pose
 
-        self.pose_viz.publish(grasp_pose)
-        self.pre_grasp_viz.publish(pregrasp_pose)
+            self.pose_viz.publish(grasp_pose)
+            self.pre_grasp_viz.publish(pregrasp_pose)
 
-        userdata["status"] = "picking"
-        return "succeeded"
+            userdata["status"] = "picking"
+            return "succeeded"
+        except Exception as e:
+            rospy.logerr(e)
+        return "aborted"
