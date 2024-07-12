@@ -111,7 +111,7 @@ class GraspDetectionROS:
         self.tf_buffer = tf2_ros.Buffer()
         self.listener = tf2_ros.TransformListener(self.tf_buffer)
         self.bridge = CvBridge()
-        self.grasp_viz_perception = rospy.Publisher("selected_grasp_pose_perception", geometry_msgs.msg.PoseStamped,
+        self.grasp_viz_perception = rospy.Publisher("~selected_grasp_pose_perception", geometry_msgs.msg.PoseStamped,
                                         queue_size=1, latch=True)
 
         self.tf_buffer = tf2_ros.Buffer()
@@ -161,7 +161,7 @@ class GraspDetectionROS:
 
         return [qx, qy, qz, qw]
 
-    def transfor_pose(self, pose_stamped, to_frame):
+    def transform_pose(self, pose_stamped, to_frame):
         try:
             output_pose_stemped = self.tf_buffer.transform(pose_stamped, to_frame, rospy.Duration(1))
             return output_pose_stemped
@@ -280,7 +280,7 @@ class GraspDetectionROS:
 
         # transform from base ink to 3d pose
         # position in base_line
-        output_pose_stamped = self.transfor_pose(vis_pose, 'base_link')
+        output_pose_stamped = self.transform_pose(vis_pose, 'base_link')
 
         r_prefix = R.from_euler('xyz', [math.pi/2., -math.pi/2., math.pi/2.], degrees=False)
         r3 = r_prefix * r_cam
@@ -374,7 +374,7 @@ class GraspDetectionROS:
             RGB_TO_DEPTH_FRAME_OFFSET = 0.022
             DEPTH_TILT = -transform.transform.translation.z - 0.01
         else:
-            RGB_TO_DEPTH_FRAME_OFFSET = 0.007
+            RGB_TO_DEPTH_FRAME_OFFSET = -0.005
             DEPTH_TILT = -transform.transform.translation.z - 0.01
         POD_OFFSET = 0.
 
@@ -404,7 +404,7 @@ class GraspDetectionROS:
         vis_pose = PoseStamped(header=t_header, pose=as_pose_pose)
         self.grasp_viz_perception.publish(vis_pose)
 
-        output_pose_stamped = self.transfor_pose(vis_pose, 'base_link')
+        output_pose_stamped = self.transform_pose(vis_pose, 'base_link')
         r_prefix = R.from_euler('xyz', [math.pi/2., -math.pi/2., math.pi/2.], degrees=False)
         r3 = r_prefix * r_cam
         orientation = r3.as_quat()
@@ -507,7 +507,7 @@ class GraspDetectionROS:
         vis_pose = PoseStamped(header=t_header, pose=as_pose_pose)
         self.grasp_viz_perception.publish(vis_pose)
 
-        output_pose_stamped = self.transfor_pose(vis_pose, 'base_link')
+        output_pose_stamped = self.transform_pose(vis_pose, 'base_link')
         r_prefix = R.from_euler('xyz', [math.pi/2., -math.pi/2., math.pi/2.], degrees=False)
         r3 = r_prefix * r_cam
         orientation = r3.as_quat()
