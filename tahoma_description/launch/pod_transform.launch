@@ -1,4 +1,6 @@
+<!-- Use `pod_location_calibration` to update this -->
 <launch>
     <node name="robot_to_pod_transform" pkg="tf2_ros" type="static_transform_publisher"
-          args="0.832 0.4955 0 -1.57 0 0 base_link pod_base_link"/>
+        args="0.811 0.395 -0.09 -1.552 -0.000 -0.072 base_link pod_base_link"/>
+
 </launch>
