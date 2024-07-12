@@ -374,9 +374,9 @@ class GraspDetectionROS:
             RGB_TO_DEPTH_FRAME_OFFSET = 0.022
             DEPTH_TILT = -transform.transform.translation.z - 0.01
         else:
-            RGB_TO_DEPTH_FRAME_OFFSET = 0.0225
+            RGB_TO_DEPTH_FRAME_OFFSET = 0.007
             DEPTH_TILT = -transform.transform.translation.z - 0.01
-        POD_OFFSET = 0.1
+        POD_OFFSET = 0.
 
         point[2] = transform.transform.translation.x - POD_OFFSET - transform_camera_to_base_link.transform.translation.x
         point[1] -= point[2]*np.sin(DEPTH_TILT)
@@ -410,6 +410,7 @@ class GraspDetectionROS:
         orientation = r3.as_quat()
         output_pose_stamped.pose.orientation = Quaternion(x=orientation[0], y=orientation[1],
                                         z=orientation[2], w=orientation[3])
+        self.visualize_grasps([output_pose_stamped])
         return True, "", [output_pose_stamped]
 
     def detect_dexnet_grasps_cb(self, request):

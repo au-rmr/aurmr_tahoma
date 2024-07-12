@@ -168,9 +168,10 @@ class TFSlider:
             modified_rot = [original_roll + self.offset_roll,
                                     original_pitch + self.offset_pitch,
                                     original_yaw + self.offset_yaw]
+            rospy.loginfo_throttle_identical(120, f"New pod transform: {modified_trans[0]:.3f} {modified_trans[1]:.3f} {modified_trans[2]:.3f} {modified_rot[2]:.3f} {modified_rot[1]:.3f} {modified_rot[0]:.3f}")
+
             modified_rot = tf.transformations.quaternion_from_euler(*modified_rot)
 
-            rospy.loginfo_throttle_identical(120, f"New pod transform: {modified_trans[0]:.3f} {modified_trans[1]:.3f} {modified_trans[2]:.3f} {modified_rot[2]:.3f} {modified_rot[1]:.3f} {modified_rot[0]:.3f}")
             self.br.sendTransform(modified_trans,
                                 modified_rot,
                                 rospy.Time.now(),
