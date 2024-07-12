@@ -10,3 +10,9 @@
 [submodule "robotiq"]
 	path = robotiq
 	url = https://github.com/au-rmr/robotiq.git
+[submodule "third-party/usb_camn"]
+	path = third-party/usb_camn
+	url = git@github.com:ros-drivers/usb_cam.git
+[submodule "third-party/usb_cam"]
+	path = third-party/usb_cam
+	url = git@github.com:ros-drivers/usb_cam.git
