@@ -28,4 +28,7 @@
   <node name="grasp_detection" pkg="aurmr_perception" type="grasp_detection_server" output="screen">
   </node>
 
+  <include file="$(find tahoma_bringup)/launch/usb_camera.launch">
+    <arg name="name" value="gripper_camera"/>
+  </include>
 </launch>
