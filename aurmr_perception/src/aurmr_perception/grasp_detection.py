@@ -353,7 +353,9 @@ class GraspDetectionROS:
         print(grasp_point, grasp_angle*180/np.pi, crop_bin_bounds)
 
         center3D_depth_value = self.depth_img[int(grasp_point[1]), int(grasp_point[0])]
-
+        if center3D_depth_value < 0.01:
+            print("Hole in depth image, setting depth to default 0.018")
+            center3D_depth_value = 0.018
         pointz = center3D_depth_value/1000.0
         pointx = (grasp_point[0] - cx) * pointz / fx
         pointy = (grasp_point[1] - cy) * pointz / fy
