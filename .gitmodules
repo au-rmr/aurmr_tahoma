@@ -3,7 +3,7 @@
 	url = https://github.com/ros-industrial/ur_msgs.git
 [submodule "universal_robot"]
 	path = universal_robot
-	url = https://github.com/fmauch/universal_robot
+	url = https://github.com/fmauch/universal_robot.git
 [submodule "Universal_Robots_ROS_Driver"]
 	path = Universal_Robots_ROS_Driver
 	url = https://github.com/UniversalRobots/Universal_Robots_ROS_Driver.git
@@ -16,3 +16,15 @@
 [submodule "third-party/usb_cam"]
 	path = third-party/usb_cam
 	url = git@github.com:ros-drivers/usb_cam.git
+[submodule "moveit_calibration"]
+	path = moveit_calibration
+	url = https://github.com/moveit/moveit_calibration.git
+[submodule "ros_controllers"]
+	path = ros_controllers
+	url = https://github.com/ros-controls/ros_controllers.git
+[submodule "ros_control"]
+	path = ros_control
+	url = https://github.com/ros-controls/ros_control.git
+[submodule "industrial_robot_status_controller"]
+	path = industrial_robot_status_controller
+	url = https://github.com/gavanderhoorn/industrial_robot_status_controller.git
