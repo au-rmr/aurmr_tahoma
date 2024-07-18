@@ -5,7 +5,7 @@ from fileinput import filename
 from unittest import result
 import cv2
 import matplotlib
-from aurmr_perception.srv import CaptureObject, RemoveObject, GetObjectPoints, ResetBin, LoadDataset
+from aurmr_perception.srv import CaptureObject, CaptureTable, RemoveObject, GetObjectPoints, GetObjectMasks, ResetBin, LoadDataset
 
 
 from skimage.color import label2rgb
@@ -18,6 +18,7 @@ import tf2_ros
 import matplotlib.pyplot as plt
 from collections import defaultdict
 from sensor_msgs.msg import Image, CameraInfo, PointField, PointCloud2
+from demo.segnetv2_demo import SegnetV2
 from std_msgs.msg import Header
 from std_srvs.srv import Trigger
 # from aurmr_unseen_object_clustering.tools.run_network import clustering_network
@@ -33,20 +34,23 @@ MATCH_FAILED = 4
 IN_BAD_BINS = 5
 
 class PodPerceptionROS:
-    def __init__(self, model, camera_name, visualize, camera_type):
+    def __init__(self, model, camera_name, visualize, camera_type, gripper_camera, gripper_camera_name):
         self.visualize = visualize
         self.camera_name = camera_name
+        self.gripper_camera_name = gripper_camera_name
         self.model = model
 
         self.tf2_buffer = tf2_ros.Buffer()
         self.tf2_listener = tf2_ros.TransformListener(self.tf2_buffer)
 
         self.trigger_capture = rospy.Service('~capture_object', CaptureObject, self.capture_object_callback)
+        self.trigger_capture_table = rospy.Service('~capture_table', CaptureTable, self.capture_table_callback)
         self.trigger_empty_pod = rospy.Service('~capture_empty_pod', Trigger, self.empty_pod_callback)
         self.trigger_pick = rospy.Service('~pick_object', CaptureObject, self.pick_object_callback)
         self.trigger_stow = rospy.Service('~stow_object', CaptureObject, self.stow_object_callback)
         self.trigger_update = rospy.Service('~update_bin', CaptureObject, self.update_object_callback)
         self.trigger_retrieve = rospy.Service('~get_object_points', GetObjectPoints, self.get_object_callback)
+        self.trigger_retrieve_table = rospy.Service('~get_masks_table', GetObjectMasks, self.get_mask_table_callback)
         self.trigger_reset = rospy.Service('~reset_bin', ResetBin, self.reset_callback)
         self.trigger_load = rospy.Service('~load_dataset', LoadDataset, self.load_dataset)
 
@@ -66,6 +70,10 @@ class PodPerceptionROS:
         else:
             raise RuntimeError(f"Unknown camera type requested: {camera_type}")
 
+        if gripper_camera:
+            self.gripper_camera_rgb_subscriber = message_filters.Subscriber(f'/{self.gripper_camera_name}/image_raw', Image)
+            self.gripper_camera_info_subscriber = message_filters.Subscriber(f'/{self.gripper_camera_name}/camera_info', CameraInfo)
+
         self.points_sub = rospy.Subscriber(f'/{self.camera_name}/points2', PointCloud2, self.points_cb)
         self.masks_pub = rospy.Publisher('~detected_masks', Image, queue_size=1, latch=True)
         self.labels_pub = rospy.Publisher('~labeled_images', Image, queue_size=1, latch=True)
@@ -73,11 +81,22 @@ class PodPerceptionROS:
         self.camera_synchronizer = message_filters.ApproximateTimeSynchronizer([
             self.camera_depth_subscriber, self.camera_rgb_subscriber, self.camera_info_subscriber], 10, 1)
         self.camera_synchronizer.registerCallback(self.camera_callback)
+
+        if gripper_camera:
+            self.gripper_camera_synchronizer = message_filters.ApproximateTimeSynchronizer([
+                self.gripper_camera_rgb_subscriber, self.gripper_camera_info_subscriber], 10, 1)
+            self.gripper_camera_synchronizer.registerCallback(self.gripper_camera_callback)
         self.received_images = False
         self.rgb_image = None
         self.depth_image = None
         self.camera_info = None
         self.points_msg = None
+        if gripper_camera:
+            self.gripper_received_images = False
+            self.gripper_rgb_image = None
+            self.gripper_camera_info = None
+
+
 
     def play_camera_shutter(self):
         audio_file = '/usr/share/sounds/freedesktop/stereo/camera-shutter.oga'
@@ -194,6 +213,11 @@ class PodPerceptionROS:
         self.play_camera_shutter()
         return result, message, mask
 
+    def capture_table_callback(self, request):
+        result, message, masks = self.model.capture_table_object(self.gripper_rgb_image.astype(np.uint8))
+        self.play_camera_shutter()
+        return result, message, masks
+
     def points_cb(self, request):
         if self.points_msg is None:
             rospy.loginfo("Points Found")
@@ -304,6 +328,9 @@ class PodPerceptionROS:
                pointcloud,\
                mask_msg
 
+    def get_mask_table_callback(self, request):
+        return True, "Table Mask Retrieved", self.model.get_masks_table()
+
     def pick_object_callback(self, request):
         if not request.bin_id or not request.object_id:
             return False, "bin_id and object_id are required"
@@ -382,6 +409,45 @@ class PodPerceptionROS:
         #     cv2.imshow('rgb_image', rgb_im_viz)
         #     cv2.waitKey(1)
 
+    def gripper_camera_callback(self, ros_rgb_image, ros_camera_info):
+        k = np.reshape(ros_camera_info.K, (3,3))
+        r = np.reshape(ros_camera_info.R, (3,3))
+        d = ros_camera_info.D
+        p = np.reshape(ros_camera_info.P, (3,4))
+
+
+
+        self.gripper_received_images = True
+        self.gripper_rgb_image = ros_numpy.numpify(ros_rgb_image).astype(np.float32)
+
+        # #undistort
+        # h,  w = self.rgb_image .shape[:2]
+        # newcameramtx, roi = cv2.getOptimalNewCameraMatrix(k, d, (w,h), 0, (w,h))
+        # self.rgb_image = cv2.undistort(self.rgb_image, k, d).astype(np.uint8)
+        # # crop the image
+        # x, y, w, h = roi
+        # print(roi)
+        # plt.imshow(self.rgb_image)
+        # plt.show()
+        # self.rgb_image = self.rgb_image[y:y+h, x:x+w]
+        # plt.imshow(self.rgb_image)
+        # plt.show()
+        #undistort
+        # h,  w = self.depth_image .shape[:2]
+        # newcameramtx, roi = cv2.getOptimalNewCameraMatrix(k, d, (w,h), 1, (w,h))
+        # self.depth_image = cv2.undistort(self.depth_image, k, d).astype(np.uint8)
+        # # crop the image
+        # x, y, w, h = roi
+        # self.depth_image = self.depth_image[y:y+h, x:x+w]
+        # # img_shape = ros_numpy.numpify(ros_rgb_image).shape[0:2]
+        self.gripper_camera_info = ros_camera_info
+        # self.camera_info.K = newcameramtx.flatten()
+        # print(newcameramtx)
+        # if self.visualize:
+        #     rgb_im_viz = cv2.cvtColor(self.rgb_image, cv2.COLOR_RGB2BGR)
+        #     cv2.imshow('rgb_image', rgb_im_viz)
+        #     cv2.waitKey(1)
+
 class DiffPodModel:
     def __init__(self, diff_threshold, segmentation_method):
         self.diff_threshold = diff_threshold
@@ -394,6 +460,8 @@ class DiffPodModel:
         self.bin_normals = {}
         self.segmentation_method = segmentation_method
         self.net = None
+        self.table_net = SegnetV2()
+        self.table_mask = None
         self.mask_pub = rospy.Publisher("~masks", Image, queue_size=5)
 
     def numpify_pointcloud(self, points, im_shape):
@@ -462,6 +530,22 @@ class DiffPodModel:
 
         points = np.vstack((x_ros,y_ros,z_ros))
         return points
+
+    def capture_table_object(self, rgb_image):
+        if rgb_image is None:
+            return False, f"Table RGB image is None"
+        full_masks_ret = np.zeros_like(rgb_image[:, :, 0])
+        bin_crop = [100,250,35,500]
+        rgb_image_croppped = rgb_image[bin_crop[0]:bin_crop[1], bin_crop[2]:bin_crop[3], :]
+        masks, full_masks = self.table_net.mask_generator(rgb_image_croppped)
+        full_masks_ret[bin_crop[0]:bin_crop[1], bin_crop[2]:bin_crop[3]] = full_masks
+        if not masks:
+            return True, f"No masks were found", None
+        self.table_mask = full_masks_ret
+        # viz = self.table_net.vis_masks(rgb_image, full_masks_ret)
+        # plt.imsave('viz.png', viz)
+        # plt.show()
+        return True, f"Table has been segmented successfully.", ros_numpy.msgify(Image, full_masks_ret, encoding="mono8")
 
     def capture_object(self, bin_id, object_id, rgb_image, depth_image, camera_intrinsics):
         if not bin_id or not object_id:
@@ -612,6 +696,9 @@ class DiffPodModel:
         # plt.title(f"get_object {object_id} in {bin_id}")
         # plt.show()
         return (bin_id, points, mask), msg
+
+    def get_masks_table(self):
+        return ros_numpy.msgify(Image, self.table_mask.astype(np.uint8), encoding="mono8")
 
     def remove_object(self, bin_id, object_id, rgb_image, depth_image, camera_intrinsics, points_msg):
         if not bin_id or not object_id:

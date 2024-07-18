@@ -5,8 +5,8 @@ import ros_numpy
 import rospy
 import tf2_ros
 import cv2
-from std_msgs.msg import ColorRGBA
-from aurmr_perception.srv import DetectGraspPoses
+from std_msgs.msg import ColorRGBA, Header
+from aurmr_perception.srv import DetectGraspPoses, DetectGraspPosesTable
 from geometry_msgs.msg import PoseStamped, Quaternion, Pose, Point, Vector3
 from tf_conversions import transformations
 from aurmr_perception.visualization import create_gripper_pose_markers
@@ -99,6 +99,7 @@ class GraspDetectionROS:
             self.detect_grasps_dexnet = rospy.Service('~detect_grasps', DetectGraspPoses, self.detect_dexnet_grasps_cb)
         elif(grasp_method == "centroid"):
             self.detect_grasps = rospy.Service('~detect_grasps', DetectGraspPoses, self.detect_grasps_cb)
+        self.detect_grasps_table = rospy.Service('~detect_grasps_table', DetectGraspPosesTable, self.detect_grasps_table_cb)
 
         self.dections_viz_pub = rospy.Publisher("~detected_grasps", MarkerArray, latch=True, queue_size=1)
         self.points_viz_pub = rospy.Publisher("~detected_pts", PointCloud2, latch=True, queue_size=5)
@@ -203,6 +204,75 @@ class GraspDetectionROS:
         print(request.points.header)
         self.visualize_grasps(stamped_detections)
         return True, "", stamped_detections
+
+    def detect_grasps_table_cb(self, request):
+        cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
+        fx, fy = 388.98364, 388.29218
+        cx, cy = 285.36342, 215.72219
+        width = 640
+        height = 480
+
+        # picks first mask
+        mask_id = 1
+        cv_image_obj = np.zeros_like(cv_image)
+        cv_image_obj[cv_image == mask_id] = 1
+        count = (cv_image == 1).sum()
+        y_center, x_center = np.argwhere(cv_image==1).sum(0)/count
+        grasp_point = [int(x_center), int(y_center)]
+
+
+        seconds = time.time()
+        result = time.localtime(seconds)
+        img_path = "/home/aurmr/workspaces/RGB_grasp_soofiyan_ws/src/Paper evaluation/Dataset"
+        fig, axs = plt.subplots(1, 1, figsize=(12, 3))
+        axs.imshow(cv_image)
+        axs.add_patch(
+            plt.Circle((grasp_point[0], grasp_point[1]), radius=2, color="red", fill=True)
+        )
+        plt.savefig(os.path.join(img_path, f"grasp_point_img_{result.tm_mday}_{result.tm_hour}_{result.tm_min}_{result.tm_sec}.png"))
+
+        pointz = 0.6
+        pointx = (grasp_point[0] - cx) * pointz / fx
+        pointy = (grasp_point[1] - cy) * pointz / fy
+
+        point = [pointx, pointy, pointz]
+
+        transform= self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
+        transform_camera_to_base_link= self.tf_buffer.lookup_transform('base_link', 'gripper_camera', rospy.Time())
+
+        print("point ", point)
+        CLOSER_TO_TOTE_OFFSET = 0.
+        CLOSER_TO_BASE_OFFSET = -0.06
+        point[0] = point[0] * 1.1
+        point[1] = point[1] * 1
+        point[0] += CLOSER_TO_TOTE_OFFSET
+        point[1] += CLOSER_TO_BASE_OFFSET
+
+        clamped_euler_angles = [0., 0., 0.]
+
+        clamped_euler_angles[0] = 0.0
+        clamped_euler_angles[1] = -1.57
+
+        print("post euler angles", clamped_euler_angles[0]*180/math.pi, clamped_euler_angles[1]*180/math.pi)
+        # transform from the 3d pose to rgb_camera_link
+        r_cam = R.from_euler('xyz', [clamped_euler_angles[0], clamped_euler_angles[1], clamped_euler_angles[2]], degrees=False)
+        orientation_viz = r_cam.as_quat()
+
+        as_quat_pose = Quaternion(x=orientation_viz[0], y=orientation_viz[1],
+                                        z=orientation_viz[2], w=orientation_viz[3])
+        as_pose_pose = Pose(position=Point(x=point[0], y=point[1], z=point[2]), orientation=as_quat_pose)
+        vis_pose = PoseStamped(header=Header(frame_id="gripper_camera"), pose=as_pose_pose)
+        self.grasp_viz_perception.publish(vis_pose)
+
+        output_pose_stamped = self.transform_pose(vis_pose, 'base_link')
+        r_prefix = R.from_euler('xyz', [math.pi/2., -math.pi/2., math.pi/2.], degrees=False)
+        r3 = r_prefix * r_cam
+        orientation = r3.as_quat()
+        output_pose_stamped.pose.orientation = Quaternion(x=orientation[0], y=orientation[1],
+                                        z=orientation[2], w=orientation[3])
+
+        return True, "", [output_pose_stamped]
+
 
     def detect_grasps_normal_cb(self, request):
         cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')

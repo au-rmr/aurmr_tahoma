@@ -14,10 +14,13 @@ catkin_python_setup()
 add_service_files(
   FILES
   CaptureObject.srv
+  CaptureTable.srv
   RemoveObject.srv
   GetObjectPoints.srv
+  GetObjectMasks.srv
   ResetBin.srv
   DetectGraspPoses.srv
+  DetectGraspPosesTable.srv
   LoadDataset.srv
 )
 
