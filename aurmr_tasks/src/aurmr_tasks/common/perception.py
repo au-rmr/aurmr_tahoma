@@ -7,11 +7,15 @@ import rospy
 from smach import State
 from aurmr_perception.srv import (
     DetectGraspPoses,
+    DetectGraspPosesTable,
     ResetBin,
     ResetBinRequest,
     GetObjectPoints,
+    GetObjectMasks,
     GetObjectPointsRequest,
+    GetObjectMasksRequest,
     CaptureObjectRequest,
+    CaptureTableRequest
 )
 from std_srvs.srv import Trigger
 
@@ -62,6 +66,26 @@ class CaptureObject(State):
         )
         rospy.loginfo("in CAPTUREOBJECT" + userdata['target_bin_id'])
         capture_response = self.capture_object(capture_obj_req)
+
+        if capture_response.success:
+            return "succeeded"
+        else:
+            return "aborted"
+
+class CaptureTable(State):
+    def __init__(self):
+        State.__init__(
+            self,
+            input_keys=[],
+            outcomes=['succeeded', 'aborted']
+        )
+        self.capture_table = rospy.ServiceProxy('/aurmr_perception/capture_table', aurmr_perception.srv.CaptureTable)
+        self.capture_table.wait_for_service(timeout=rospy.Duration(5))
+
+    def execute(self, userdata):
+        capture_table_req = CaptureTableRequest()
+        rospy.loginfo("in CAPTURETABLE")
+        capture_response = self.capture_table(capture_table_req)
 
         if capture_response.success:
             return "succeeded"
@@ -223,6 +247,72 @@ class GetGraspPose(State):
 
             userdata['pre_grasp_pose'] = pregrasp_pose
 
+            self.pose_viz.publish(grasp_pose)
+            self.pre_grasp_viz.publish(pregrasp_pose)
+
+            userdata["status"] = "picking"
+            return "succeeded"
+        except Exception as e:
+            rospy.logerr(e)
+        return "aborted"
+
+class GetTableGraspPose(State):
+    def __init__(self, frame_id='base_link', pre_grasp_offset=.12):
+        State.__init__(
+            self,
+            output_keys=['grasp_pose', 'pre_grasp_pose', 'status'],
+            outcomes=['succeeded', 'preempted', 'aborted']
+        )
+        self.get_masks = rospy.ServiceProxy('/aurmr_perception/get_masks_table', GetObjectMasks)
+        self.get_grasp = rospy.ServiceProxy('/grasp_detection/detect_grasps_table', DetectGraspPosesTable)
+        # Crash during initialization if these aren't running so see the problem early
+        self.get_masks.wait_for_service(timeout=5)
+        self.get_grasp.wait_for_service(timeout=5)
+        self.frame_id = frame_id
+        self.pre_grasp_offset = pre_grasp_offset
+        self.pose_viz = rospy.Publisher("~selected_grasp_pose", geometry_msgs.msg.PoseStamped,
+                                                      queue_size=1, latch=True)
+        self.pre_grasp_viz = rospy.Publisher("~selected_pre_grasp_pose", geometry_msgs.msg.PoseStamped,
+                                        queue_size=1, latch=True)
+
+    def add_offset(self, offset, grasp_pose):
+        v = qv_mult(
+            quat_msg_to_vec(grasp_pose.pose.orientation), (0, 0, offset))
+        offset_pose = deepcopy(grasp_pose)
+        offset_pose.pose.position.x += v[0]
+        offset_pose.pose.position.y += v[1]
+        offset_pose.pose.position.z += v[2]
+        return offset_pose
+
+    def execute(self, userdata):
+        try:
+            rospy.loginfo("Using perception system to get grasp pose")
+            get_mask_req = GetObjectMasksRequest()
+            masks_response = self.get_masks(get_mask_req)
+
+            if not masks_response.success:
+                userdata["status"] = "pass"
+                return "aborted"
+
+            grasp_response = self.get_grasp(mask=masks_response.mask,
+                                            dist_threshold=self.pre_grasp_offset)
+
+            if not grasp_response.success:
+                userdata["status"] = "pass"
+                return "aborted"
+
+            # NOTE: No extra filtering or ranking on our part. Just take the first one
+            # As the arm_tool0 is 20cm in length w.r.t tip of suction cup thus adding 0.2m offset
+            grasp_pose = grasp_response.poses[0]
+
+            grasp_pose = self.add_offset(-0.35, grasp_pose)
+
+            userdata['grasp_pose'] = grasp_pose
+
+            # adding 0.12m offset for pre grasp pose to prepare it for grasp pose which is use to pick the object
+            pregrasp_pose = self.add_offset(-self.pre_grasp_offset, grasp_pose)
+
+            userdata['pre_grasp_pose'] = pregrasp_pose
             self.pose_viz.publish(grasp_pose)
             self.pre_grasp_viz.publish(pregrasp_pose)
 
