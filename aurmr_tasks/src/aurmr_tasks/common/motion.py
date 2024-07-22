@@ -309,6 +309,25 @@ class MoveEndEffectorInLineInOut(State):
             return "succeeded"
 
 
+class MoveToEjector(State):
+    def __init__(self, robot):
+        State.__init__(self, input_keys=["target_bin_id"], outcomes=['succeeded', 'aborted'])
+        self.robot = robot
+
+    def execute(self, ud):
+        target = ud["target_bin_id"]
+        if isinstance(target, JointState):
+            to_log = target.position
+        else:
+            target = "pre_bin_" + target.lower() + "_eject"
+        to_log = target
+        rospy.loginfo(f"Moving to {to_log}")
+        success = self.robot.move_to_joint_angles(target)
+        if success:
+            return "succeeded"
+        else:
+            return "aborted"
+
 class CloseGripper(State):
     def __init__(self, robot, return_before_done=False):
         State.__init__(self, input_keys=[], outcomes=['succeeded', 'preempted', 'aborted'])
@@ -665,7 +684,6 @@ class AddFullPodCollisionGeometryDropHide(State):
         self.robot.scene.add_box("right_side_frame", PoseStamped(header=Header(frame_id="base_link"),
                                                     pose=Pose(position=Point(x=0.25, y=-1.00, z=1.34),
                                                               orientation=I_QUAT)), (2.00, .05, 3.0))
-
 
         number_collision_box = 3
 
