@@ -12,7 +12,7 @@
     <include file="$(find ur_robot_driver)/launch/ur16e_bringup.launch">
         <arg name="controllers" default="scaled_pos_joint_traj_controller joint_state_controller  force_torque_sensor_controller robot_status_controller"/>
         <arg name="stopped_controllers" default="pos_joint_traj_controller joint_group_pos_controller joint_group_vel_controller" doc="Controllers that are initally loaded, but not started."/>
-        <arg name="robot_ip" value="192.168.43.92" />
+       <arg name="robot_ip" value="192.168.43.92" />
         <arg name="robot_description_file" value="$(find tahoma_description)/launch/load_tahoma.launch" />
         <arg name="controller_config_file" default="$(find tahoma_bringup)/config/controllers.yaml" />
         <arg name="kinematics_config" value="$(find tahoma_description)/config/arm_calibration.yaml" />
@@ -53,14 +53,7 @@
       </include>
     </group> -->
 
-    <group if="$(eval gripper_type == 'vacuum')">
-      <include file="$(find vacuum_gripper_control)/launch/vacuum_gripper_socket.launch">
-        <arg name="gripper_type" default="$(arg gripper_type)" />
-      </include>
-      <include file="$(find vacuum_gripper_action_server)/launch/vacuum_gripper_socket_action_server.launch">
-        <arg name="gripper_type" default="$(arg gripper_type)" />
-      </include>
-    </group>
+    <include if="$(eval gripper_type == 'vacuum')" file="$(find vacuum_gripper_action_server)/launch/vacuum_gripper.launch"/>
 
     <!-- <include file="$(find vacuum_gripper_control)/launch/vacuum_gripper_socket.launch">
       <arg name="gripper_type" default="$(arg gripper_type)" />
