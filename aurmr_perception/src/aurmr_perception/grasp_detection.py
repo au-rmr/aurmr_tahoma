@@ -440,7 +440,7 @@ class GraspDetectionROS:
             RGB_TO_DEPTH_FRAME_OFFSET = 0.007
             DEPTH_TILT = -transform.transform.translation.z - 0.01
         elif(request.bin_id == "2H"):
-            RGB_TO_DEPTH_FRAME_OFFSET = 0.017
+            RGB_TO_DEPTH_FRAME_OFFSET = 0.0
             DEPTH_TILT = -transform.transform.translation.z - 0.01
         elif(request.bin_id == "3H"):
             RGB_TO_DEPTH_FRAME_OFFSET = 0.022
