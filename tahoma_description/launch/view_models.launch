@@ -1,6 +1,8 @@
 <launch>
   <arg name="gui" default="True"/>
   <arg name="pod" default="1" doc="Suffix of pod to load. Leave empty or set to 'false' to turn off the pod."/>
+  <arg name="face" default="A" doc="Face of pod model to load. Only applies if pod arg not empty"/>
+
 
   <include file="$(find tahoma_description)/launch/load_tahoma.launch" />
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
@@ -13,7 +15,9 @@
 
 
   <group if="$(eval pod > 0)">
-    <include file="$(find tahoma_description)/launch/load_pod.launch" />
+    <include file="$(find tahoma_description)/launch/load_pod.launch" >
+      <arg name="pod_id" value="$(arg pod)$(arg face)"/>
+    </include>
     <include file="$(find tahoma_description)/launch/pod_transform.launch" />
   </group>
 
