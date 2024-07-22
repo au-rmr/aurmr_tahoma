@@ -17,6 +17,7 @@ from geometry_msgs.msg import PoseStamped, WrenchStamped
 from robotiq_2f_gripper_control.msg import vacuum_gripper_input as VacuumGripperStatus
 from control_msgs.msg import FollowJointTrajectoryAction, GripperCommandAction, GripperCommandGoal
 from moveit_msgs.msg import Constraints, JointConstraint
+<<<<<<< HEAD
 class MoveEndEffectorToPose_Storm(State):
     def __init__(self, default_pose=None):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
@@ -292,6 +293,11 @@ class MoveToBinHome(State):
             return 'pass'
 
 
+=======
+from aurmr_tasks.util import all_close, pose_dist
+
+
+>>>>>>> 30568e21ab93727763ba9377fef85275c13a0f68
 class MoveToJointAngles(State):
     def __init__(self, robot, default_position=None):
         State.__init__(self, input_keys=["position"], outcomes=['succeeded', 'aborted'])
@@ -350,16 +356,19 @@ class MoveEndEffectorToPose(State):
     def __init__(self, robot):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
+<<<<<<< HEAD
         self.target_pose_visualizer = rospy.Publisher("end_effector_target", geometry_msgs.msg.PoseStamped,
                                                       queue_size=1, latch=True)
+=======
+        self.default_pose = default_pose
+
+>>>>>>> 30568e21ab93727763ba9377fef85275c13a0f68
 
     def execute(self, userdata):
         if self.default_pose:
             pose = self.default_pose
         else:
             pose = userdata["pose"]
-
-        self.target_pose_visualizer.publish(pose)
         success = self.robot.move_to_pose(
                           pose,
                           allowed_planning_time=25.0,
@@ -380,6 +389,7 @@ class MoveEndEffectorToPoseManipulable(State):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
         self.default_pose = default_pose
+<<<<<<< HEAD
         self.target_pose_visualizer = rospy.Publisher("end_effector_target", geometry_msgs.msg.PoseStamped,
                                                       queue_size=1, latch=True)
 
@@ -403,6 +413,33 @@ class MoveEndEffectorToPoseManipulable(State):
             return "succeeded"
         else:
             return "aborted"
+=======
+
+    def execute(self, userdata):
+        try:
+            if self.default_pose:
+                pose = self.default_pose
+            else:
+                pose = userdata["pose"]
+
+            success = self.robot.move_to_pose_manipulable(
+                            pose,
+                            allowed_planning_time=25.0,
+                            execution_timeout=25.0,
+                            num_planning_attempts=40,
+                            orientation_constraint=None,
+                            replan=True,
+                            replan_attempts=10,
+                            tolerance=0.005)
+            if success:
+                return "succeeded"
+            else:
+                return "aborted"
+        except Exception as e:
+            rospy.logerr(e)
+
+        return "aborted"
+>>>>>>> 30568e21ab93727763ba9377fef85275c13a0f68
 
 class MoveEndEffectorToPoseLinear(State):
     def __init__(self, robot, to_pose):
@@ -864,6 +901,66 @@ class AddPodCollisionGeometry(State):
         # If we exited the while loop without returning then we timed out
         return "aborted"
 
+<<<<<<< HEAD
+
+class AddFullPodCollisionGeometryDropHide(State):
+=======
+class AddFullPodCollisionGeometryTableDropHide(State):
+>>>>>>> 30568e21ab93727763ba9377fef85275c13a0f68
+    def __init__(self, robot):
+        State.__init__(self, outcomes=['succeeded', 'aborted'])
+        self.robot = robot
+
+    def execute(self, ud):
+        # FIXME: We should probably read this in from transforms or something
+        POD_SIZE = .9148
+        HALF_POD_SIZE = POD_SIZE / 2
+        WALL_WIDTH = 0.003
+        SIDE_WALL_WIDTH = 0.033
+
+        self.robot.scene.add_box("front_frame", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                    pose=Pose(position=Point(x=POD_SIZE/2, y=0., z=1.34),
+                                                              orientation=I_QUAT)), (1.8, .05, 3.0))
+
+        self.robot.scene.add_box("left_side_frame", PoseStamped(header=Header(frame_id="base_link"),
+                                                    pose=Pose(position=Point(x=0.25, y=1.00, z=1.34),
+                                                              orientation=I_QUAT)), (2.00, .05, 3.0))
+
+        self.robot.scene.add_box("right_side_frame", PoseStamped(header=Header(frame_id="base_link"),
+                                                    pose=Pose(position=Point(x=0.25, y=-1.00, z=1.34),
+                                                              orientation=I_QUAT)), (2.00, .05, 3.0))
+
+
+<<<<<<< HEAD
+        number_collision_box = 3
+=======
+        self.robot.scene.add_box("table", PoseStamped(header=Header(frame_id="base_link"),
+                                                    pose=Pose(position=Point(x=0.58, y=0.01, z=1.15),
+                                                              orientation=I_QUAT)), (0.60, 1.5, 0.05 ))
+
+
+        number_collision_box = 4
+>>>>>>> 30568e21ab93727763ba9377fef85275c13a0f68
+
+        start = rospy.get_time()
+        seconds = rospy.get_time()
+        timeout = 5.0
+        while (seconds - start < timeout) and not rospy.is_shutdown():
+            objects = self.robot.scene.get_objects()
+
+            # Test if we are in the expected state
+            if len(objects) == number_collision_box:
+<<<<<<< HEAD
+=======
+                return "succeeded"
+
+            # Sleep so that we give other threads time on the processor
+            rospy.sleep(0.1)
+            seconds = rospy.get_time()
+
+        # If we exited the while loop without returning then we timed out
+        return "aborted"
+
 
 class AddFullPodCollisionGeometryDropHide(State):
     def __init__(self, robot):
@@ -900,6 +997,7 @@ class AddFullPodCollisionGeometryDropHide(State):
 
             # Test if we are in the expected state
             if len(objects) == number_collision_box:
+>>>>>>> 30568e21ab93727763ba9377fef85275c13a0f68
                 return "succeeded"
 
             # Sleep so that we give other threads time on the processor

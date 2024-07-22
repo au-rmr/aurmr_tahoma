@@ -2,29 +2,52 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="pod">
   <xacro:arg name="pod_id" default="1A"/>
   <xacro:arg name="include_flaps" default="true"/>
+<<<<<<< HEAD
   <xacro:arg name="call_macro" default="false"/>
 
   <xacro:macro name="pod_recipe" params="pod_id:=1A include_flaps:=true">  
+=======
+
+  <xacro:macro name="pod_recipe" params="pod_id:=1A include_flaps:=true">
+>>>>>>> 30568e21ab93727763ba9377fef85275c13a0f68
     <xacro:include filename="$(find tahoma_description)/urdf/pod.xacro"/>
       <xacro:property name="POD_ID"  value="${pod_id[0]}"/>
       <xacro:property name="FACE_ID" value="${pod_id[1]}"/>
 
+<<<<<<< HEAD
       <!-- Current pod -->
       <xacro:if value="${POD_ID == 1}">
         <xacro:if value="${FACE_ID == 'A'}"><!-- (13x4) Ref. -> pod1_recipe_790-00265-021.txt "bindDimensions" : A1-A13. corresponds to reality. Current face -->
           <xacro:pod_urdf 
             prefix="pod_" 
+=======
+      <!-- Recipes are bottom shelf to top-->
+      <!-- Small bin bod. -->
+      <xacro:if value="${POD_ID == 1}">
+        <xacro:if value="${FACE_ID == 'A'}"><!-- (13x4) Ref. -> pod1_recipe_790-00265-021.txt "bindDimensions" : A1-A13. corresponds to reality. Current face -->
+          <xacro:pod
+            prefix="pod_"
+>>>>>>> 30568e21ab93727763ba9377fef85275c13a0f68
             BRACE_TO_FABRIC_Z_OFFSET="0.085"
             PODFACE_ID = "1A"
             BIN_DEPTH="0.152"
             BIN_WIDTH="0.234"
             BIN_BOTTOM_THICKNESS="0.005"
+<<<<<<< HEAD
             BIN_HEIGHTS="${[0.223, 0.146, 0.197, 0.146, 0.121, 0.223, 0.121, 0.146, 0.121, 0.223, 0.121, 0.146, 0.261]}"
             INCLUDE_FLAPS="${include_flaps}"/>
         </xacro:if> 
         <xacro:if value="${FACE_ID == 'B'}"><!-- (8x2) Ref. -> pod1_recipe_790-00265-021.txt "bindDimensions" : B1-B8. corresponds to reality -->
           <xacro:pod_urdf 
             prefix="pod_" 
+=======
+            BIN_HEIGHTS="${[0.234, 0.166, 0.173, 0.146, 0.187, 0.160, 0.116, 0.223, 0.146, 0.223, 0.146, 0.261]}"
+            INCLUDE_FLAPS="${include_flaps}"/>
+        </xacro:if>
+        <xacro:if value="${FACE_ID == 'B'}"><!-- (8x2) Ref. -> pod1_recipe_790-00265-021.txt "bindDimensions" : B1-B8. corresponds to reality -->
+          <xacro:pod
+            prefix="pod_"
+>>>>>>> 30568e21ab93727763ba9377fef85275c13a0f68
             BRACE_TO_FABRIC_Z_OFFSET="0.085"
             PODFACE_ID = "1B"
             BIN_DEPTH="0.470"
@@ -34,21 +57,37 @@
             BIN_BOTTOM_THICKNESS="0.007"
             BIN_HEIGHTS="${[0.346, 0.244, 0.219, 0.295, 0.219, 0.320, 0.244, 0.308]}"
             INCLUDE_FLAPS="${include_flaps}"/>
+<<<<<<< HEAD
         </xacro:if> 
         <xacro:if value="${FACE_ID == 'C'}"><!-- (12x4) Ref. -> pod1_recipe_790-00265-021.txt "bindDimensions" : C1-C12. haven't been measured in reality -->
           <xacro:pod_urdf 
             prefix="pod_" 
+=======
+        </xacro:if>
+        <xacro:if value="${FACE_ID == 'C'}"><!-- (12x4) Ref. -> .02  .006  .005 pod1_recipe_790-00265-021.txt "bindDimensions" : C1-C12. haven't been measured in reality -->
+          <xacro:pod
+            prefix="pod_"
+>>>>>>> 30568e21ab93727763ba9377fef85275c13a0f68
             BRACE_TO_FABRIC_Z_OFFSET="0.085"
             PODFACE_ID = "1C"
             BIN_DEPTH="0.152"
             BIN_WIDTH="0.234"
             BIN_BOTTOM_THICKNESS="0.005"
+<<<<<<< HEAD
             BIN_HEIGHTS="${[0.223, 0.146, 0.223, 0.146, 0.197, 0.146, 0.121, 0.223, 0.146, 0.223, 0.146, 0.261]}"
             INCLUDE_FLAPS="${include_flaps}"/>
         </xacro:if> 
         <xacro:if value="${FACE_ID == 'D'}"><!-- (7x2) Ref. -> pod1_recipe_790-00265-021.txt "bindDimensions" : D1-D7. corresponds to reality -->
           <xacro:pod_urdf 
             prefix="pod_" 
+=======
+            BIN_HEIGHTS="${[0.234, 0.166, 0.173, 0.146, 0.187, 0.160, 0.116, 0.223, 0.146, 0.223, 0.146, 0.261]}"
+            INCLUDE_FLAPS="${include_flaps}"/>
+        </xacro:if>
+        <xacro:if value="${FACE_ID == 'D'}"><!-- (7x2) Ref. -> pod1_recipe_790-00265-021.txt "bindDimensions" : D1-D7. corresponds to reality -->
+          <xacro:pod
+            prefix="pod_"
+>>>>>>> 30568e21ab93727763ba9377fef85275c13a0f68
             BRACE_TO_FABRIC_Z_OFFSET="0.085"
             PODFACE_ID = "1D"
             BIN_DEPTH="0.470"
@@ -58,14 +97,24 @@
             BIN_BOTTOM_THICKNESS="0.007"
             BIN_HEIGHTS="${[0.346, 0.320, 0.320, 0.269, 0.320, 0.320, 0.308]}"
             INCLUDE_FLAPS="${include_flaps}"/>
+<<<<<<< HEAD
         </xacro:if> 
       </xacro:if> 
+=======
+        </xacro:if>
+      </xacro:if>
+>>>>>>> 30568e21ab93727763ba9377fef85275c13a0f68
 
       <!-- Henry and Michael using pod -->
       <xacro:if value="${POD_ID == 2}">
         <xacro:if value="${FACE_ID == 'A'}"><!-- (8x3) Ref. -> pod2_recipe_790-00265-022.txt "bindDimensions" : A1-A8 with minor changes corresponding to reality. Henry using face -->
+<<<<<<< HEAD
           <xacro:pod_urdf 
             prefix="pod_" 
+=======
+          <xacro:pod
+            prefix="pod_"
+>>>>>>> 30568e21ab93727763ba9377fef85275c13a0f68
             BRACE_TO_FABRIC_Z_OFFSET="0.035"
             PODFACE_ID = "2A"
             BIN_DEPTH="0.356"
@@ -73,10 +122,17 @@
             BIN_BOTTOM_THICKNESS="0.007"
             BIN_HEIGHTS="${[0.346, 0.295, 0.250, 0.225, 0.250, 0.275, 0.325, 0.275]}"
             INCLUDE_FLAPS="${include_flaps}"/>
+<<<<<<< HEAD
         </xacro:if> 
         <xacro:if value="${FACE_ID == 'B'}"><!-- (8x1) Ref. -> pod2_recipe_790-00265-022.txt "bindDimensions" : B1-B8. haven't been measured in reality -->
           <xacro:pod_urdf 
             prefix="pod_" 
+=======
+        </xacro:if>
+        <xacro:if value="${FACE_ID == 'B'}"><!-- (8x1) Ref. -> pod2_recipe_790-00265-022.txt "bindDimensions" : B1-B8. haven't been measured in reality -->
+          <xacro:pod
+            prefix="pod_"
+>>>>>>> 30568e21ab93727763ba9377fef85275c13a0f68
             BRACE_TO_FABRIC_Z_OFFSET="0.035"
             PODFACE_ID = "2B"
             BIN_DEPTH="0.470"
@@ -85,10 +141,17 @@
             BIN_BOTTOM_THICKNESS="0.007"
             BIN_HEIGHTS="${[0.346, 0.244, 0.219, 0.295, 0.219, 0.320, 0.244, 0.308]}"
             INCLUDE_FLAPS="${include_flaps}"/>
+<<<<<<< HEAD
         </xacro:if> 
         <xacro:if value="${FACE_ID == 'C'}"><!-- (8x3) Ref. -> pod2_recipe_790-00265-022.txt "bindDimensions" : C1-C8. haven't been measured in reality -->
           <xacro:pod_urdf 
             prefix="pod_" 
+=======
+        </xacro:if>
+        <xacro:if value="${FACE_ID == 'C'}"><!-- (8x3) Ref. -> pod2_recipe_790-00265-022.txt "bindDimensions" : C1-C8. haven't been measured in reality -->
+          <xacro:pod
+            prefix="pod_"
+>>>>>>> 30568e21ab93727763ba9377fef85275c13a0f68
             BRACE_TO_FABRIC_Z_OFFSET="0.035"
             PODFACE_ID = "2C"
             BIN_DEPTH="0.356"
@@ -96,10 +159,17 @@
             BIN_BOTTOM_THICKNESS="0.007"
             BIN_HEIGHTS="${[0.320, 0.295, 0.244, 0.219, 0.295, 0.269, 0.295, 0.257]}"
             INCLUDE_FLAPS="${include_flaps}"/>
+<<<<<<< HEAD
         </xacro:if> 
         <xacro:if value="${FACE_ID == 'D'}"><!-- (7x1) Ref. -> pod2_recipe_790-00265-022.txt "bindDimensions" : D1-D7. haven't been measured in reality -->
           <xacro:pod_urdf 
             prefix="pod_" 
+=======
+        </xacro:if>
+        <xacro:if value="${FACE_ID == 'D'}"><!-- (7x1) Ref. -> pod2_recipe_790-00265-022.txt "bindDimensions" : D1-D7. haven't been measured in reality -->
+          <xacro:pod
+            prefix="pod_"
+>>>>>>> 30568e21ab93727763ba9377fef85275c13a0f68
             BRACE_TO_FABRIC_Z_OFFSET="0.035"
             PODFACE_ID = "2D"
             BIN_DEPTH="0.470"
@@ -108,6 +178,7 @@
             BIN_BOTTOM_THICKNESS="0.007"
             BIN_HEIGHTS="${[0.346, 0.320, 0.320, 0.269, 0.320, 0.320, 0.308]}"
             INCLUDE_FLAPS="${include_flaps}"/>
+<<<<<<< HEAD
         </xacro:if> 
       </xacro:if>
   </xacro:macro>
@@ -115,4 +186,12 @@
   <xacro:if value="$(arg call_macro)"><!-- (7x1) Ref. -> pod2_recipe_790-00265-022.txt "bindDimensions" : D1-D7. haven't been measured in reality -->
     <xacro:pod_recipe pod_id="$(arg pod_id)" include_flaps="$(arg include_flaps)"/>
   </xacro:if>
+=======
+        </xacro:if>
+      </xacro:if>
+  </xacro:macro>
+
+  <xacro:pod_recipe pod_id="$(arg pod_id)" include_flaps="$(arg include_flaps)"/>
+
+>>>>>>> 30568e21ab93727763ba9377fef85275c13a0f68
 </robot>
