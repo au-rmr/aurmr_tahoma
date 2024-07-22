@@ -242,7 +242,7 @@ class GraspDetectionROS:
 
         print("point ", point)
         CLOSER_TO_TOTE_OFFSET = 0.
-        CLOSER_TO_BASE_OFFSET = -0.06
+        CLOSER_TO_BASE_OFFSET = -0.07
         point[0] = point[0] * 1.1
         point[1] = point[1] * 1
         point[0] += CLOSER_TO_TOTE_OFFSET
