@@ -618,7 +618,7 @@ class AddFullPodCollisionGeometryTableDropHide(State):
 
 
         self.robot.scene.add_box("table", PoseStamped(header=Header(frame_id="base_link"),
-                                                    pose=Pose(position=Point(x=0.58, y=0.01, z=1.05),
+                                                    pose=Pose(position=Point(x=0.58, y=0.01, z=1.15),
                                                               orientation=I_QUAT)), (0.60, 1.5, 0.05 ))
 
 
