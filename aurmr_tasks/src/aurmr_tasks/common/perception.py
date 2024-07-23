@@ -164,6 +164,9 @@ class GetGraspPose(State):
     def add_offset(self, offset, grasp_pose):
         v = qv_mult(
             quat_msg_to_vec(grasp_pose.pose.orientation), (0, 0, offset))
+        print("########################################################################")
+        print("pre grasp pose: ", grasp_pose)
+
         offset_pose = deepcopy(grasp_pose)
         offset_pose.pose.position.x += v[0]
         offset_pose.pose.position.y += v[1]

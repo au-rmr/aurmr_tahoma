@@ -109,6 +109,7 @@ def moveit_error_string(val):
 class Tahoma:
     def __init__(self, in_sim=False):
         self.in_sim = in_sim
+        self.force_values_init = False
         self.joint_state = None
         self.point_cloud = None
 
@@ -134,7 +135,7 @@ class Tahoma:
         self.commander = moveit_commander.RobotCommander()
         self.scene = moveit_commander.PlanningSceneInterface(synchronous=True)
         self.move_group = moveit_commander.MoveGroupCommander(ARM_GROUP_NAME)
-        self.MAX_VEL_FACTOR = .5
+        self.MAX_VEL_FACTOR = .75
         self.MAX_ACC_FACTOR = .5
         self.move_group.set_max_velocity_scaling_factor(self.MAX_VEL_FACTOR)
         self.move_group.set_max_acceleration_scaling_factor(self.MAX_ACC_FACTOR)
@@ -173,6 +174,7 @@ class Tahoma:
     def wrench_cb(self, msg: WrenchStamped):
         self.force_mag = math.sqrt(msg.wrench.force.x**2 + msg.wrench.force.y**2+ msg.wrench.force.z**2)
         self.torque_mag = math.sqrt(msg.wrench.torque.x**2 + msg.wrench.torque.y**2+ msg.wrench.torque.z**2)
+        self.object_detected = (self.force_mag > 35)
 
     def gripper_status_cb(self, msg: VacuumGripperStatus):
         self.object_detected = (msg.gPO < 95)
