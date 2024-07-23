@@ -15,8 +15,7 @@ from aurmr_perception.srv import (
 )
 from std_srvs.srv import Trigger
 
-from aurmr_perception.util import qv_mult, quat_msg_to_vec, vec_to_quat_msg
-
+from aurmr_tasks.util import add_offset
 
 class CaptureEmptyBin(State):
     def __init__(self):
@@ -143,8 +142,8 @@ class GetGraspPose(State):
     def __init__(self, tf_buffer, frame_id='base_link', pre_grasp_offset=.12):
         State.__init__(
             self,
-            input_keys=['target_bin_id', 'target_object_id', 'human_grasp_pose'],
-            output_keys=['grasp_pose', 'pre_grasp_pose', 'status', 'human_grasp_pose'],
+            input_keys=['target_bin_id', 'target_object_id'],
+            output_keys=['grasp_pose', 'pre_grasp_pose', 'status'],
             outcomes=['succeeded', 'preempted', 'aborted']
         )
         self.get_points = rospy.ServiceProxy('/aurmr_perception/get_object_points', GetObjectPoints)
@@ -154,62 +153,46 @@ class GetGraspPose(State):
         self.get_grasp.wait_for_service(timeout=5)
         self.frame_id = frame_id
         self.pre_grasp_offset = pre_grasp_offset
-        self.pose_viz = rospy.Publisher("selected_grasp_pose", geometry_msgs.msg.PoseStamped,
+        self.pose_viz = rospy.Publisher("~selected_grasp_pose", geometry_msgs.msg.PoseStamped,
                                                       queue_size=1, latch=True)
-        self.percep_pose_viz = rospy.Publisher("selected_grasp_pose_perception", geometry_msgs.msg.PoseStamped,
-                                                      queue_size=1, latch=True)
-        self.pre_grasp_viz = rospy.Publisher("selected_pre_grasp_pose", geometry_msgs.msg.PoseStamped,
+        self.pre_grasp_viz = rospy.Publisher("~selected_pre_grasp_pose", geometry_msgs.msg.PoseStamped,
                                         queue_size=1, latch=True)
         self.grasp_to_arm_tool0 = tf_buffer.lookup_transform("arm_tool0", "gripper_equilibrium_grasp", rospy.Time(0),
                                                rospy.Duration(1)).transform
 
-    def add_offset(self, offset, grasp_pose):
-        v = qv_mult(
-            quat_msg_to_vec(grasp_pose.pose.orientation), (0, 0, offset))
-        offset_pose = deepcopy(grasp_pose)
-        offset_pose.pose.position.x += v[0]
-        offset_pose.pose.position.y += v[1]
-        offset_pose.pose.position.z += v[2]
-        return offset_pose
 
     def execute(self, userdata):
-        if 'human_grasp_pose' in userdata and userdata['human_grasp_pose'] != None:
-            rospy.loginfo("Using human provided grasp pose")
-            grasp_pose = userdata['human_grasp_pose']
-            userdata["human_grasp_pose"] = None
 
-        else:
-            rospy.loginfo("Using perception system to get grasp pose")
-            get_points_req = GetObjectPointsRequest(
-                bin_id=userdata['target_bin_id'],
-                object_id=userdata['target_object_id'],
-                frame_id=self.frame_id
-            )
-            print(get_points_req, get_points_req)
-            points_response = self.get_points(get_points_req)
+        rospy.loginfo("Using perception system to get grasp pose")
+        get_points_req = GetObjectPointsRequest(
+            bin_id=userdata['target_bin_id'],
+            object_id=userdata['target_object_id'],
+            frame_id=self.frame_id
+        )
+        points_response = self.get_points(get_points_req)
 
-            if not points_response.success:
-                userdata["status"] = "pass"
-                return "aborted"
+        if not points_response.success:
+            userdata["status"] = "pass"
+            return "aborted"
 
-            grasp_response = self.get_grasp(points=points_response.points,
-                                            mask=points_response.mask,
-                                            dist_threshold=self.pre_grasp_offset, bin_id=userdata['target_bin_id'])
+        grasp_response = self.get_grasp(points=points_response.points,
+                                        mask=points_response.mask,
+                                        dist_threshold=self.pre_grasp_offset, bin_id=userdata['target_bin_id'])
 
-            if not grasp_response.success:
-                userdata["status"] = "pass"
-                return "aborted"
+        if not grasp_response.success:
+            userdata["status"] = "pass"
+            return "aborted"
 
-            # NOTE: No extra filtering or ranking on our part. Just take the first one
-            # As the arm_tool0 is 20cm in length w.r.t tip of suction cup thus adding 0.2m offset
-            grasp_pose = grasp_response.poses[0]
+        # NOTE: No extra filtering or ranking on our part. Just take the first one
+        # As the arm_tool0 is 20cm in length w.r.t tip of suction cup thus adding 0.2m offset
+        grasp_pose = grasp_response.poses[0]
 
-        grasp_pose = self.add_offset(-0.20, grasp_pose)
+        grasp_pose = add_offset(-0.20, grasp_pose)
 
         userdata['grasp_pose'] = grasp_pose
 
         # adding 0.12m offset for pre grasp pose to prepare it for grasp pose which is use to pick the object
-        pregrasp_pose = self.add_offset(-self.pre_grasp_offset, grasp_pose)
+        pregrasp_pose = add_offset(-self.pre_grasp_offset, grasp_pose)
 
         userdata['pre_grasp_pose'] = pregrasp_pose
 

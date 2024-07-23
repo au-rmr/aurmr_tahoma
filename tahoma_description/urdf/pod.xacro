@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="pod">
-  <xacro:macro name="pod_urdf" params="prefix:=pod_
+  <xacro:macro name="pod" params="prefix:=pod_
                                   BASE_WIDTH:=0.9400
                                   BASE_HEIGHT:=0.265
                                   BRACE_WIDTH:=0.9390
@@ -18,9 +18,9 @@
                                   PODFACE_ID:=1A
                                   INCLUDE_FLAPS:=true
                                   ">
-    <!-- ############################################################################## -->                                       
+    <!-- ############################################################################## -->
     <!-- ### Pod's frame sizes (meters), universal for all pods in the Robotics Lab ### -->
-    <!-- ############################################################################## -->  
+    <!-- ############################################################################## -->
     <!-- BASE_WIDTH: 0.9398 in .stl file, but in reality - 0.940
          BASE_HEIGHT: 0.295 in .stl file, but in reality - 0.265
          BRACE_WIDTH: 0.9188 in .stl file, but in reality - 0.9390
@@ -38,7 +38,7 @@
          BOTTOM_BIN_WIDTH
          BIN_BOTTOM_THICKNESS
          BIN_HEIGHTS
-         PODFACE_ID 
+         PODFACE_ID
          -->
     <xacro:property name="alphabet" value="abcdefghijklmnopqrstuvwxyz"/>
     <xacro:property name="POD_ID"  value="${PODFACE_ID[0]}"/>
@@ -161,7 +161,7 @@
           <origin xyz="${width} 0 0" rpy="0 0 0"/>
           <parent link="${bin_name}"/>
           <child link="${bin_name}_right"/>
-        </joint> 
+        </joint>
       </xacro:if>
 
       <xacro:shifted_box name="${bin_name}_back" x_len="${width}" y_len="${BIN_WALL_THICKNESS}" z_len="${height}"/>
@@ -190,7 +190,7 @@
       </xacro:if>
       <xacro:unless value="${sections == 1}">
         <xacro:property name="rightmost" value="false"/>
-      </xacro:unless> 
+      </xacro:unless>
       <xacro:bin colrow_id="${i+1}${row_id}" rightmost="${rightmost}"
                  width="${bin_width}" depth="${bin_depth}" height="${bin_height}"/>
 
@@ -203,7 +203,7 @@
       <xacro:if value="${sections > 1}"><!-- recurse for the remaining bins -->
         <xacro:bin_row row_id="${row_id}" bin_row_base="${bin_row_base}" sections="${sections-1}" i="${i+1}"
                        bin_width="${bin_width}" bin_depth="${bin_depth}" bin_height="${bin_height}"/><!-- no prefix passing -->
-      </xacro:if>  
+      </xacro:if>
     </xacro:macro>
 
 
@@ -217,7 +217,7 @@
           <parent link="${shelf_name}"/>
           <child link="${shelf_name}_left_margin"/>
         </joint>
-      </xacro:if> 
+      </xacro:if>
 
       <link name="${shelf_name}"/>
       <xacro:bin_row row_id="${row_id}" bin_row_base="${shelf_name}" sections="${sections}"
@@ -230,7 +230,7 @@
           <parent link="${shelf_name}"/>
           <child link="${shelf_name}_right_margin"/>
         </joint>
-      </xacro:if> 
+      </xacro:if>
     </xacro:macro>
 
 
@@ -260,9 +260,9 @@
       <xacro:unless value="${FACE_ID == 'B' or FACE_ID == 'D'}">
         <xacro:property name="shelf_depth" value="${BIN_DEPTH}"/>
         <xacro:property name="bin_width" value="${BIN_WIDTH}"/>
-      </xacro:unless> 
+      </xacro:unless>
 
-      <xacro:shelf prefix="${prefix}" row_id="${alphabet[i]}" sections="${NUM_COLUMNS}" 
+      <xacro:shelf prefix="${prefix}" row_id="${alphabet[i]}" sections="${NUM_COLUMNS}"
                    bin_width="${bin_width}" shelf_depth="${shelf_depth}" shelf_height="${shelf_height}"/>
 
       <joint name="${shelf_stack_base}_${shelf_name}_joint" type="fixed">

@@ -6,20 +6,26 @@
   <arg name="grasp_detector" default="vacuum_heuristic" />
   <arg name="segmentation_method" default="clustering" />
   <arg name="camera_type" default="azure_kinect" />
+  <arg name="gripper_camera" default="True" />
+  <arg name="gripper_camera_name" default="gripper_camera" />
   <!-- normal or centroid for grasp type -->
   <arg name="grasp_type" default="normal" />
 
 
 
-  <node name="demo_service" pkg="uois_service_multi_demo" type="demo_service.py" output="screen" />
+  <node name="demo_service" pkg="aurmr_unseen_object_clustering" type="uois_service" output="screen" />
+  <!-- These are short-lived parameters which need to be configured using the `pod_calibration` scripts-->
+  <rosparam file="/tmp/bin_bounds.yaml" />
 
   <node name="aurmr_perception" pkg="aurmr_perception" type="aurmr_perception" output="screen">
     <param name="camera_name"                   value="$(arg camera)" />
     <param name="viz"                   value="$(arg viz)" />
     <param name="segmentation_method"                   value="$(arg segmentation_method)" />
     <param name="camera_type" value="$(arg camera_type)"/>
+    <param name="gripper_camera_name" value="$(arg gripper_camera_name)"/>
+    <param name="gripper_camera" value="$(arg gripper_camera)"/>
   </node>
-  
+
   <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="rgb_camera_link_offset_broadcaster" args="-0.032 0 0.004 0 0 0 1 rgb_camera_link rgb_camera_link_offset" /> -->
   <node pkg="tf2_ros" type="static_transform_publisher" name="rgb_camera_link_offset_broadcaster" args="-0.01 0 0 0 0 0 1 rgb_camera_link rgb_camera_link_offset" />
 
@@ -27,5 +33,11 @@
   <param name="grasp_detection_method" type="str" value="$(arg grasp_type)" />
   <node name="grasp_detection" pkg="aurmr_perception" type="grasp_detection_server" output="screen">
   </node>
+
+  <include file="$(find tahoma_bringup)/launch/usb_camera.launch">
+    <arg name="name" value="gripper_camera"/>
+    <arg name="config" value="$(find tahoma_bringup)/config/gripper_camera_calibration.yaml"/>
+  </include>
+  <node pkg="tf2_ros" type="static_transform_publisher" name="gripper_camera_link_offset_broadcaster" args="0 0.04 0.01 3.14 0 0 gripper_base_link gripper_camera" />
 
 </launch>

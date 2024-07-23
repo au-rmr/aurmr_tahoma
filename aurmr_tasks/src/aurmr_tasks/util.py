@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import Union
 
 import geometry_msgs.msg
 from math import pi, tau, dist, fabs, cos
@@ -7,6 +8,8 @@ import rospy
 from geometry_msgs.msg import PoseStamped
 from moveit_commander.conversions import pose_to_list
 from smach import State, StateMachine
+
+from aurmr_perception.util import qv_mult, quat_msg_to_vec
 
 
 def apply_offset_to_pose(pose, offset, offset_frame=None, tf_buffer=None):
@@ -23,6 +26,16 @@ def apply_offset_to_pose(pose, offset, offset_frame=None, tf_buffer=None):
     # It would be better to grab the transform once and apply it to the offset vector
     offset_pose = tf_buffer.transform(offset_pose, pose.header.frame_id, rospy.Duration(1))
     return offset_pose
+
+def add_offset(offset, grasp_pose):
+    v = qv_mult(
+        quat_msg_to_vec(grasp_pose.pose.orientation), (0, 0, offset))
+    offset_pose = deepcopy(grasp_pose)
+    offset_pose.pose.position.x += v[0]
+    offset_pose.pose.position.y += v[1]
+    offset_pose.pose.position.z += v[2]
+    return offset_pose
+
 
 
 class Formulator(State):
@@ -48,7 +61,7 @@ def formulate_ud_str_auto(name, template, input_keys, output_key, transitions=No
     StateMachine.add_auto(name, Formulator(template, input_keys, output_key), ["succeeded"],transitions=transitions)
 
 
-def all_close(goal, actual, tolerance):
+def all_close(goal: Union[geometry_msgs.msg.Pose, geometry_msgs.msg.PoseStamped, list], actual: Union[geometry_msgs.msg.Pose, geometry_msgs.msg.PoseStamped, list], tolerance: float):
     """
     Convenience method for testing if the values in two lists are within a tolerance of each other.
     For Pose and PoseStamped inputs, the angle between the two quaternions is compared (the angle

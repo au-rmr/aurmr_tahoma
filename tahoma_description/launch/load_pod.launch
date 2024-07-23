@@ -1,10 +1,9 @@
 <?xml version="1.0" ?>
 <launch>
-    <arg name="id" default="1" doc="ID number for pod to load" />
-    <arg name="pod_id" default="1C" doc="ID number for pod to load" />
+    <arg name="pod_id" doc="ID number for pod to load" />
     <arg name="include_flaps" default="true" doc="Adds bin flaps into urdf model" />
 
-    <param name="pod_description" command="xacro $(find tahoma_description)/robots/pod.xacro --inorder pod_id:=$(arg pod_id) include_flaps:=$(arg include_flaps) call_macro:=true" />
+    <param name="pod_description" command="xacro $(find tahoma_description)/robots/pod.xacro pod_id:=$(arg pod_id) include_flaps:=$(arg include_flaps) call_macro:=true" />
     <node name="pod_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
         <remap from="robot_description" to="pod_description"/>
         <remap from="joint_states" to="/dev/null" />

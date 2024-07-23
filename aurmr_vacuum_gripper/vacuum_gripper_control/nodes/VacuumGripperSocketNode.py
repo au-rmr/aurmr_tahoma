@@ -2,7 +2,7 @@
 # Driver for Schmalz vacuum ejectors. Manual can be found at chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.schmalz.com/site/binaries/content/assets/media/01_vacuum-technology-automation/SCTSi/en/BAL_10.02.99.10501_en-EN_02.pdf
 
 import os
-from pycomm3 import CIPDriver, Services, configure_default_logger, LOG_VERBOSE, exceptions, SINT, UINT, USINT
+from pycomm3 import CIPDriver, Services, configure_default_logger, LOG_VERBOSE, exceptions, SINT, UINT, USINT, CommError
 from logging import WARNING
 import socket
 from vacuum_gripper_control.msg import vacuum_gripper_input, vacuum_gripper_output
@@ -182,19 +182,21 @@ class VacuumGripper:
 
     def get_device_status(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=DEVICE_STATUS, attribute=5)
-        return USINT.decode(msg.value) 
-    
+
+        return USINT.decode(msg.value)
+
     #TODO Is a list comprehension correct? <<
     def get_ejector_status(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=EJECTOR_STATUS, attribute=5)
         status = [USINT.decode(msg.value) for ejector in msg] #change to msg.value --> returns [_, _, _, _] _ being a 0 or a 1
-        return status 
-    
+
+        return status
+
     def get_ejector_control(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5)
-        status = [USINT.decode(msg.value) for ejector in msg] # for every ejector in msg? 
-        return status 
-    
+        status = [USINT.decode(msg.value) for ejector in msg] # for every ejector in msg?
+        return status
+
     def get_extendedValuesEjectorOne(self):
         #11000 to 11015, 11000 is first ejector
         #Byte 0:1: System vacuum (in mbar)
@@ -357,7 +359,7 @@ def mainLoop(ur_address, gripper_type):
     # gripper.set_SetPointH1(850)
     try:
         status = gripper.getStatus()
-    except exceptions.CommError:
+    except CommError:
         rospy.logerr("Communication error while getting status. Ignoring and looping")
     pub.publish(status)
     # Wait a little
