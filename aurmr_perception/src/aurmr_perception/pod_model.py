@@ -24,7 +24,8 @@ from std_srvs.srv import Trigger
 # from aurmr_unseen_object_clustering.tools.match_masks import match_masks
 from aurmr_unseen_object_clustering.tools.segmentation_net import SegNet, NO_OBJ_STORED, UNDERSEGMENTATION, OBJ_NOT_FOUND, MATCH_FAILED, IN_BAD_BINS, def_config
 from copy import deepcopy
-
+import cProfile, pstats, io
+from pstats import SortKey
 
 class PodPerceptionROS:
     def __init__(self, model, camera_name, visualize, camera_type):
@@ -134,11 +135,16 @@ class PodPerceptionROS:
         updated_config["bounds"] = dataset.metadata["bin_bounds"]
         first_depth = first_depth.astype(np.float32)
 
+        from aurmr_setup.utils.workspace_utils import get_active_workspace_path
 
-        self.net = SegNet(config=updated_config, init_depth=first_depth, init_info=K)
+        workspace_path = get_active_workspace_path()
+        import shutil
+        rospy.loginfo("Removing directory of cropped bin images...")
+        shutil.rmtree(f"{workspace_path}/src/uois_service_multi_demo/dataset/", ignore_errors=True)
+        self.net = SegNet(dataset.metadata["bin_bounds"], config=updated_config, init_depth=first_depth, init_info=K)
         self.model.net = self.net
 
-        for entry in dataset.entries:
+        for i, entry in enumerate(dataset.entries):
 
             camera_data = entry.camera_data[self.camera_name]
 
@@ -150,7 +156,8 @@ class PodPerceptionROS:
 
             depth_image = depth_image.astype(np.float32)
 
-            for action in entry.actions:
+            for j, action in enumerate(entry.actions):
+                print(f"Loading action  {j + 1} of {len(entry.actions)} (entry {i}/{len(dataset.entries)})")
                 # Hack so we can keep changes isolated from rest of file
                 class MockCameraInfo():
                     def __init__(self) -> None:
@@ -161,7 +168,13 @@ class PodPerceptionROS:
                         print("Can't simplify bin id ", action.item.bin_id)
                         continue
                     print(action.item.bin_id, simple_bin_id)
-                    self.model.add_object(simple_bin_id, action.item.asin_id, rgb_image, depth_image, MockCameraInfo(), points_msg)
+                    with cProfile.Profile() as pr:
+                        self.model.add_object(simple_bin_id, action.item.asin_id, rgb_image, depth_image, MockCameraInfo(), points_msg)
+                    #s = io.StringIO()
+                    #sortby = SortKey.CUMULATIVE
+                    #ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+                    #ps.print_stats()
+                    #print(s.getvalue())
                 else:
                     print("ERROR ACTION NOT SUPPORTED")
 
@@ -207,9 +220,7 @@ class PodPerceptionROS:
         # self.net = SegNet(init_depth=self.model.numpify_pointcloud(self.points_msg, self.rgb_image.shape))
 
         intrinsics_3x3 = np.reshape(self.camera_info.K, (3,3))
-        print(intrinsics_3x3)
-        print(type(intrinsics_3x3))
-        self.net = SegNet(init_depth=self.depth_image, init_info=intrinsics_3x3)
+        self.net = SegNet(rospy.get_param("bin_bounds"), init_depth=self.depth_image, init_info=intrinsics_3x3)
         self.model.net = self.net
         return {"success": True, "message": "empty bin captured"}
 
@@ -260,11 +271,10 @@ class PodPerceptionROS:
                                                                  rospy.Duration(1))
             camera_to_target_mat = ros_numpy.numpify(stamped_transform.transform)
             points = np.vstack([points, np.ones(points.shape[1])])  # convert to homogenous
-            print(points.shape)
             points = np.matmul(camera_to_target_mat, points)[0:3, :].T  # apply transform
         else:
             points = points.T
-        print(points.shape)
+
         # Convert numpy points to a pointcloud message
         itemsize = np.dtype(np.float32).itemsize
         points = np.hstack((points, np.ones((points.shape[0], 4))))
@@ -309,7 +319,7 @@ class PodPerceptionROS:
     def update_object_callback(self, request):
         if not request.bin_id:
             return False, "bin_id is required"
-        print("CALLBACK")
+
         result, message = self.model.update(request.bin_id, self.rgb_image, self.depth_image, self.camera_info, self.points_msg)
 
         return result, message, None
@@ -399,7 +409,6 @@ class DiffPodModel:
         # points = np.vstack((points['x'],points['y'],points['z']))
         points = np.stack((points['x'],points['y'],points['z']), axis=2)
 
-        print(points.shape)
         plt.imshow(points[...,2])
         plt.show()
         return points
@@ -407,7 +416,6 @@ class DiffPodModel:
     def mask_pointcloud(self, points, mask):
         # Points may or may not be (points x 1), so we flatten to be sure
         points = ros_numpy.numpify(points).flatten()
-        np.save("/tmp/points1.npy", points)
         points_seg = points[mask.flatten() > 0]
         points_seg = np.vstack((points_seg['x'],points_seg['y'],points_seg['z']))
         points_seg = points_seg[:, np.invert(np.isnan(points_seg[2, :]))]
@@ -416,7 +424,6 @@ class DiffPodModel:
     def backproject(self, depth_image, mask, camera_intrinsics):
         points = rospy.wait_for_message(f'/camera_lower_right/points2', PointCloud2)
         points = ros_numpy.numpify(points)
-        np.save("/tmp/points1.npy", points)
         points_seg = points[mask.flatten() > 0]
         points_seg = np.vstack((points_seg['x'],points_seg['y'],points_seg['z']))
         points_seg = points_seg[:, np.invert(np.isnan(points_seg[0, :]))]
@@ -511,7 +518,6 @@ class DiffPodModel:
         if not bin_id or not object_id:
             return False, "bin_id and object_id are required"
 
-        rospy.loginfo(bin_id + str(type(bin_id)))
         # plt.imshow(rgb_image.astype(np.uint8))
         # plt.show()
         # status = self.net.stow(bin_id, object_id, rgb_image, self.numpify_pointcloud(points_msg, rgb_image.shape))
@@ -633,8 +639,6 @@ class DiffPodModel:
         return True, f"Object {object_id} in bin {bin_id} has been removed"
 
     def update(self, bin_id, rgb_image, depth_image, camera_intrinsics, points_msg):
-        print(bin_id)
-        print(self.points_table.keys())
         if not bin_id :
             rospy.logwarn("bin id not given")
             return False, "bin_id is required"
@@ -645,11 +649,10 @@ class DiffPodModel:
 
         self.latest_captures[bin_id] = rgb_image
 
-        print("CALLBACK2")
         intrinsics_3x3 = np.reshape(camera_intrinsics.K, (3,3))
         # self.net.update(bin_id, rgb_image, self.numpify_pointcloud(points_msg, rgb_image.shape))
         self.net.update(bin_id, rgb_image, depth_raw=depth_image, info=intrinsics_3x3)
-        print("DONE UPDATING")
+
         if bin_id not in self.net.bad_bins:
             for o_id in self.points_table[bin_id].keys():
                 mask = self.net.get_obj_mask(o_id)
