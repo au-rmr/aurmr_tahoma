@@ -1,0 +1,10 @@
+<?xml version="1.0" ?>
+
+<launch>
+  <arg name="gripper_type" default="vacuum" />
+
+  <node name="gripper_action_server" pkg="vacuum_gripper_action_server"
+    type="vacuum_gripper_socket_action_server.py" output="screen">
+    <param name="gripper_type" type="str" value="$(arg gripper_type)" />
+  </node>
+</launch>

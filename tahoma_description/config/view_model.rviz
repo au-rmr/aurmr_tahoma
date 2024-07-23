@@ -3,15 +3,9 @@ Panels:
     Help Height: 0
     Name: Displays
     Property Tree Widget:
-      Expanded:
-        - /Tahoma1
-        - /Pod1
-        - /PointCloud21
-        - /TF1/Frames1
-        - /Pose1
-        - /Pose2
+      Expanded: ~
       Splitter Ratio: 0.3637469708919525
-    Tree Height: 898
+    Tree Height: 433
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -25,10 +19,9 @@ Panels:
     Name: Views
     Splitter Ratio: 0.5
   - Class: rviz/Time
-    Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud2
+    SyncSource: Camera
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -54,7 +47,7 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: true
-    - Alpha: 0.20000000298023224
+    - Alpha: 1
       Class: rviz/RobotModel
       Collision Enabled: false
       Enabled: true
@@ -144,17 +137,30 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        camera_bottom_screw_frame:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        camera_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         camera_lower_left_mount:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
+        camera_lower_mount:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
         camera_lower_right_mount:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        camera_upper_mount:
+        camera_secondary_upper_mount:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -168,6 +174,10 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        cantilever_camera_upper_mount:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
         control_box:
           Alpha: 1
           Show Axes: false
@@ -213,6 +223,11 @@ Visualization Manager:
           Show Trail: false
           Value: true
         left_light_panel_emitter:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        realsense_back_gripper_mount:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -255,6 +270,8 @@ Visualization Manager:
       Visual Enabled: true
     - Class: rviz/TF
       Enabled: false
+      Filter (blacklist): ""
+      Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
         All Enabled: false
@@ -268,7 +285,7 @@ Visualization Manager:
         {}
       Update Interval: 0
       Value: false
-    - Alpha: 0.20000000298023224
+    - Alpha: 0.4000000059604645
       Class: rviz/RobotModel
       Collision Enabled: false
       Enabled: true
@@ -307,11 +324,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        pod_bin_1a_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         pod_bin_1a_top:
           Alpha: 1
           Show Axes: false
@@ -337,11 +349,6 @@ Visualization Manager:
           Show Trail: false
           Value: true
         pod_bin_1b_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1b_right:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -375,11 +382,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        pod_bin_1c_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         pod_bin_1c_top:
           Alpha: 1
           Show Axes: false
@@ -405,11 +407,6 @@ Visualization Manager:
           Show Trail: false
           Value: true
         pod_bin_1d_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1d_right:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -443,11 +440,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        pod_bin_1e_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         pod_bin_1e_top:
           Alpha: 1
           Show Axes: false
@@ -473,11 +465,6 @@ Visualization Manager:
           Show Trail: false
           Value: true
         pod_bin_1f_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1f_right:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -511,11 +498,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        pod_bin_1g_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         pod_bin_1g_top:
           Alpha: 1
           Show Axes: false
@@ -545,182 +527,7 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        pod_bin_1h_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         pod_bin_1h_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1i:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_1i_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1i_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1i_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1i_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1i_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1i_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1j:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_1j_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1j_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1j_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1j_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1j_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1j_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1k:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_1k_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1k_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1k_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1k_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1k_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1k_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1l:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_1l_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1l_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1l_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1l_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1l_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1l_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1m:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_1m_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1m_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1m_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1m_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1m_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_1m_top:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -745,11 +552,6 @@ Visualization Manager:
           Show Trail: false
           Value: true
         pod_bin_2a_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2a_right:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -783,11 +585,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        pod_bin_2b_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         pod_bin_2b_top:
           Alpha: 1
           Show Axes: false
@@ -813,11 +610,6 @@ Visualization Manager:
           Show Trail: false
           Value: true
         pod_bin_2c_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2c_right:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -851,11 +643,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        pod_bin_2d_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         pod_bin_2d_top:
           Alpha: 1
           Show Axes: false
@@ -881,11 +668,6 @@ Visualization Manager:
           Show Trail: false
           Value: true
         pod_bin_2e_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2e_right:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -919,11 +701,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        pod_bin_2f_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         pod_bin_2f_top:
           Alpha: 1
           Show Axes: false
@@ -949,11 +726,6 @@ Visualization Manager:
           Show Trail: false
           Value: true
         pod_bin_2g_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2g_right:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -987,182 +759,7 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        pod_bin_2h_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         pod_bin_2h_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2i:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_2i_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2i_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2i_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2i_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2i_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2i_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2j:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_2j_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2j_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2j_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2j_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2j_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2j_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2k:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_2k_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2k_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2k_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2k_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2k_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2k_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2l:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_2l_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2l_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2l_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2l_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2l_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2l_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2m:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_2m_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2m_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2m_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2m_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2m_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_2m_top:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -1439,618 +1036,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        pod_bin_3i:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_3i_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3i_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3i_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3i_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3i_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3i_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3j:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_3j_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3j_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3j_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3j_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3j_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3j_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3k:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_3k_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3k_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3k_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3k_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3k_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3k_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3l:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_3l_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3l_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3l_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3l_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3l_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3l_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3m:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_3m_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3m_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3m_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3m_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3m_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_3m_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4a:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_4a_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4a_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4a_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4a_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4a_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4a_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4b:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_4b_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4b_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4b_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4b_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4b_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4b_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4c:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_4c_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4c_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4c_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4c_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4c_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4c_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4d:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_4d_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4d_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4d_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4d_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4d_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4d_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4e:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_4e_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4e_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4e_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4e_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4e_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4e_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4f:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_4f_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4f_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4f_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4f_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4f_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4f_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4g:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_4g_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4g_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4g_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4g_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4g_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4g_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4h:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_4h_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4h_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4h_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4h_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4h_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4h_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4i:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_4i_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4i_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4i_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4i_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4i_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4i_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4j:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_4j_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4j_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4j_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4j_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4j_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4j_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4k:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_4k_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4k_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4k_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4k_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4k_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4k_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4l:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_4l_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4l_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4l_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4l_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4l_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4l_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4m:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_bin_4m_back:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4m_bottom:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4m_flap:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4m_left:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4m_right:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        pod_bin_4m_top:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         pod_brace:
           Alpha: 1
           Show Axes: false
@@ -2091,26 +1076,6 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        pod_shelf_i:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_shelf_j:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_shelf_k:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_shelf_l:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        pod_shelf_m:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
       Name: Pod
       Robot Description: pod_description
       TF Prefix: ""
@@ -2119,6 +1084,8 @@ Visualization Manager:
       Visual Enabled: true
     - Class: rviz/TF
       Enabled: false
+      Filter (blacklist): ""
+      Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
         All Enabled: true
@@ -2144,7 +1111,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: RGB8
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Min Color: 0; 0; 0
@@ -2152,14 +1119,14 @@ Visualization Manager:
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
-      Size (Pixels): 3
+      Size (Pixels): 1
       Size (m): 0.009999999776482582
-      Style: Flat Squares
+      Style: Points
       Topic: /camera_lower_right/points2
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Acceleration_Scaling_Factor: 0.1
       Class: moveit_rviz_plugin/MotionPlanning
       Enabled: false
@@ -2191,189 +1158,6 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          arm_base:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          arm_base_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          arm_base_link_inertia:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_flange:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          arm_forearm_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_shoulder_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_tool0:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          arm_upper_arm_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_wrist_1_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_wrist_2_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_wrist_3_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          back_left_caster:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          back_right_caster:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          base_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          camera_base:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_beam_lower:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_body:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_lower_left_mount:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_lower_right_mount:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_upper_mount:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          camera_visor:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          cantilever:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          control_box:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          control_box_mount:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          coupling:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          epick_end_effector:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          front_left_caster:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          front_right_caster:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          gripper_base_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          gripper_equilibrium_grasp:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          left_light_panel:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          left_light_panel_emitter:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          right_light_panel:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          right_light_panel_emitter:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          robot_plate:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          stand:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          stand_brace:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          stand_upright:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
         Loop Animation: false
         Robot Alpha: 0.5
         Robot Color: 150; 50; 150
@@ -2383,6 +1167,7 @@ Visualization Manager:
         State Display Time: 3x
         Trail Step Size: 1
         Trajectory Topic: move_group/display_planned_path
+        Use Sim Time: false
       Planning Metrics:
         Payload: 1
         Show Joint Torques: false
@@ -2419,189 +1204,6 @@ Visualization Manager:
           Expand Link Details: false
           Expand Tree: false
           Link Tree Style: Links in Alphabetic Order
-          arm_base:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          arm_base_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          arm_base_link_inertia:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_flange:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          arm_forearm_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_shoulder_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_tool0:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          arm_upper_arm_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_wrist_1_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_wrist_2_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          arm_wrist_3_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          back_left_caster:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          back_right_caster:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          base_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          camera_base:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_beam_lower:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_body:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_lower_left_mount:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_lower_right_mount:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          camera_upper_mount:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          camera_visor:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          cantilever:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          control_box:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          control_box_mount:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          coupling:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          epick_end_effector:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          front_left_caster:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          front_right_caster:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          gripper_base_link:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          gripper_equilibrium_grasp:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-          left_light_panel:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          left_light_panel_emitter:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          right_light_panel:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          right_light_panel_emitter:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          robot_plate:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          stand:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          stand_brace:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
-          stand_upright:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
-            Value: true
         Robot Alpha: 1
         Show Robot Collision: false
         Show Robot Visual: true
@@ -2609,6 +1211,8 @@ Visualization Manager:
       Velocity_Scaling_Factor: 0.1
     - Class: rviz/TF
       Enabled: true
+      Filter (blacklist): ""
+      Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
         All Enabled: false
@@ -2638,8 +1242,6 @@ Visualization Manager:
           Value: false
         back_right_caster:
           Value: false
-        base:
-          Value: false
         base_link:
           Value: true
         camera_base:
@@ -2648,23 +1250,33 @@ Visualization Manager:
           Value: false
         camera_body:
           Value: false
+        camera_bottom_screw_frame:
+          Value: false
+        camera_link:
+          Value: false
+        camera_lower_left_link:
+          Value: true
         camera_lower_left_mount:
           Value: false
+        camera_lower_mount:
+          Value: false
+        camera_lower_right_link:
+          Value: true
         camera_lower_right_mount:
           Value: false
-        camera_upper_mount:
+        camera_secondary_upper_mount:
           Value: false
         camera_visor:
           Value: false
         cantilever:
+          Value: false
+        cantilever_camera_upper_mount:
           Value: false
         control_box:
           Value: false
         control_box_mount:
           Value: false
         coupling:
-          Value: false
-        depth_camera_link:
           Value: false
         epick_end_effector:
           Value: false
@@ -2675,8 +1287,6 @@ Visualization Manager:
         gripper_base_link:
           Value: false
         gripper_equilibrium_grasp:
-          Value: false
-        imu_link:
           Value: false
         left_light_panel:
           Value: false
@@ -2694,8 +1304,6 @@ Visualization Manager:
           Value: false
         pod_bin_1a_left:
           Value: false
-        pod_bin_1a_right:
-          Value: false
         pod_bin_1a_top:
           Value: false
         pod_bin_1b:
@@ -2707,8 +1315,6 @@ Visualization Manager:
         pod_bin_1b_flap:
           Value: false
         pod_bin_1b_left:
-          Value: false
-        pod_bin_1b_right:
           Value: false
         pod_bin_1b_top:
           Value: false
@@ -2722,8 +1328,6 @@ Visualization Manager:
           Value: false
         pod_bin_1c_left:
           Value: false
-        pod_bin_1c_right:
-          Value: false
         pod_bin_1c_top:
           Value: false
         pod_bin_1d:
@@ -2735,8 +1339,6 @@ Visualization Manager:
         pod_bin_1d_flap:
           Value: false
         pod_bin_1d_left:
-          Value: false
-        pod_bin_1d_right:
           Value: false
         pod_bin_1d_top:
           Value: false
@@ -2750,8 +1352,6 @@ Visualization Manager:
           Value: false
         pod_bin_1e_left:
           Value: false
-        pod_bin_1e_right:
-          Value: false
         pod_bin_1e_top:
           Value: false
         pod_bin_1f:
@@ -2763,8 +1363,6 @@ Visualization Manager:
         pod_bin_1f_flap:
           Value: false
         pod_bin_1f_left:
-          Value: false
-        pod_bin_1f_right:
           Value: false
         pod_bin_1f_top:
           Value: false
@@ -2778,8 +1376,6 @@ Visualization Manager:
           Value: false
         pod_bin_1g_left:
           Value: false
-        pod_bin_1g_right:
-          Value: false
         pod_bin_1g_top:
           Value: false
         pod_bin_1h:
@@ -2792,79 +1388,7 @@ Visualization Manager:
           Value: false
         pod_bin_1h_left:
           Value: false
-        pod_bin_1h_right:
-          Value: false
         pod_bin_1h_top:
-          Value: false
-        pod_bin_1i:
-          Value: false
-        pod_bin_1i_back:
-          Value: false
-        pod_bin_1i_bottom:
-          Value: false
-        pod_bin_1i_flap:
-          Value: false
-        pod_bin_1i_left:
-          Value: false
-        pod_bin_1i_right:
-          Value: false
-        pod_bin_1i_top:
-          Value: false
-        pod_bin_1j:
-          Value: false
-        pod_bin_1j_back:
-          Value: false
-        pod_bin_1j_bottom:
-          Value: false
-        pod_bin_1j_flap:
-          Value: false
-        pod_bin_1j_left:
-          Value: false
-        pod_bin_1j_right:
-          Value: false
-        pod_bin_1j_top:
-          Value: false
-        pod_bin_1k:
-          Value: false
-        pod_bin_1k_back:
-          Value: false
-        pod_bin_1k_bottom:
-          Value: false
-        pod_bin_1k_flap:
-          Value: false
-        pod_bin_1k_left:
-          Value: false
-        pod_bin_1k_right:
-          Value: false
-        pod_bin_1k_top:
-          Value: false
-        pod_bin_1l:
-          Value: false
-        pod_bin_1l_back:
-          Value: false
-        pod_bin_1l_bottom:
-          Value: false
-        pod_bin_1l_flap:
-          Value: false
-        pod_bin_1l_left:
-          Value: false
-        pod_bin_1l_right:
-          Value: false
-        pod_bin_1l_top:
-          Value: false
-        pod_bin_1m:
-          Value: false
-        pod_bin_1m_back:
-          Value: false
-        pod_bin_1m_bottom:
-          Value: false
-        pod_bin_1m_flap:
-          Value: false
-        pod_bin_1m_left:
-          Value: false
-        pod_bin_1m_right:
-          Value: false
-        pod_bin_1m_top:
           Value: false
         pod_bin_2a:
           Value: false
@@ -2875,8 +1399,6 @@ Visualization Manager:
         pod_bin_2a_flap:
           Value: false
         pod_bin_2a_left:
-          Value: false
-        pod_bin_2a_right:
           Value: false
         pod_bin_2a_top:
           Value: false
@@ -2890,8 +1412,6 @@ Visualization Manager:
           Value: false
         pod_bin_2b_left:
           Value: false
-        pod_bin_2b_right:
-          Value: false
         pod_bin_2b_top:
           Value: false
         pod_bin_2c:
@@ -2903,8 +1423,6 @@ Visualization Manager:
         pod_bin_2c_flap:
           Value: false
         pod_bin_2c_left:
-          Value: false
-        pod_bin_2c_right:
           Value: false
         pod_bin_2c_top:
           Value: false
@@ -2918,8 +1436,6 @@ Visualization Manager:
           Value: false
         pod_bin_2d_left:
           Value: false
-        pod_bin_2d_right:
-          Value: false
         pod_bin_2d_top:
           Value: false
         pod_bin_2e:
@@ -2931,8 +1447,6 @@ Visualization Manager:
         pod_bin_2e_flap:
           Value: false
         pod_bin_2e_left:
-          Value: false
-        pod_bin_2e_right:
           Value: false
         pod_bin_2e_top:
           Value: false
@@ -2946,8 +1460,6 @@ Visualization Manager:
           Value: false
         pod_bin_2f_left:
           Value: false
-        pod_bin_2f_right:
-          Value: false
         pod_bin_2f_top:
           Value: false
         pod_bin_2g:
@@ -2959,8 +1471,6 @@ Visualization Manager:
         pod_bin_2g_flap:
           Value: false
         pod_bin_2g_left:
-          Value: false
-        pod_bin_2g_right:
           Value: false
         pod_bin_2g_top:
           Value: false
@@ -2974,79 +1484,7 @@ Visualization Manager:
           Value: false
         pod_bin_2h_left:
           Value: false
-        pod_bin_2h_right:
-          Value: false
         pod_bin_2h_top:
-          Value: false
-        pod_bin_2i:
-          Value: false
-        pod_bin_2i_back:
-          Value: false
-        pod_bin_2i_bottom:
-          Value: false
-        pod_bin_2i_flap:
-          Value: false
-        pod_bin_2i_left:
-          Value: false
-        pod_bin_2i_right:
-          Value: false
-        pod_bin_2i_top:
-          Value: false
-        pod_bin_2j:
-          Value: false
-        pod_bin_2j_back:
-          Value: false
-        pod_bin_2j_bottom:
-          Value: false
-        pod_bin_2j_flap:
-          Value: false
-        pod_bin_2j_left:
-          Value: false
-        pod_bin_2j_right:
-          Value: false
-        pod_bin_2j_top:
-          Value: false
-        pod_bin_2k:
-          Value: false
-        pod_bin_2k_back:
-          Value: false
-        pod_bin_2k_bottom:
-          Value: false
-        pod_bin_2k_flap:
-          Value: false
-        pod_bin_2k_left:
-          Value: false
-        pod_bin_2k_right:
-          Value: false
-        pod_bin_2k_top:
-          Value: false
-        pod_bin_2l:
-          Value: false
-        pod_bin_2l_back:
-          Value: false
-        pod_bin_2l_bottom:
-          Value: false
-        pod_bin_2l_flap:
-          Value: false
-        pod_bin_2l_left:
-          Value: false
-        pod_bin_2l_right:
-          Value: false
-        pod_bin_2l_top:
-          Value: false
-        pod_bin_2m:
-          Value: false
-        pod_bin_2m_back:
-          Value: false
-        pod_bin_2m_bottom:
-          Value: false
-        pod_bin_2m_flap:
-          Value: false
-        pod_bin_2m_left:
-          Value: false
-        pod_bin_2m_right:
-          Value: false
-        pod_bin_2m_top:
           Value: false
         pod_bin_3a:
           Value: false
@@ -3059,7 +1497,7 @@ Visualization Manager:
         pod_bin_3a_left:
           Value: false
         pod_bin_3a_right:
-          Value: false
+          Value: true
         pod_bin_3a_top:
           Value: false
         pod_bin_3b:
@@ -3073,7 +1511,7 @@ Visualization Manager:
         pod_bin_3b_left:
           Value: false
         pod_bin_3b_right:
-          Value: false
+          Value: true
         pod_bin_3b_top:
           Value: false
         pod_bin_3c:
@@ -3087,7 +1525,7 @@ Visualization Manager:
         pod_bin_3c_left:
           Value: false
         pod_bin_3c_right:
-          Value: false
+          Value: true
         pod_bin_3c_top:
           Value: false
         pod_bin_3d:
@@ -3101,7 +1539,7 @@ Visualization Manager:
         pod_bin_3d_left:
           Value: false
         pod_bin_3d_right:
-          Value: false
+          Value: true
         pod_bin_3d_top:
           Value: false
         pod_bin_3e:
@@ -3115,7 +1553,7 @@ Visualization Manager:
         pod_bin_3e_left:
           Value: false
         pod_bin_3e_right:
-          Value: false
+          Value: true
         pod_bin_3e_top:
           Value: false
         pod_bin_3f:
@@ -3129,7 +1567,7 @@ Visualization Manager:
         pod_bin_3f_left:
           Value: false
         pod_bin_3f_right:
-          Value: false
+          Value: true
         pod_bin_3f_top:
           Value: false
         pod_bin_3g:
@@ -3143,7 +1581,7 @@ Visualization Manager:
         pod_bin_3g_left:
           Value: false
         pod_bin_3g_right:
-          Value: false
+          Value: true
         pod_bin_3g_top:
           Value: false
         pod_bin_3h:
@@ -3157,260 +1595,8 @@ Visualization Manager:
         pod_bin_3h_left:
           Value: false
         pod_bin_3h_right:
-          Value: false
+          Value: true
         pod_bin_3h_top:
-          Value: false
-        pod_bin_3i:
-          Value: false
-        pod_bin_3i_back:
-          Value: false
-        pod_bin_3i_bottom:
-          Value: false
-        pod_bin_3i_flap:
-          Value: false
-        pod_bin_3i_left:
-          Value: false
-        pod_bin_3i_right:
-          Value: false
-        pod_bin_3i_top:
-          Value: false
-        pod_bin_3j:
-          Value: false
-        pod_bin_3j_back:
-          Value: false
-        pod_bin_3j_bottom:
-          Value: false
-        pod_bin_3j_flap:
-          Value: false
-        pod_bin_3j_left:
-          Value: false
-        pod_bin_3j_right:
-          Value: false
-        pod_bin_3j_top:
-          Value: false
-        pod_bin_3k:
-          Value: false
-        pod_bin_3k_back:
-          Value: false
-        pod_bin_3k_bottom:
-          Value: false
-        pod_bin_3k_flap:
-          Value: false
-        pod_bin_3k_left:
-          Value: false
-        pod_bin_3k_right:
-          Value: false
-        pod_bin_3k_top:
-          Value: false
-        pod_bin_3l:
-          Value: false
-        pod_bin_3l_back:
-          Value: false
-        pod_bin_3l_bottom:
-          Value: false
-        pod_bin_3l_flap:
-          Value: false
-        pod_bin_3l_left:
-          Value: false
-        pod_bin_3l_right:
-          Value: false
-        pod_bin_3l_top:
-          Value: false
-        pod_bin_3m:
-          Value: false
-        pod_bin_3m_back:
-          Value: false
-        pod_bin_3m_bottom:
-          Value: false
-        pod_bin_3m_flap:
-          Value: false
-        pod_bin_3m_left:
-          Value: false
-        pod_bin_3m_right:
-          Value: false
-        pod_bin_3m_top:
-          Value: false
-        pod_bin_4a:
-          Value: false
-        pod_bin_4a_back:
-          Value: false
-        pod_bin_4a_bottom:
-          Value: false
-        pod_bin_4a_flap:
-          Value: false
-        pod_bin_4a_left:
-          Value: false
-        pod_bin_4a_right:
-          Value: false
-        pod_bin_4a_top:
-          Value: false
-        pod_bin_4b:
-          Value: false
-        pod_bin_4b_back:
-          Value: false
-        pod_bin_4b_bottom:
-          Value: false
-        pod_bin_4b_flap:
-          Value: false
-        pod_bin_4b_left:
-          Value: false
-        pod_bin_4b_right:
-          Value: false
-        pod_bin_4b_top:
-          Value: false
-        pod_bin_4c:
-          Value: false
-        pod_bin_4c_back:
-          Value: false
-        pod_bin_4c_bottom:
-          Value: false
-        pod_bin_4c_flap:
-          Value: false
-        pod_bin_4c_left:
-          Value: false
-        pod_bin_4c_right:
-          Value: false
-        pod_bin_4c_top:
-          Value: false
-        pod_bin_4d:
-          Value: false
-        pod_bin_4d_back:
-          Value: false
-        pod_bin_4d_bottom:
-          Value: false
-        pod_bin_4d_flap:
-          Value: false
-        pod_bin_4d_left:
-          Value: false
-        pod_bin_4d_right:
-          Value: false
-        pod_bin_4d_top:
-          Value: false
-        pod_bin_4e:
-          Value: false
-        pod_bin_4e_back:
-          Value: false
-        pod_bin_4e_bottom:
-          Value: false
-        pod_bin_4e_flap:
-          Value: false
-        pod_bin_4e_left:
-          Value: false
-        pod_bin_4e_right:
-          Value: false
-        pod_bin_4e_top:
-          Value: false
-        pod_bin_4f:
-          Value: false
-        pod_bin_4f_back:
-          Value: false
-        pod_bin_4f_bottom:
-          Value: false
-        pod_bin_4f_flap:
-          Value: false
-        pod_bin_4f_left:
-          Value: false
-        pod_bin_4f_right:
-          Value: false
-        pod_bin_4f_top:
-          Value: false
-        pod_bin_4g:
-          Value: false
-        pod_bin_4g_back:
-          Value: false
-        pod_bin_4g_bottom:
-          Value: false
-        pod_bin_4g_flap:
-          Value: false
-        pod_bin_4g_left:
-          Value: false
-        pod_bin_4g_right:
-          Value: false
-        pod_bin_4g_top:
-          Value: false
-        pod_bin_4h:
-          Value: false
-        pod_bin_4h_back:
-          Value: false
-        pod_bin_4h_bottom:
-          Value: false
-        pod_bin_4h_flap:
-          Value: false
-        pod_bin_4h_left:
-          Value: false
-        pod_bin_4h_right:
-          Value: false
-        pod_bin_4h_top:
-          Value: false
-        pod_bin_4i:
-          Value: false
-        pod_bin_4i_back:
-          Value: false
-        pod_bin_4i_bottom:
-          Value: false
-        pod_bin_4i_flap:
-          Value: false
-        pod_bin_4i_left:
-          Value: false
-        pod_bin_4i_right:
-          Value: false
-        pod_bin_4i_top:
-          Value: false
-        pod_bin_4j:
-          Value: false
-        pod_bin_4j_back:
-          Value: false
-        pod_bin_4j_bottom:
-          Value: false
-        pod_bin_4j_flap:
-          Value: false
-        pod_bin_4j_left:
-          Value: false
-        pod_bin_4j_right:
-          Value: false
-        pod_bin_4j_top:
-          Value: false
-        pod_bin_4k:
-          Value: false
-        pod_bin_4k_back:
-          Value: false
-        pod_bin_4k_bottom:
-          Value: false
-        pod_bin_4k_flap:
-          Value: false
-        pod_bin_4k_left:
-          Value: false
-        pod_bin_4k_right:
-          Value: false
-        pod_bin_4k_top:
-          Value: false
-        pod_bin_4l:
-          Value: false
-        pod_bin_4l_back:
-          Value: false
-        pod_bin_4l_bottom:
-          Value: false
-        pod_bin_4l_flap:
-          Value: false
-        pod_bin_4l_left:
-          Value: false
-        pod_bin_4l_right:
-          Value: false
-        pod_bin_4l_top:
-          Value: false
-        pod_bin_4m:
-          Value: false
-        pod_bin_4m_back:
-          Value: false
-        pod_bin_4m_bottom:
-          Value: false
-        pod_bin_4m_flap:
-          Value: false
-        pod_bin_4m_left:
-          Value: false
-        pod_bin_4m_right:
-          Value: false
-        pod_bin_4m_top:
           Value: false
         pod_brace:
           Value: false
@@ -3432,20 +1618,8 @@ Visualization Manager:
           Value: false
         pod_shelf_h:
           Value: false
-        pod_shelf_i:
+        realsense_back_gripper_mount:
           Value: false
-        pod_shelf_j:
-          Value: false
-        pod_shelf_k:
-          Value: false
-        pod_shelf_l:
-          Value: false
-        pod_shelf_m:
-          Value: false
-        rgb_camera_link:
-          Value: false
-        rgb_camera_link_offset:
-          Value: true
         right_light_panel:
           Value: false
         right_light_panel_emitter:
@@ -3457,8 +1631,6 @@ Visualization Manager:
         stand_brace:
           Value: false
         stand_upright:
-          Value: false
-        tool0_controller:
           Value: false
       Marker Alpha: 1
       Marker Scale: 1
@@ -3473,12 +1645,6 @@ Visualization Manager:
               {}
             camera_visor:
               {}
-            depth_camera_link:
-              imu_link:
-                {}
-              rgb_camera_link:
-                rgb_camera_link_offset:
-                  {}
           pod_base_link:
             pod_brace:
               pod_fabric_base:
@@ -3492,8 +1658,6 @@ Visualization Manager:
                       {}
                     pod_bin_1a_left:
                       {}
-                    pod_bin_1a_right:
-                      {}
                     pod_bin_1a_top:
                       {}
                   pod_bin_2a:
@@ -3504,8 +1668,6 @@ Visualization Manager:
                     pod_bin_2a_flap:
                       {}
                     pod_bin_2a_left:
-                      {}
-                    pod_bin_2a_right:
                       {}
                     pod_bin_2a_top:
                       {}
@@ -3522,19 +1684,6 @@ Visualization Manager:
                       {}
                     pod_bin_3a_top:
                       {}
-                  pod_bin_4a:
-                    pod_bin_4a_back:
-                      {}
-                    pod_bin_4a_bottom:
-                      {}
-                    pod_bin_4a_flap:
-                      {}
-                    pod_bin_4a_left:
-                      {}
-                    pod_bin_4a_right:
-                      {}
-                    pod_bin_4a_top:
-                      {}
                 pod_shelf_b:
                   pod_bin_1b:
                     pod_bin_1b_back:
@@ -3544,8 +1693,6 @@ Visualization Manager:
                     pod_bin_1b_flap:
                       {}
                     pod_bin_1b_left:
-                      {}
-                    pod_bin_1b_right:
                       {}
                     pod_bin_1b_top:
                       {}
@@ -3557,8 +1704,6 @@ Visualization Manager:
                     pod_bin_2b_flap:
                       {}
                     pod_bin_2b_left:
-                      {}
-                    pod_bin_2b_right:
                       {}
                     pod_bin_2b_top:
                       {}
@@ -3575,19 +1720,6 @@ Visualization Manager:
                       {}
                     pod_bin_3b_top:
                       {}
-                  pod_bin_4b:
-                    pod_bin_4b_back:
-                      {}
-                    pod_bin_4b_bottom:
-                      {}
-                    pod_bin_4b_flap:
-                      {}
-                    pod_bin_4b_left:
-                      {}
-                    pod_bin_4b_right:
-                      {}
-                    pod_bin_4b_top:
-                      {}
                 pod_shelf_c:
                   pod_bin_1c:
                     pod_bin_1c_back:
@@ -3597,8 +1729,6 @@ Visualization Manager:
                     pod_bin_1c_flap:
                       {}
                     pod_bin_1c_left:
-                      {}
-                    pod_bin_1c_right:
                       {}
                     pod_bin_1c_top:
                       {}
@@ -3610,8 +1740,6 @@ Visualization Manager:
                     pod_bin_2c_flap:
                       {}
                     pod_bin_2c_left:
-                      {}
-                    pod_bin_2c_right:
                       {}
                     pod_bin_2c_top:
                       {}
@@ -3628,19 +1756,6 @@ Visualization Manager:
                       {}
                     pod_bin_3c_top:
                       {}
-                  pod_bin_4c:
-                    pod_bin_4c_back:
-                      {}
-                    pod_bin_4c_bottom:
-                      {}
-                    pod_bin_4c_flap:
-                      {}
-                    pod_bin_4c_left:
-                      {}
-                    pod_bin_4c_right:
-                      {}
-                    pod_bin_4c_top:
-                      {}
                 pod_shelf_d:
                   pod_bin_1d:
                     pod_bin_1d_back:
@@ -3650,8 +1765,6 @@ Visualization Manager:
                     pod_bin_1d_flap:
                       {}
                     pod_bin_1d_left:
-                      {}
-                    pod_bin_1d_right:
                       {}
                     pod_bin_1d_top:
                       {}
@@ -3663,8 +1776,6 @@ Visualization Manager:
                     pod_bin_2d_flap:
                       {}
                     pod_bin_2d_left:
-                      {}
-                    pod_bin_2d_right:
                       {}
                     pod_bin_2d_top:
                       {}
@@ -3681,19 +1792,6 @@ Visualization Manager:
                       {}
                     pod_bin_3d_top:
                       {}
-                  pod_bin_4d:
-                    pod_bin_4d_back:
-                      {}
-                    pod_bin_4d_bottom:
-                      {}
-                    pod_bin_4d_flap:
-                      {}
-                    pod_bin_4d_left:
-                      {}
-                    pod_bin_4d_right:
-                      {}
-                    pod_bin_4d_top:
-                      {}
                 pod_shelf_e:
                   pod_bin_1e:
                     pod_bin_1e_back:
@@ -3703,8 +1801,6 @@ Visualization Manager:
                     pod_bin_1e_flap:
                       {}
                     pod_bin_1e_left:
-                      {}
-                    pod_bin_1e_right:
                       {}
                     pod_bin_1e_top:
                       {}
@@ -3716,8 +1812,6 @@ Visualization Manager:
                     pod_bin_2e_flap:
                       {}
                     pod_bin_2e_left:
-                      {}
-                    pod_bin_2e_right:
                       {}
                     pod_bin_2e_top:
                       {}
@@ -3734,19 +1828,6 @@ Visualization Manager:
                       {}
                     pod_bin_3e_top:
                       {}
-                  pod_bin_4e:
-                    pod_bin_4e_back:
-                      {}
-                    pod_bin_4e_bottom:
-                      {}
-                    pod_bin_4e_flap:
-                      {}
-                    pod_bin_4e_left:
-                      {}
-                    pod_bin_4e_right:
-                      {}
-                    pod_bin_4e_top:
-                      {}
                 pod_shelf_f:
                   pod_bin_1f:
                     pod_bin_1f_back:
@@ -3756,8 +1837,6 @@ Visualization Manager:
                     pod_bin_1f_flap:
                       {}
                     pod_bin_1f_left:
-                      {}
-                    pod_bin_1f_right:
                       {}
                     pod_bin_1f_top:
                       {}
@@ -3769,8 +1848,6 @@ Visualization Manager:
                     pod_bin_2f_flap:
                       {}
                     pod_bin_2f_left:
-                      {}
-                    pod_bin_2f_right:
                       {}
                     pod_bin_2f_top:
                       {}
@@ -3787,19 +1864,6 @@ Visualization Manager:
                       {}
                     pod_bin_3f_top:
                       {}
-                  pod_bin_4f:
-                    pod_bin_4f_back:
-                      {}
-                    pod_bin_4f_bottom:
-                      {}
-                    pod_bin_4f_flap:
-                      {}
-                    pod_bin_4f_left:
-                      {}
-                    pod_bin_4f_right:
-                      {}
-                    pod_bin_4f_top:
-                      {}
                 pod_shelf_g:
                   pod_bin_1g:
                     pod_bin_1g_back:
@@ -3809,8 +1873,6 @@ Visualization Manager:
                     pod_bin_1g_flap:
                       {}
                     pod_bin_1g_left:
-                      {}
-                    pod_bin_1g_right:
                       {}
                     pod_bin_1g_top:
                       {}
@@ -3822,8 +1884,6 @@ Visualization Manager:
                     pod_bin_2g_flap:
                       {}
                     pod_bin_2g_left:
-                      {}
-                    pod_bin_2g_right:
                       {}
                     pod_bin_2g_top:
                       {}
@@ -3840,19 +1900,6 @@ Visualization Manager:
                       {}
                     pod_bin_3g_top:
                       {}
-                  pod_bin_4g:
-                    pod_bin_4g_back:
-                      {}
-                    pod_bin_4g_bottom:
-                      {}
-                    pod_bin_4g_flap:
-                      {}
-                    pod_bin_4g_left:
-                      {}
-                    pod_bin_4g_right:
-                      {}
-                    pod_bin_4g_top:
-                      {}
                 pod_shelf_h:
                   pod_bin_1h:
                     pod_bin_1h_back:
@@ -3862,8 +1909,6 @@ Visualization Manager:
                     pod_bin_1h_flap:
                       {}
                     pod_bin_1h_left:
-                      {}
-                    pod_bin_1h_right:
                       {}
                     pod_bin_1h_top:
                       {}
@@ -3875,8 +1920,6 @@ Visualization Manager:
                     pod_bin_2h_flap:
                       {}
                     pod_bin_2h_left:
-                      {}
-                    pod_bin_2h_right:
                       {}
                     pod_bin_2h_top:
                       {}
@@ -3893,284 +1936,6 @@ Visualization Manager:
                       {}
                     pod_bin_3h_top:
                       {}
-                  pod_bin_4h:
-                    pod_bin_4h_back:
-                      {}
-                    pod_bin_4h_bottom:
-                      {}
-                    pod_bin_4h_flap:
-                      {}
-                    pod_bin_4h_left:
-                      {}
-                    pod_bin_4h_right:
-                      {}
-                    pod_bin_4h_top:
-                      {}
-                pod_shelf_i:
-                  pod_bin_1i:
-                    pod_bin_1i_back:
-                      {}
-                    pod_bin_1i_bottom:
-                      {}
-                    pod_bin_1i_flap:
-                      {}
-                    pod_bin_1i_left:
-                      {}
-                    pod_bin_1i_right:
-                      {}
-                    pod_bin_1i_top:
-                      {}
-                  pod_bin_2i:
-                    pod_bin_2i_back:
-                      {}
-                    pod_bin_2i_bottom:
-                      {}
-                    pod_bin_2i_flap:
-                      {}
-                    pod_bin_2i_left:
-                      {}
-                    pod_bin_2i_right:
-                      {}
-                    pod_bin_2i_top:
-                      {}
-                  pod_bin_3i:
-                    pod_bin_3i_back:
-                      {}
-                    pod_bin_3i_bottom:
-                      {}
-                    pod_bin_3i_flap:
-                      {}
-                    pod_bin_3i_left:
-                      {}
-                    pod_bin_3i_right:
-                      {}
-                    pod_bin_3i_top:
-                      {}
-                  pod_bin_4i:
-                    pod_bin_4i_back:
-                      {}
-                    pod_bin_4i_bottom:
-                      {}
-                    pod_bin_4i_flap:
-                      {}
-                    pod_bin_4i_left:
-                      {}
-                    pod_bin_4i_right:
-                      {}
-                    pod_bin_4i_top:
-                      {}
-                pod_shelf_j:
-                  pod_bin_1j:
-                    pod_bin_1j_back:
-                      {}
-                    pod_bin_1j_bottom:
-                      {}
-                    pod_bin_1j_flap:
-                      {}
-                    pod_bin_1j_left:
-                      {}
-                    pod_bin_1j_right:
-                      {}
-                    pod_bin_1j_top:
-                      {}
-                  pod_bin_2j:
-                    pod_bin_2j_back:
-                      {}
-                    pod_bin_2j_bottom:
-                      {}
-                    pod_bin_2j_flap:
-                      {}
-                    pod_bin_2j_left:
-                      {}
-                    pod_bin_2j_right:
-                      {}
-                    pod_bin_2j_top:
-                      {}
-                  pod_bin_3j:
-                    pod_bin_3j_back:
-                      {}
-                    pod_bin_3j_bottom:
-                      {}
-                    pod_bin_3j_flap:
-                      {}
-                    pod_bin_3j_left:
-                      {}
-                    pod_bin_3j_right:
-                      {}
-                    pod_bin_3j_top:
-                      {}
-                  pod_bin_4j:
-                    pod_bin_4j_back:
-                      {}
-                    pod_bin_4j_bottom:
-                      {}
-                    pod_bin_4j_flap:
-                      {}
-                    pod_bin_4j_left:
-                      {}
-                    pod_bin_4j_right:
-                      {}
-                    pod_bin_4j_top:
-                      {}
-                pod_shelf_k:
-                  pod_bin_1k:
-                    pod_bin_1k_back:
-                      {}
-                    pod_bin_1k_bottom:
-                      {}
-                    pod_bin_1k_flap:
-                      {}
-                    pod_bin_1k_left:
-                      {}
-                    pod_bin_1k_right:
-                      {}
-                    pod_bin_1k_top:
-                      {}
-                  pod_bin_2k:
-                    pod_bin_2k_back:
-                      {}
-                    pod_bin_2k_bottom:
-                      {}
-                    pod_bin_2k_flap:
-                      {}
-                    pod_bin_2k_left:
-                      {}
-                    pod_bin_2k_right:
-                      {}
-                    pod_bin_2k_top:
-                      {}
-                  pod_bin_3k:
-                    pod_bin_3k_back:
-                      {}
-                    pod_bin_3k_bottom:
-                      {}
-                    pod_bin_3k_flap:
-                      {}
-                    pod_bin_3k_left:
-                      {}
-                    pod_bin_3k_right:
-                      {}
-                    pod_bin_3k_top:
-                      {}
-                  pod_bin_4k:
-                    pod_bin_4k_back:
-                      {}
-                    pod_bin_4k_bottom:
-                      {}
-                    pod_bin_4k_flap:
-                      {}
-                    pod_bin_4k_left:
-                      {}
-                    pod_bin_4k_right:
-                      {}
-                    pod_bin_4k_top:
-                      {}
-                pod_shelf_l:
-                  pod_bin_1l:
-                    pod_bin_1l_back:
-                      {}
-                    pod_bin_1l_bottom:
-                      {}
-                    pod_bin_1l_flap:
-                      {}
-                    pod_bin_1l_left:
-                      {}
-                    pod_bin_1l_right:
-                      {}
-                    pod_bin_1l_top:
-                      {}
-                  pod_bin_2l:
-                    pod_bin_2l_back:
-                      {}
-                    pod_bin_2l_bottom:
-                      {}
-                    pod_bin_2l_flap:
-                      {}
-                    pod_bin_2l_left:
-                      {}
-                    pod_bin_2l_right:
-                      {}
-                    pod_bin_2l_top:
-                      {}
-                  pod_bin_3l:
-                    pod_bin_3l_back:
-                      {}
-                    pod_bin_3l_bottom:
-                      {}
-                    pod_bin_3l_flap:
-                      {}
-                    pod_bin_3l_left:
-                      {}
-                    pod_bin_3l_right:
-                      {}
-                    pod_bin_3l_top:
-                      {}
-                  pod_bin_4l:
-                    pod_bin_4l_back:
-                      {}
-                    pod_bin_4l_bottom:
-                      {}
-                    pod_bin_4l_flap:
-                      {}
-                    pod_bin_4l_left:
-                      {}
-                    pod_bin_4l_right:
-                      {}
-                    pod_bin_4l_top:
-                      {}
-                pod_shelf_m:
-                  pod_bin_1m:
-                    pod_bin_1m_back:
-                      {}
-                    pod_bin_1m_bottom:
-                      {}
-                    pod_bin_1m_flap:
-                      {}
-                    pod_bin_1m_left:
-                      {}
-                    pod_bin_1m_right:
-                      {}
-                    pod_bin_1m_top:
-                      {}
-                  pod_bin_2m:
-                    pod_bin_2m_back:
-                      {}
-                    pod_bin_2m_bottom:
-                      {}
-                    pod_bin_2m_flap:
-                      {}
-                    pod_bin_2m_left:
-                      {}
-                    pod_bin_2m_right:
-                      {}
-                    pod_bin_2m_top:
-                      {}
-                  pod_bin_3m:
-                    pod_bin_3m_back:
-                      {}
-                    pod_bin_3m_bottom:
-                      {}
-                    pod_bin_3m_flap:
-                      {}
-                    pod_bin_3m_left:
-                      {}
-                    pod_bin_3m_right:
-                      {}
-                    pod_bin_3m_top:
-                      {}
-                  pod_bin_4m:
-                    pod_bin_4m_back:
-                      {}
-                    pod_bin_4m_bottom:
-                      {}
-                    pod_bin_4m_flap:
-                      {}
-                    pod_bin_4m_left:
-                      {}
-                    pod_bin_4m_right:
-                      {}
-                    pod_bin_4m_top:
-                      {}
           stand:
             back_left_caster:
               {}
@@ -4183,12 +1948,12 @@ Visualization Manager:
             stand_upright:
               camera_beam_lower:
                 camera_lower_left_mount:
-                  {}
+                  camera_lower_left_link:
+                    {}
                 camera_lower_right_mount:
-                  {}
+                  camera_lower_right_link:
+                    {}
               cantilever:
-                camera_upper_mount:
-                  {}
                 robot_plate:
                   arm_base_link:
                     arm_base:
@@ -4203,9 +1968,25 @@ Visualization Manager:
                                   arm_flange:
                                     arm_tool0:
                                       coupling:
+                                        camera_bottom_screw_frame:
+                                          camera_link:
+                                            realsense_back_gripper_mount:
+                                              {}
+                                          camera_lower_mount:
+                                            {}
+                                          camera_secondary_upper_mount:
+                                            {}
                                         gripper_base_link:
                                           epick_end_effector:
                                             gripper_equilibrium_grasp:
+                                              {}
+                                        realsense_back_gripper_mount:
+                                          camera_bottom_screw_frame:
+                                            camera_link:
+                                              {}
+                                            camera_lower_mount:
+                                              {}
+                                            camera_secondary_upper_mount:
                                               {}
               control_box_mount:
                 control_box:
@@ -4252,6 +2033,28 @@ Visualization Manager:
       Topic: /aurmr_demo/grasp_pose
       Unreliable: false
       Value: true
+    - Class: rviz/Camera
+      Enabled: true
+      Image Rendering: background and overlay
+      Image Topic: /camera_lower_right/image_raw
+      Name: Camera
+      Overlay Alpha: 0.5
+      Queue Size: 2
+      Transport Hint: raw
+      Unreliable: false
+      Value: true
+      Visibility:
+        Grid: true
+        MotionPlanning: true
+        Pod: true
+        Pod frames: true
+        PointCloud2: true
+        Pose: true
+        Stand frames: true
+        TF: true
+        Tahoma: true
+        Value: true
+      Zoom Factor: 1
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -4273,7 +2076,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 3.2141237258911133
+      Distance: 3.9838194847106934
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -4281,29 +2084,31 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.8393827080726624
-        Y: 0.07680177688598633
-        Z: 1.2297961711883545
+        X: 0.29868924617767334
+        Y: 0.3212997019290924
+        Z: 1.7820113897323608
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.3879767656326294
+      Pitch: 0.7997967004776001
       Target Frame: <Fixed Frame>
-      Yaw: 2.055972099304199
+      Yaw: 2.1691482067108154
     Saved: ~
 Window Geometry:
+  Camera:
+    collapsed: false
   Displays:
     collapsed: false
-  Height: 1043
+  Height: 1016
   Hide Left Dock: false
   Hide Right Dock: false
   MotionPlanning:
     collapsed: false
   MotionPlanning - Trajectory Slider:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd000000040000000000000338000003bdfc020000000efb000000100044006900730070006c006100790073010000003b000003bd000000c700fffffffb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c006900640065007202000000000000000000000280000001e0fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067000000027a0000017e0000016900fffffffb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000001600000016fb0000002600480061006e0064004500790065002000430061006c006900620072006100740069006f006e0100000124000002b90000000000000000fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670000000269000001740000000000000000000000010000010f000002b4fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003b000002b4000000a000fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000738000000e3fc0100000002fb0000000a0049006d0061006700650000000000000007380000000000000000fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004b00000003efc0100000002fb0000000800540069006d00650000000000000004b00000042700fffffffb0000000800540069006d0065010000000000000450000000000000000000000442000003bd00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000003b00000039efc0200000010fc0000003d000001ee000000c900fffffffa000000010100000002fb0000000c00430061006d0065007200610000000000ffffffff0000000000000000fb000000100044006900730070006c0061007900730100000000000003380000015600fffffffb0000000c00430061006d0065007200610100000231000001aa0000001600fffffffb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c006900640065007202000000000000000000000280000001e0fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670000000274000001690000017d00fffffffb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000001600000016fb0000002600480061006e0064004500790065002000430061006c006900620072006100740069006f006e0100000124000002b90000000000000000fb000000280020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000000000000000fb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e00670000000269000001740000000000000000fb0000000a0049006d00610067006500000002a5000001380000000000000000000000010000010f000002b4fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003b000002b4000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000738000000e3fc0100000002fb0000000a0049006d0061006700650000000000000007380000000000000000fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004b00000003efc0100000002fb0000000800540069006d00650000000000000004b00000041800fffffffb0000000800540069006d00650100000000000004500000000000000000000003820000039e00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -4312,6 +2117,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: false
-  Width: 1920
-  X: 1920
-  Y: 0
+  Width: 1848
+  X: 362
+  Y: 96

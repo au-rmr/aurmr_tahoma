@@ -1,0 +1,9 @@
+<launch>
+  <arg name="gripper_ip" default="gripper" />
+  <arg name="gripper_type" default="vacuum" />
+
+  <node pkg="vacuum_gripper_control" type="VacuumGripperSocketNode.py" name="vacuum_gripper_control" output="screen">
+      <param name="gripper_ip" type="str" value="$(arg gripper_ip)" />
+      <param name="gripper_type" type="str" value="$(arg gripper_type)" />
+  </node>
+</launch>

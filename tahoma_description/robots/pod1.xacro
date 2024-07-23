@@ -1,5 +1,0 @@
-<?xml version="1.0"?>
-<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="pod1">
-  <xacro:include filename="$(find tahoma_description)/urdf/pod.xacro"/>
-  <xacro:pod prefix="pod_" recipe_a="${[8.75,5.5,7.5,6,4.5,8.75,5,6,5,8.75,5,6,11]}"/>
-</robot>

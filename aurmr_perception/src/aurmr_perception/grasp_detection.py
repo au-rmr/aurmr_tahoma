@@ -18,8 +18,8 @@ from visualization_msgs.msg import MarkerArray, Marker
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import sys
-sys.path.append("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/UIE_main/mask2former_frame/")
-from normal_std.inference_grasp_main import run_normal_std
+#sys.path.append("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/UIE_main/mask2former_frame/")
+#from normal_std.inference_grasp_main import run_normal_std
 
 from scipy.spatial.transform import Rotation as R
 from copy import deepcopy
@@ -58,18 +58,24 @@ class HeuristicGraspDetector:
         # points = np.matmul(camera_to_target_mat, points)[0:3, :].T  # apply transform
 
         # center[0] = center[0] - 0.02
-        POD_OFFSET = -0.1
+        # POD_OFFSET = -0.1
+
         transform= self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
-        center[0] = transform.transform.translation.x- POD_OFFSET
+        POD_OFFSET = 0.1
+        RGB_TO_DEPTH_FRAME_OFFSET = -0.015
+        DEPTH_TILT = -transform.transform.translation.z-0.03
+        # center[2] += center[0]*np.sin(DEPTH_TILT)
+        center[2] += DEPTH_TILT
+        center[1] -= RGB_TO_DEPTH_FRAME_OFFSET
+        center[0] = transform.transform.translation.x - POD_OFFSET
 
         # NOTE(nickswalker,4-29-22): Hack to compensate for the chunk of points that don't get observed
         # due to the lip of the bin
         #center[2] -= 0.02
-        print(points.shape, center.shape)
-        position = self.grasp_offset * self.bin_normal + center
+        print(center, points.shape, center.shape)
         align_to_bin_orientation = transformations.quaternion_from_euler(math.pi / 2., -math.pi / 2., math.pi / 2.)
 
-        poses_stamped = [(position, align_to_bin_orientation)]
+        poses_stamped = [(center, align_to_bin_orientation)]
         print(poses_stamped)
         return poses_stamped
 
@@ -163,7 +169,7 @@ class GraspDetectionROS:
 
     def detect_grasps_cb(self, request):
         cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
-        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
+        # cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
         pts = ros_numpy.numpify(request.points)
         self.points_viz_pub.publish(request.points)
         pts = np.stack([pts['x'],
@@ -182,7 +188,7 @@ class GraspDetectionROS:
 
     def detect_grasps__normal_cb(self, request):
         cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
-        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
+        # cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
         
         # convert point cloud to mask
         fx, fy = 1940.1367, 1940.1958
@@ -191,7 +197,7 @@ class GraspDetectionROS:
         height = 3072
 
         cv_image_new = np.zeros([height, width])
-        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/zero_cv_image.png", cv_image_new)
+        # cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/zero_cv_image.png", cv_image_new)
         pts = ros_numpy.numpify(request.points)
         pts = np.stack([pts['x'],
                         pts['y'],
@@ -217,7 +223,7 @@ class GraspDetectionROS:
         #     cv_image_new[int(cx-pixel_pos_x)][int(cy-pixel_pos_y)] = 1 
         # print("xyz", i[0],i[1] , i[2])
         # print("uv ", pixel_pos_x, pixel_pos_y)
-        # cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/new_cv_image_mask.png", cv_image_new)
+        # cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/new_cv_image_mask.png", cv_image_new)
         # float z = msg->points[i].z*1000.0;
         # float u = (msg->points[i].x*1000.0*focal_x) / z;
         # float v = (msg->points[i].y*1000.0*focal_y) / z;
@@ -247,33 +253,6 @@ class GraspDetectionROS:
         inference_object = run_normal_std()
         point, euler_angles = inference_object.inference(self.rgb_img, self.depth_img, cv_image)
         print("points", point)
-        # POD_OFFSET = -0.11535
-        # transform= self.tf_buffer.lookup_transform('base_link', 'rgb_camera_link_offset', rospy.Time())
-
-        #transform_via_tf = self.tf_buffer.transform(PointStamped(point=Point(point[0], point[1], point[2])))
-        '''T = np.eye(4)
-        T[:3, 3] = (transform.transform.translation.x, transform.transform.translation.y, transform.transform.translation.z)
-        T[:3, :3] = R.from_quat((transform.transform.rotation.x, transform.transform.rotation.y, transform.transform.rotation.z, transform.transform.rotation.w)).as_matrix()
-        points_in_base_link = np.array((*point, 1)) @ T
-        print(transform.transform.translation)
-        print(T)
-        position = [0.0, 0.0, 0.0]
-        print("pre position", point[2] + transform.transform.translation.x, -point[0] + transform.transform.translation.y, -point[1] + transform.transform.translation.z)
-        position = points_in_base_link'''
-        
-        # euler_angles[0] = np.clip(euler_angles[0], -45, 45)
-        # euler_angles[1] = np.clip(euler_angles[1], -45, 45)
-        # if(euler_angles[0] > -5 and euler_angles[0] < 5):
-        #     euler_angles[0] = 0
-        # if(euler_angles[1] > -5 and euler_angles[1] < 5):
-        #     euler_angles[1] = 0
-
-        # position[2] = -points[1] + transform.transform.translation.z
-        # with boling
-        # orientation = transformations.quaternion_from_euler(math.pi/2., -math.pi/2. + euler_angles[1], euler_angles[0] + math.pi/2.)
-        #orientation = transformations.quaternion_from_euler(math.pi/2., -math.pi/2., math.pi/2.)
-        # orientation = transformations.quaternion_from_euler(math.pi/2., -math.pi/2., math.pi/2.)
-
 
         # clamp euler englaes within 15 and 45 but if less than 15 it will be 0
         clamped_euler_angles = [0., 0., 0.]
@@ -285,6 +264,9 @@ class GraspDetectionROS:
             clamped_euler_angles[1] = self.clamp(euler_angles[1], -30.*math.pi/180., -12.*math.pi/180.)
         else:
             clamped_euler_angles[1] = 0.0
+
+        # Comment this if you want to use the normal of the object
+        clamped_euler_angles = [0., 0., 0.]
         
         # clamped_euler_angles[1] = 0.0
         print("post euler angles", clamped_euler_angles[0]*180/math.pi, clamped_euler_angles[1]*180/math.pi)

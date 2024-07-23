@@ -1,0 +1,8 @@
+<?xml version="1.0" ?>
+<launch>
+    <node name="throttle_hand_rgb" pkg="topic_tools" type="throttle" args="messages /camera/color/image_raw 5"/>
+
+    <node name="throttle_rgb" pkg="topic_tools" type="throttle" args="messages /camera_lower_right/rgb/image_raw 1"/>
+    <node name="throttle_depth" pkg="topic_tools" type="throttle" args="messages /camera_lower_right/depth_to_rgb/image_raw 1"/>
+
+</launch>

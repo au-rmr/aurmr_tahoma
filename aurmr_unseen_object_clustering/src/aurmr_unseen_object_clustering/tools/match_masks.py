@@ -15,8 +15,12 @@ def match_masks(im1, im2, mask1, mask2):
 
     mask_recs = np.zeros(shape=(np.max(mask1), np.max(mask2)))
 
-    sift = cv2.SIFT_create()
+    sift = cv2.SIFT_create(nfeatures=150, contrastThreshold=0.04, edgeThreshold=30)
     k2, d2 = sift.detectAndCompute(im2, None)
+    print()
+    print()
+    print()
+    print()
 
     for i in range(1, np.max(mask1) + 1):
         # Subset the image from the mask
@@ -54,10 +58,13 @@ def match_masks(im1, im2, mask1, mask2):
             else:
                 mask_recs[i - 1, j - 1] = 0
         
-        # idx = np.argmax(mask_recs[i-1, :])
-        # im2_now = im2 * (mask2 == idx + 1)
-        # img3 = cv2.drawMatches(im1_now,k1,im2_now,k2,good,None)
-        # plt.imshow(img3, 'gray'), plt.show()
+        visualize = True
+        if visualize:
+            idx = np.argmax(mask_recs[i-1, :])
+            im2_now = im2 * (mask2 == idx + 1)
+            img3 = cv2.drawMatches(im1_now,k1,im2_now,k2,good,None)
+            plt.imshow(img3, 'gray')
+            plt.show()
 
     print("mask_recs", mask_recs)
     # Find the mask in the destination image that best matches the soruce mask
