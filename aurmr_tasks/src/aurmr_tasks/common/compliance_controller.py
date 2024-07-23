@@ -61,11 +61,13 @@ class MoveToOffset(State):
         start_time = time.time()
         while ((time.time() - start_time) < timeout) and not rospy.is_shutdown():
             if self.has_reached_target_pose(target_pose):
+                self.stop()
                 return 'succeeded'
             rospy.sleep(0.005)
         return 'succeeded'
 
     def has_reached_target_pose(self, target_pose):
         current_pose = self.robot.move_group.get_current_pose()
+        current_pose.header.stamp = rospy.Time(0)
         current_pose = self.robot.tf2_buffer.transform(current_pose, self.target_frame, rospy.Duration(1))
         return (self.detect_object and self.robot.object_detected) or all_close(target_pose, current_pose, 0.03)
