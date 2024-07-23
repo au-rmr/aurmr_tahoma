@@ -63,7 +63,7 @@ class VacuumGripper:
 
     def close_connection(self):
         self.cip_driver.close()
-
+    
     def is_connected(self):
         return self.cip_driver.connected
 
@@ -72,7 +72,7 @@ class VacuumGripper:
             # TODO
 
             message = vacuum_gripper_input()
-
+            
             #Assign the values to their respective variables
             # message.DEVICE_STATUS = self.get_device_status()
             # message.EJECTOR_STATUS = self.get_ejector_status()
@@ -84,21 +84,21 @@ class VacuumGripper:
         else:
             raise RuntimeError(f"Unknown gripper type requested: {self.gripper_type}")
         return message
-
+    
     def vacuum(self, pressure, release):
         var_dict = dict([(self.GTO, 0)]) # GTO is gripper regulation -- similar to ejector control
-        self._set_vars(var_dict)
+        self._set_vars(var_dict) 
         while(self._get_var(self.GTO) != 0): # sleep until the gripper regulation is 0, meaning the gripper is off
             rospy.sleep(.005)
         # var_dict = dict([(self.PR, pressure), (self.GTO, 1)])
-        print(var_dict)
+        print(var_dict) 
         var_dict = dict([(self.MOD, 0b01), (self.PR, pressure), (self.SP, 0), (self.FR, pressure+40), (self.GTO, 1)])
-        # MOD - gripper mode
+        # MOD - gripper mode  
         #   X
         # PR - max pressure requested when writing / pressure reading when read
-        #   similar to SETPOINT_H1 <-- why is this set to 100 above?
+        #   similar to SETPOINT_H1 <-- why is this set to 100 above? 
         # SP - timeout period
-        #
+        #  
         # FR - minimum pressure requested when writing
 
         # GTO - gripper
@@ -110,7 +110,7 @@ class VacuumGripper:
             #rPR is the register for pressure on the vacuum
             #rATR is the register for auto release on the vacuum
             #don't need gripper mocip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000000] + [0b00000000] + [0b00000001] + [0b00000001] + [0b00000000]*12))de, max-pressure
-        # EJECTOR_CONTROL is an instance so it should not be set to 0,
+        # EJECTOR_CONTROL is an instance so it should not be set to 0, 
         # is there a way to to make this gripper be regulated to 0 - meaning off
         # var_dict = {EJECTOR_CONTROL, 0} # this is the instance - I need a varible that does the same thing
         # while(EJECTOR_CONTROL != 0):
@@ -145,7 +145,7 @@ class VacuumGripper:
             if not self.open_connection():
                 raise exceptions.CommError
         except AttributeError:
-            print('No such attribute found. You may need to open a connection first.')
+            print('No such attribute found. You may need to open a connection first.') 
 
     def open_valve(self, number):
         ejectors = [0] * 16
@@ -158,7 +158,7 @@ class VacuumGripper:
             if not self.open_connection():
                 raise exceptions.CommError
         except AttributeError:
-            print('No such attribute found. You may need to open a connection first.')
+            print('No such attribute found. You may need to open a connection first.') 
 
     def blow_off(self, number):
         try:
@@ -168,7 +168,7 @@ class VacuumGripper:
             if not self.open_connection():
                 raise exceptions.CommError
         except AttributeError:
-            print('No such attribute found. You may need to open a connection first.')
+            print('No such attribute found. You may need to open a connection first.') 
 
     def blow_off(self, number):
         try:
@@ -178,16 +178,18 @@ class VacuumGripper:
             if not self.open_connection():
                 raise exceptions.CommError
         except AttributeError:
-            print('No such attribute found. You may need to open a connection first.')
+            print('No such attribute found. You may need to open a connection first.') 
 
     def get_device_status(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=DEVICE_STATUS, attribute=5)
+
         return USINT.decode(msg.value)
 
     #TODO Is a list comprehension correct? <<
     def get_ejector_status(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=EJECTOR_STATUS, attribute=5)
         status = [USINT.decode(msg.value) for ejector in msg] #change to msg.value --> returns [_, _, _, _] _ being a 0 or a 1
+
         return status
 
     def get_ejector_control(self):
@@ -210,20 +212,20 @@ class VacuumGripper:
             "last_free_flow" : (msg.value[9] << 8) | msg.value[8]
         }
         return extended_values_dict
-
+    
     #TODO: need to find a way to return the errors
-    def control_unit_errors(self):
+    def control_unit_errors(self): 
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=CU_ERRORS, attribute=5)
-        status = [USINT.decode(msg.value) for error in msg]
+        status = [USINT.decode(msg.value) for error in msg]  
     #TODO: check the ones using .decode
     def get_supply_pressure(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SUPPLY_PRESSURE, attribute=5)
-        return USINT.decode(msg.value) #need to check with decode, make sure it doesn't return 238
-
+        return USINT.decode(msg.value) #need to check with decode, make sure it doesn't return 238 
+    
     def get_leakage_rate(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=LEAKAGE_RATE, attribute=5)
         return USINT.decode(msg.value)
-
+    
     def get_system_vacuum(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SYSTEM_VACUUM, attribute=5)
 
@@ -235,28 +237,28 @@ class VacuumGripper:
         except exceptions.BufferEmptyError:
             return 0
         return output
-
-
+    
+    
     def get_SetPointH1(self):
-        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5)
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5) 
         setPointH1 = (msg.value[1] << 8) | msg.value[0]
         return setPointH1
-
+        
     def get_Hysteresis_h1(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5)
         hysteresis_h1 = (msg.value[1] << 8) | msg.value[0]
         return hysteresis_h1
 
     def get_SetPointH2(self):
-        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SETPOINT_H2, attribute=5)
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SETPOINT_H2, attribute=5) 
         setPointH2 = (msg.value[1] << 8) | msg.value[0]
         return setPointH2 #returns a decimal value
-
+    
     def get_Hysteresis_h2(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=HYSTERESIS_h2, attribute=5)
         hysteresis_h2 = (msg.value[1] << 8) | msg.value[0]
         return hysteresis_h2
-
+    
     def set_SetPointH1(self, value):
         # data = []
         #new = bytearray([hex(value & 0xFF), hex(value >> 8)] * 16)
@@ -270,9 +272,9 @@ class VacuumGripper:
         # Setting the H1 value to 850 using bits
         self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5,request_data = bytearray([0b11111010, 0b00]*16))
 
-
+    
     def get_SetPointH1(self):
-        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5)
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SETPOINT_H1, attribute=5) 
         # if set at default, this returns --> /xee/x02 ..repeated 16 times to fill 32 bytes
         #/x02ee = 750 which is the H1 default value
         #0b11101110 = 0xee and 0b00000010 = 0x02
@@ -284,7 +286,7 @@ class VacuumGripper:
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5)
         hysteresis_h1 = (msg.value[1] << 8) | msg.value[0]
         return hysteresis_h1
-
+    
     def set_SetPointH1(self, value):
         # value = 750
         # in hex: 0x02ee
@@ -294,8 +296,8 @@ class VacuumGripper:
         new = bytearray([hex(value & 0xFF), hex(value >> 8)] * 16)
         msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h1, attribute=5, request_data = new)
 
-
-    # CHECK: Does this set the vacuum range and correctly?
+    
+    # CHECK: Does this set the vacuum range and correctly? 
     # def set_vacuum_range(self, pressure):
     #     if (pressure > 998):
     #         print("Pressure amount too high")
@@ -313,22 +315,22 @@ class VacuumGripper:
     #     msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=SETPOINT_H2, attribute=5, request_Data = pressure - hysteresis1)
     #     hysteresis2 = setpoint2 - 28lll'
     #     msg = self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=HYSTERESIS_h2, attribute=5, request_Data = hysteresis2)
-
+        
     #     # Extra check to make sure the values are within the range:
-    #     if (pressure < (setpoint2 + hysteresis1) or setpoint2 > (pressure - hysteresis1)):
+    #     if (pressure < (setpoint2 + hysteresis1) or setpoint2 > (pressure - hysteresis1)): 
     #         print("Issue with setting the points for pressure change")
     #     if ((pressure - setpoint2) < hysteresis1 or (setpoint2 - 2) < hysteresis2):
     #         print("Issye with the hysteresis value")
-
+    
     def get_max_vacuum_range(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=MAX_VACUUM_REACHED, attribute=5)
-        return USINT.decode(msg.value)
-
+        return USINT.decode(msg.value) 
+    
     def get_free_flow_vacuum(self): # use free flow vacuum for object_detected
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=FREE_FLOW_VACUUM, attribute=5)
-        flow_amount = (msg.value[1] << 8) | msg.value[0] # or are the values flipped, value[0] and then value[1]?
-        return flow_amount # not returned as a uint16, rather as an int --> will this be ok?
-
+        flow_amount = (msg.value[1] << 8) | msg.value[0] # or are the values flipped, value[0] and then value[1]? 
+        return flow_amount # not returned as a uint16, rather as an int --> will this be ok? 
+    
     #CHECK
     def get_supply_voltage(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SUPPLY_VOLTAGE, attribute=1)
@@ -337,7 +339,7 @@ class VacuumGripper:
 
 
 def mainLoop(ur_address, gripper_type):
-  # Gripper is a C-Model that is connected to a UR controller with the Robotiq URCap installed.
+  # Gripper is a C-Model that is connected to a UR controller with the Robotiq URCap installed. 
   # Commands are published to port 63352 as ASCII strings.
   gripper = VacuumGripper('192.168.137.2', gripper_type)
   gripper.open_connection()
@@ -351,7 +353,7 @@ def mainLoop(ur_address, gripper_type):
   pub = rospy.Publisher('~status', input_msg, queue_size=3)
   # The Gripper command
   rospy.Subscriber('~command', output_msg, gripper.sendCommand)
-
+  
   while not rospy.is_shutdown():
     # Get and publish the Gripper status
     # gripper.set_SetPointH1(850)

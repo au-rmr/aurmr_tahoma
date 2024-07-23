@@ -75,6 +75,8 @@ class MoveEndEffectorToPose(State):
         self.robot = robot
         self.default_pose = default_pose
 
+        self.target_pose_visualizer = rospy.Publisher("end_effector_target", geometry_msgs.msg.PoseStamped,
+                                                      queue_size=1, latch=True)
 
     def execute(self, userdata):
         if self.default_pose:
@@ -350,3 +352,4 @@ class ReleaseGripperIfNoItem(State):
         if not self.robot.check_gripper_item():
             self.robot.open_gripper(return_before_done=True)
         return 'succeeded'
+
