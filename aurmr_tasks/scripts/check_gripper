@@ -38,7 +38,7 @@ def main():
         StateMachine.add_auto("GRASP", motion.CloseGripper(robot, return_before_done=True), ["succeeded"])
         StateMachine.add_auto("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot), ["succeeded"])
     # stows = [["4f", "mouthwash"], ["4f", "soda"], ["4f", "syrup"]]
-    
+
     sis = smach_ros.IntrospectionServer('pick_sm', pick_sm, '/pick')
     sis.start()
 
