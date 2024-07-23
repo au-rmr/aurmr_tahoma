@@ -6,6 +6,12 @@ import time
 
 
 from aurmr_tasks.common.visualization_utils import EEFVisualization
+from aurmr_tasks.common.tahoma import requires_controller
+
+COMPLIANCE_CONTROLLER = "ur_cartesian_compliance_controller"
+
+
+
 class MoveToOffset(State):
     def __init__(self, robot, offset, frame_id, detect_object):
         super().__init__(outcomes=['succeeded', 'aborted'],  output_keys=['starting_grasp_pose_out'], input_keys=['target_pose_in'])
@@ -25,6 +31,7 @@ class MoveToOffset(State):
         self.pub.publish(start_pose)
 
 
+    @requires_controller(COMPLIANCE_CONTROLLER)
     def execute(self, userdata):
         self.close_robot_gripper()
         start_pose = self.robot.move_group.get_current_pose()
