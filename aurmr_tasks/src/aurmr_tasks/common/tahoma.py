@@ -146,6 +146,7 @@ class Tahoma:
             queue_size=1,
             latch=True
         )
+        self.object_detected = False
 
         # default_constraints = self.move_group.get_path_constraints()
         # for name in self.commander.get_active_joint_names():
