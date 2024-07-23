@@ -6,13 +6,14 @@
 manipulator:
   kinematics_solver: trac_ik_kinematics_plugin/TRAC_IKKinematicsPlugin
   # solve_type: Distance
-  # solve_type: Manip1
-  solve_type: Manip1
+  solve_type: Speed
+  # NOTE(nickswalker7-9-24): Manipulability optimization is 10x slower
+  # solve_type: Manipulation1
   kinematics_solver_search_resolution: 0.005
   kinematics_solver_timeout: 0.5
 
 # NOTE: The last arguments to the constructors are optional.
-# The solve type can be one of the following: 
+# The solve type can be one of the following:
 # Speed: returns very quickly the first solution found
 # Distance: runs for the full timeout_in_secs, then returns the solution that minimizes SSE from the seed
 # Manip1: runs for full timeout, returns solution that maximizes sqrt(det(J*J^T)) (the product of the singular values of the Jacobian)
