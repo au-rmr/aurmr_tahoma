@@ -95,25 +95,3 @@ def pose_dist(goal, actual):
         return (d, cos_phi_half)
     else:
         return None
-    
-
-class SwitchControllers(State):
-    def __init__(self, start_controllers, stop_controllers):
-        State.__init__(self, outcomes=['succeeded', 'aborted'])
-        self.start_controllers = start_controllers
-        self.stop_controllers = stop_controllers
-
-    def execute(self, userdata):
-        rospy.wait_for_service('/controller_manager/switch_controller')
-        try:
-            # Create a service proxy
-            switch_controller_service = rospy.ServiceProxy('/controller_manager/switch_controller', SwitchController)
-
-            # Call the service with the provided arguments
-            response = switch_controller_service(self.start_controllers, self.stop_controllers, 1, False, 0.0)
-            print(f"Service call response: {response}")
-            
-            return 'succeeded'
-        except rospy.ServiceException as e:
-            print(f"Service call failed: {e}")
-            return 'aborted'
