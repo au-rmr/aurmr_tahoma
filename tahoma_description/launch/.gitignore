@@ -1,0 +1,4 @@
+# We modify this file on the robot frequently, but don't want
+# to track changes in the repo. User should populate the file with
+# calibrated transform. See pod_location_calibration
+pod_transform.launch
