@@ -161,6 +161,8 @@ class PodPerceptionROS:
 
 
         self.net = SegNet(config=updated_config, init_depth=first_depth, init_info=K)
+        # (henrifung)NOTE: PERHAPS OTHER THINGS NEED TO BE CLEARED
+        self.model.reset_model()
         self.model.net = self.net
 
         for entry in dataset.entries:
@@ -683,7 +685,7 @@ class DiffPodModel:
 
 
         if bin_id in self.net.bad_bins:
-            msg = f"Object {object_id} in bin {bin_id} was could not be segmented, but was selected by user"
+            msg = f"Object {object_id} in bin {bin_id} could not be segmented, and was added to bad bins already during stowing/picking"
             return False, msg
             mask = self.net.get_obj_mask(object_id)
             self.points_table[bin_id][object_id] = self.mask_pointcloud(points_msg, mask)
@@ -764,6 +766,18 @@ class DiffPodModel:
 
         return True
 
+    def reset_model(self):
+        self.latest_captures = {}
+        self.latest_masks = {}
+        self.points_table = {}
+        self.masks_table = {}
+        self.occluded_table = {}
+        self.object_bin_queues = defaultdict(ObjectBinQueue)
+        self.bin_normals = {}
+        self.net = None
+        self.table_net = SegnetV2()
+        self.table_mask = None
+        self.mask_pub = rospy.Publisher("~masks", Image, queue_size=5)
 
 class ObjectBinQueue:
     def __init__(self):
