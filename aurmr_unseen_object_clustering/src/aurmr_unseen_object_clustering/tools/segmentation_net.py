@@ -1,4 +1,5 @@
 import os
+import glob
 from operator import truediv
 import numpy as np
 import torch
@@ -263,7 +264,32 @@ class SegNet:
         # self.object = SegnetV2()
         # print("post object call")
 
-   # Computes the point cloud from a depth array and camera intrinsics
+        # NOTE (henrifung): if these images aren't deleted, not only will it lead to incorrect predictions
+        #                   it will also result in an exception when querying UOIS when `sequence length`
+        #                   is greater than 10, as this is the sample size of the model
+        #
+        #                   If this is intended (you are picking from the same bin more than 10 times),
+        #                   you may change the sample size in uois_service_multi_demo/scripts/demo_service.py
+        try:
+            folders = ['1E', '1H', '1F', '1G', '2E', '2H', '2F', '2G', '3E', '3H', '3F', '3G', '4E', '4H', '4F', '4G', '1D', '2D', '3D', '1C', '2C', '3C']
+
+            workspace_path = get_active_workspace_path()
+            for folder in folders:
+                path = f"{workspace_path}/src/uois_service_multi_demo/dataset/"
+                folder_path = path+folder
+                files = glob.glob(f'{folder_path}/*.npy')
+                for file in files:
+                    os.remove(file)
+                files = glob.glob(f'{folder_path}/*.png')
+                for file in files:
+                    os.remove(file)
+            files = glob.glob(f'{path}/pod/*.png')
+            for file in files:
+                os.remove(file)
+        except Exception as e:
+            print("DELETE SEQUENCE IMGS FAILED, RELAUNCH AURMR PERCEPTION TO ENSURE SEQUENCE IMGS ARE CLEARED")
+
+   #  Computes the point cloud from a depth array and camera intrinsics
     def compute_xyz(self, depth_img, intrinsic):
         fx = intrinsic[0][0]
         fy = intrinsic[1][1]
