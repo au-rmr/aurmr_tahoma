@@ -334,13 +334,11 @@ class BlowOffGripper(State):
 
 class CheckGripperItem(State):
     def __init__(self, robot):
-        State.__init__(self, input_keys=[], output_keys=["status"], outcomes=['item_detected', 'no_item_detected'])
+        State.__init__(self, input_keys=[], output_keys=[], outcomes=['item_detected', 'no_item_detected'])
         self.robot = robot
 
     def execute(self, ud):
         status = 'item_detected' if self.robot.check_gripper_item() else 'no_item_detected'
-        print(status)
-        ud["status"] = status
         return status
 
 class ReleaseGripperIfNoItem(State):
