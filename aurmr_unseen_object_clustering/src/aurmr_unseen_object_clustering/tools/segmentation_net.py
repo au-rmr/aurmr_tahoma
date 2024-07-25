@@ -246,6 +246,18 @@ class SegNet:
         # self.object = SegnetV2()
         # print("post object call")
 
+
+        # NOTE (henrifung): if these images aren't deleted, not only will it lead to incorrect predictions
+        #                   it will also result in an exception when querying UOIS when `sequence length`
+        #                   is greater than 10, as this is the sample size of the model
+        #
+        #                   If this is intended (you are picking from the same bin more than 10 times),
+        #                   you may change the sample size in uois_service_multi_demo/scripts/demo_service.py
+        workspace_path = get_active_workspace_path()
+        import shutil
+        rospy.loginfo("Removing directory of cropped bin images...")
+        shutil.rmtree(f"{workspace_path}/src/uois_service_multi_demo/dataset/", ignore_errors=True)
+
    # Computes the point cloud from a depth array and camera intrinsics
     def compute_xyz(self, depth_img, intrinsic):
         fx = intrinsic[0][0]
