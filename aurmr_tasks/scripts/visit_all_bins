@@ -10,6 +10,7 @@ import rospy
 from aurmr_tasks.common import states
 from aurmr_tasks.common.tahoma import Tahoma
 import aurmr_tasks.common.control_flow as cf
+from aurmr_tasks.common import planning_scene
 from aurmr_tasks.common import motion
 import numpy as np
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
@@ -25,12 +26,12 @@ def main():
     State.simulation = simulation
     robot = Tahoma(simulation)
 
-    align_to_bin_orientation = transformations.quaternion_from_euler(-1.57, 0, 0)
+    align_to_bin_orientation = transformations.quaternion_from_euler(-1.57, -1.57, 0)
     align_to_bin_quat = Quaternion(x=align_to_bin_orientation[0], y=align_to_bin_orientation[1], z=align_to_bin_orientation[2], w=align_to_bin_orientation[3])
     for i in range(4):
         for letter in "abcdefghijklm":
             frame_name = f"pod_bin_{i+1}{letter}"
-            BIN_APPROACH_POSES.append(PoseStamped(header=std_msgs.msg.Header(frame_id=frame_name), pose=Pose(position=Point(x=.125, y=-.25,z=.05), orientation=align_to_bin_quat)))
+            BIN_APPROACH_POSES.append(PoseStamped(header=std_msgs.msg.Header(frame_id=frame_name), pose=Pose(position=Point(x=.125, y=-.275,z=.05), orientation=align_to_bin_quat)))
     print("Determining approachable bins...")
     REACHABLE_BIN_APPROACHES = []
     for i, pose in enumerate(BIN_APPROACH_POSES):
@@ -40,13 +41,13 @@ def main():
 
     print(f"{len(REACHABLE_BIN_APPROACHES)} of {len(BIN_APPROACH_POSES)} bins are approachable")
 
-    pick_sm = StateMachine(["succeeded", "preempted", "aborted"],
+    visit_sm = StateMachine(["succeeded", "preempted", "aborted"],
                            input_keys=[],
                            output_keys=[])
 
-    with pick_sm:
-        StateMachine.add_auto("CLEAR_SCENE", motion.ClearCollisionGeometry(robot), ["succeeded"])
-        StateMachine.add_auto("SETUP_COLLISION_SCENE", motion.AddPodCollisionGeometry(robot), ["succeeded"])
+    with visit_sm:
+        StateMachine.add_auto("CLEAR_SCENE", planning_scene.ClearCollisionGeometry(robot), ["succeeded"])
+        StateMachine.add_auto("SETUP_COLLISION_SCENE", planning_scene.AddPodCollisionGeometry(robot), ["succeeded"])
         cf.inject_userdata_auto("LOAD_POSES", "poses", REACHABLE_BIN_APPROACHES)
         StateMachine.add("PICK_POSE", cf.IterateList("poses", "pose"),
                          {"repeat": "MOVE_TO_POSE", "done": "aborted"})
@@ -65,16 +66,13 @@ def main():
 
     # Endless loop
     with sm:
-        StateMachine.add('PLAY_POSE_SEQUENCE', pick_sm, {"succeeded": "PLAY_POSE_SEQUENCE", "aborted": "PLAY_POSE_SEQUENCE"})
+        StateMachine.add('PLAY_POSE_SEQUENCE', visit_sm, {"succeeded": "PLAY_POSE_SEQUENCE", "aborted": "PLAY_POSE_SEQUENCE"})
 
-    rospy.loginfo('Beginning pick SM')
-
+    rospy.loginfo('Beginning state machine')
     sis = smach_ros.IntrospectionServer('pick_sm', sm, '/pick')
     sis.start()
 
     outcome = sm.execute()
-
-    rospy.spin()
     sis.stop()
 
 
