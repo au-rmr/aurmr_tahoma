@@ -14,7 +14,6 @@ from aurmr_perception.srv import (
     CaptureObjectRequest,
 )
 from std_srvs.srv import Trigger
-
 from aurmr_tasks.util import add_offset
 
 class CaptureEmptyBin(State):
@@ -23,26 +22,32 @@ class CaptureEmptyBin(State):
         self.reset_bin = rospy.ServiceProxy('/aurmr_perception/reset_bin', ResetBin)
 
     def execute(self, userdata):
-        reset_bin_req = ResetBinRequest(bin_id=userdata['target_bin_id'])
-        reset_response = self.reset_bin(reset_bin_req)
+        try:
+            reset_bin_req = ResetBinRequest(bin_id=userdata['target_bin_id'])
+            reset_response = self.reset_bin(reset_bin_req)
+            if reset_response.success:
+                return "succeeded"
+        except Exception as e:
+            rospy.logerr(e)
 
-        if reset_response.success:
-            return "succeeded"
-        else:
-            return "aborted"
+
+
+        return "aborted"
 
 class CaptureEmptyPod(State):
     def __init__(self):
-        State.__init__(self, input_keys=[], outcomes=['succeeded'])
+        State.__init__(self, input_keys=[], outcomes=['succeeded', 'aborted'])
         self.capture_empty = rospy.ServiceProxy('/aurmr_perception/capture_empty_pod', Trigger)
 
     def execute(self, userdata):
-        res = self.capture_empty()
+        try:
+            res = self.capture_empty()
+            if res.success:
+                return "succeeded"
+        except Exception as e:
+            rospy.logerr(e)
 
-        if res.success:
-            return "succeeded"
-        else:
-            return "aborted"
+        return "aborted"
 
 class CaptureObject(State):
     def __init__(self):
@@ -55,17 +60,20 @@ class CaptureObject(State):
         self.capture_object.wait_for_service(timeout=rospy.Duration(5))
 
     def execute(self, userdata):
-        capture_obj_req = CaptureObjectRequest(
-            bin_id=userdata['target_bin_id'],
-            object_id=userdata['target_object_id'],
-        )
-        rospy.loginfo("in CAPTUREOBJECT" + userdata['target_bin_id'])
-        capture_response = self.capture_object(capture_obj_req)
+        try:
+            capture_obj_req = CaptureObjectRequest(
+                bin_id=userdata['target_bin_id'],
+                object_id=userdata['target_object_id'],
+            )
+            rospy.loginfo("in CAPTUREOBJECT" + userdata['target_bin_id'])
+            capture_response = self.capture_object(capture_obj_req)
 
-        if capture_response.success:
-            return "succeeded"
-        else:
-            return "aborted"
+            if capture_response.success:
+                return "succeeded"
+        except Exception as e:
+            rospy.logerr(e)
+
+        return "aborted"
 
 
 class StowObject(State):
@@ -102,17 +110,19 @@ class PickObject(State):
         self.capture_object.wait_for_service(timeout=rospy.Duration(5))
 
     def execute(self, userdata):
-        capture_obj_req = CaptureObjectRequest(
-            bin_id=userdata['target_bin_id'],
-            object_id=userdata['target_object_id'],
-        )
-        rospy.loginfo("in CAPTUREOBJECT" + userdata['target_bin_id'])
-        capture_response = self.capture_object(capture_obj_req)
+        try:
+            capture_obj_req = CaptureObjectRequest(
+                bin_id=userdata['target_bin_id'],
+                object_id=userdata['target_object_id'],
+            )
+            rospy.loginfo("in CAPTUREOBJECT" + userdata['target_bin_id'])
+            capture_response = self.capture_object(capture_obj_req)
+            if capture_response.success:
+                return "succeeded"
+        except Exception as e:
+            rospy.logerr(e)
+        return "aborted"
 
-        if capture_response.success:
-            return "succeeded"
-        else:
-            return "aborted"
 
 class UpdateBin(State):
     def __init__(self):
@@ -125,17 +135,19 @@ class UpdateBin(State):
         self.capture_object.wait_for_service(timeout=rospy.Duration(5))
 
     def execute(self, userdata):
-        capture_obj_req = CaptureObjectRequest(
-            bin_id=userdata['target_bin_id'],
-            object_id=None,
-        )
-        rospy.loginfo("in UPDATEBIN" + userdata['target_bin_id'])
-        capture_response = self.capture_object(capture_obj_req)
+        try:
+            capture_obj_req = CaptureObjectRequest(
+                bin_id=userdata['target_bin_id'],
+                object_id=None,
+            )
+            rospy.loginfo("in UPDATEBIN" + userdata['target_bin_id'])
+            capture_response = self.capture_object(capture_obj_req)
+            if capture_response.success:
+                return "succeeded"
+        except Exception as e:
+            rospy.logerr(e)
 
-        if capture_response.success:
-            return "succeeded"
-        else:
-            return "aborted"
+        return "aborted"
 
 
 class GetGraspPose(State):
@@ -143,7 +155,7 @@ class GetGraspPose(State):
         State.__init__(
             self,
             input_keys=['target_bin_id', 'target_object_id'],
-            output_keys=['grasp_pose', 'pre_grasp_pose', 'status'],
+            output_keys=['grasp_pose', 'pre_grasp_pose'],
             outcomes=['succeeded', 'preempted', 'aborted']
         )
         self.get_points = rospy.ServiceProxy('/aurmr_perception/get_object_points', GetObjectPoints)
@@ -172,7 +184,6 @@ class GetGraspPose(State):
         points_response = self.get_points(get_points_req)
 
         if not points_response.success:
-            userdata["status"] = "pass"
             return "aborted"
 
         grasp_response = self.get_grasp(points=points_response.points,
@@ -180,7 +191,6 @@ class GetGraspPose(State):
                                         dist_threshold=self.pre_grasp_offset, bin_id=userdata['target_bin_id'])
 
         if not grasp_response.success:
-            userdata["status"] = "pass"
             return "aborted"
 
         # NOTE: No extra filtering or ranking on our part. Just take the first one
@@ -200,7 +210,4 @@ class GetGraspPose(State):
         self.pose_viz.publish(grasp_pose)
         self.pre_grasp_viz.publish(pregrasp_pose)
 
-        # import pdb; pdb.set_trace()
-
-        userdata["status"] = "picking"
         return "succeeded"
