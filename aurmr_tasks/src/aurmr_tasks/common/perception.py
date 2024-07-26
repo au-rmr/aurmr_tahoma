@@ -30,8 +30,6 @@ class CaptureEmptyBin(State):
         except Exception as e:
             rospy.logerr(e)
 
-
-
         return "aborted"
 
 class CaptureEmptyPod(State):
