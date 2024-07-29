@@ -206,6 +206,8 @@ class Tahoma:
     def gripper_status_cb(self, msg: vacuum_gripper_input):
         # mbar, typed as int
         self.system_vacuum = msg.SYSTEM_VACUUM
+        # ..TODO also check the timestamp!
+        self.object_detected = self.system_vacuum > 450
 
     def goal_status_cb(self, msg: GoalStatusArray):
         latest_time = 0

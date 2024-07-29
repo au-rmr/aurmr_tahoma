@@ -6,6 +6,7 @@ import time
 
 
 from aurmr_tasks.common.visualization_utils import EEFVisualization
+
 class MoveToOffset(State):
     def __init__(self, robot, offset, frame_id, detect_object):
         super().__init__(outcomes=['succeeded', 'aborted'],  output_keys=['starting_grasp_pose_out'], input_keys=['target_pose_in'])
@@ -37,13 +38,19 @@ class MoveToOffset(State):
 
         if userdata.target_pose_in:
             target_pose = userdata.target_pose_in
+            #rospy.loginfo("using target pose", target_pose)
+            print("input target_pose")
         else:
             target_pose = self.calculate_target_pose(start_pose)
+            #rospy.loginfo("computed target pose", target_pose)
+            print("computed target_pose")
             self.robot.force_values_init = True
 
-        self.vis.visualize_eef(target_pose)
+        print(target_pose)
 
+        self.vis.visualize_eef(target_pose)
         self.publish_target_pose(target_pose)
+
         return self.wait_for_target_pose_or_timeout(target_pose)
 
     def close_robot_gripper(self):
@@ -57,7 +64,7 @@ class MoveToOffset(State):
         self.pub.publish(target_pose)
 
     def wait_for_target_pose_or_timeout(self, target_pose):
-        timeout = 5.0
+        timeout = 20.0
         start_time = time.time()
         while ((time.time() - start_time) < timeout) and not rospy.is_shutdown():
             if self.has_reached_target_pose(target_pose):
