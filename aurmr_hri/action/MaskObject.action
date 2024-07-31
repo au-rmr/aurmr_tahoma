@@ -1,0 +1,9 @@
+# Goal
+string object_asin
+string bin_id
+sensor_msgs/CompressedImage camera_image
+---
+# Result
+sensor_msgs/CompressedImage mask
+---
+# Feedback

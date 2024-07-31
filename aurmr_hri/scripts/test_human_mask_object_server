@@ -1,0 +1,49 @@
+#!/usr/bin/env python
+
+import rospy
+import actionlib
+from aurmr_hri.msg import MaskObjectAction, MaskObjectGoal
+import cv2
+from cv_bridge import CvBridge
+import os
+
+def test_mask_object_client():
+    rospy.init_node('test_mask_object_client')
+    client = actionlib.SimpleActionClient('/mask_object', MaskObjectAction)
+    client.wait_for_server()
+
+    goal = MaskObjectGoal()
+    goal.object_asin = 'B00X4WHP5E'
+    goal.bin_id = 'bin_1'
+
+    path_to_script = os.path.dirname(os.path.realpath(__file__))
+    
+
+    image_path = os.path.abspath(path_to_script + '/../static/mock_shelf_image.png')
+    print(image_path)
+    cv_image = cv2.imread(image_path)
+
+    bridge = CvBridge()
+    goal.camera_image = bridge.cv2_to_compressed_imgmsg(cv_image)
+
+    rospy.loginfo("Sending goal to MaskObjectAction server...")
+    client.send_goal(goal)
+    client.wait_for_result()
+
+    result = client.get_result()
+    if result:
+        rospy.loginfo("Received result from MaskObjectAction server")
+        mask_image = bridge.compressed_imgmsg_to_cv2(result.mask)
+        cv2.imshow("Mask Image", mask_image)
+        while True:
+            if cv2.waitKey(1) & 0xFF == ord('q') or rospy.is_shutdown():
+                break 
+    else:
+        rospy.loginfo("No result received from MaskObjectAction server")
+
+if __name__ == '__main__':
+    try:
+        test_mask_object_client()
+    except rospy.ROSInterruptException:
+        pass
+    cv2.destroyAllWindows()

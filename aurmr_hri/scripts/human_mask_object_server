@@ -1,0 +1,130 @@
+#!/usr/bin/env python
+
+import rospy
+import actionlib
+import numpy as np
+import cv2
+from aurmr_hri.msg import MaskObjectAction, MaskObjectGoal, MaskObjectResult
+from sensor_msgs.msg import CompressedImage
+from cv_bridge import CvBridge, CvBridgeError
+
+
+class MaskObjectActionServer:
+    def __init__(self):
+        self.server = actionlib.SimpleActionServer('mask_object', MaskObjectAction, self.execute, False)
+        self.server.start()
+        self.bridge = CvBridge()
+        self.input_image = None
+        self.mask = None
+        self.drawing = False
+        self.rect_drawing = False
+        self.rect = None
+        self.bg_stroke = False
+        self.fg_stroke = False
+        self.stroke_thickness = 10
+        self.previous_x = None
+        self.previous_y = None
+
+    def execute(self, goal):
+        try:
+            self.input_image = self.bridge.compressed_imgmsg_to_cv2(goal.camera_image, desired_encoding='bgr8')
+        except CvBridgeError as e:
+            rospy.logerr(f"CvBridge Error: {e}")
+            self.server.set_aborted()
+            return
+
+        self.working_image = self.input_image.copy()
+        self.mask = np.zeros(self.input_image.shape[:2], dtype=np.uint8)
+
+        cv2.namedWindow('Image', cv2.WINDOW_GUI_NORMAL)
+        cv2.setMouseCallback('Image', self.on_mouse)
+
+        while True:
+            display_image = self.apply_tint_to_background(self.working_image, self.mask)
+            cv2.imshow('Image', display_image)
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord(' '):  # Press space to finish
+                break
+
+        mask_result = self.apply_grabcut()
+
+        result = MaskObjectResult()
+        result.mask = self.bridge.cv2_to_compressed_imgmsg(mask_result)
+        self.server.set_succeeded(result)
+        cv2.destroyAllWindows()
+
+    def on_mouse(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.rect_drawing = True
+            self.rect = (x, y, 1, 1)
+        elif event == cv2.EVENT_LBUTTONUP:
+            self.rect_drawing = False
+            # x, y, w, h
+            self.rect = (self.rect[0], self.rect[1], x - self.rect[0], y - self.rect[1])
+        elif event == cv2.EVENT_RBUTTONDOWN:
+            self.rect = None
+            self.working_image = self.input_image.copy()
+            self.drawing = True
+            self.bg_stroke = True if flags & cv2.EVENT_FLAG_CTRLKEY else False
+            self.fg_stroke = not self.bg_stroke
+            self.previous_x = x
+            self.previous_y = y
+        elif event == cv2.EVENT_RBUTTONUP:
+            self.drawing = False
+            self.bg_stroke = False
+            self.fg_stroke = False
+            self.previous_x = None
+            self.previous_y = None
+        elif event == cv2.EVENT_MOUSEMOVE:
+            if self.drawing:
+                if self.previous_x is not None and self.previous_y is not None:
+                    if self.bg_stroke:
+                        cv2.line(self.mask, (self.previous_x, self.previous_y), (x, y), cv2.GC_PR_BGD, self.stroke_thickness)
+                    elif self.fg_stroke:
+                        cv2.line(self.mask, (self.previous_x, self.previous_y), (x, y), cv2.GC_PR_FGD, self.stroke_thickness)
+                self.previous_x = x
+                self.previous_y = y
+            elif self.rect_drawing:
+                self.working_image = self.input_image.copy()
+                cv2.rectangle(self.working_image, (self.rect[0], self.rect[1]), (x, y), (0, 255, 0), 2)
+
+    def apply_grabcut(self):
+        bgd_model = np.zeros((1, 65), np.float64)
+        fgd_model = np.zeros((1, 65), np.float64)
+        if self.rect:
+            self.mask = np.zeros(self.input_image.shape[:2], dtype=np.uint8)
+            cv2.grabCut(self.input_image, self.mask, self.rect, bgd_model, fgd_model, 5, cv2.GC_INIT_WITH_RECT)
+        else:
+            cv2.grabCut(self.input_image, self.mask, None, bgd_model, fgd_model, 5, cv2.GC_INIT_WITH_MASK)
+
+        mask2 = np.where((self.mask == 2) | (self.mask == 0), 0, 1).astype('uint8')
+        result = self.input_image * mask2[:, :, np.newaxis]
+        return result
+
+    def apply_tint_to_background(self, image, mask):
+        tinted_image = image.copy()
+        alpha = 0.5  # Transparency factor for tinting
+        red_tint = np.zeros_like(image)
+        red_tint[:, :] = [0, 0, 255]  # Red color
+        green_tint = np.zeros_like(image)
+        green_tint[:, :] = [0, 255, 0]  # Green color
+
+        # Ensure there are background pixels before blending
+        bgd_indices = np.where(mask == cv2.GC_PR_BGD)
+        pr_bgd_indices = np.where(mask == cv2.GC_PR_BGD)
+        pr_fgd_indices = np.where(mask == cv2.GC_PR_FGD)
+
+        if bgd_indices[0].size > 0:
+            tinted_image[bgd_indices] = cv2.addWeighted(image[bgd_indices], 1 - alpha, red_tint[bgd_indices], alpha, 0)
+        if pr_bgd_indices[0].size > 0:
+            tinted_image[pr_bgd_indices] = cv2.addWeighted(image[pr_bgd_indices], 1 - alpha, red_tint[pr_bgd_indices], alpha, 0)
+        if pr_fgd_indices[0].size > 0:
+            tinted_image[pr_fgd_indices] = cv2.addWeighted(image[pr_fgd_indices], 1 - alpha, green_tint[pr_fgd_indices], alpha, 0)
+
+        return tinted_image
+
+if __name__ == '__main__':
+    rospy.init_node('mask_object_server')
+    server = MaskObjectActionServer()
+    rospy.spin()
+    cv2.destroyAllWindows()
