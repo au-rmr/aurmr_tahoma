@@ -99,31 +99,20 @@ def_config = {
 
 
 class Bin:
-    def __init__(self, bin_id, bounds=None, init_depth=None, config=def_config):
-        # String ID of the bin
+    def __init__(self, bin_id: str, bounds, init_depth=None, config=def_config):
         self.bin = bin_id
         self.visualize = False
-
-        # The crop bounds of the bin
-        if bounds is None:
-            self.bounds = bin_bounds[self.bin]
-        else:
-            self.bounds = bounds
 
         # Total number of bin objects
         self.n = 0
 
         self.config = config
-
-        # Stores bin state
-        #
-        # raise Exception("seems like there is either an error in the calibaration file or self.bounds[2] - self.bounds[3] are flipped ")
-
-        self.current = {'rgb':np.zeros(shape=(self.bounds[1] - self.bounds[0], self.bounds[3] - self.bounds[2], 3), dtype=np.uint8), 'depth':None, 'mask':None, 'embeddings':np.array([])}
+        self.current = {'rgb':np.zeros(shape=(bounds[1] - bounds[0], bounds[3] - bounds[2], 3), dtype=np.uint8), 'depth':None, 'mask':None, 'embeddings':np.array([])}
         self.last = {'rgb':None, 'depth':None, 'mask':None, 'embeddings':np.array([])}
         self.init_depth = init_depth[bounds[0]:bounds[1], bounds[2]:bounds[3]]
         self.bg_mask = np.ones(self.init_depth.shape, dtype=np.uint8)
         self.prev = {}
+        self.bounds = bounds
 
     def update_current(self, current):
         self.prev["last"] = self.last.copy()
@@ -168,7 +157,7 @@ class Bin:
 
 
 class SegNet:
-    def __init__(self, config=def_config, init_depth=None, init_info=None, mask=None):
+    def __init__(self, bounds, config=def_config, init_depth=None, init_info=None, mask=None):
         # init_depth[:,:][np.isnan(init_depth)] = 0
         self.frame_count_yi = 0
         # Initialize the initial network (and refinement network if it exists)
@@ -215,12 +204,13 @@ class SegNet:
             print("WARNING: No initial scene provided")
 
         # Initializes the bins
-        bin_names = config['bounds'].keys()
+        bin_names = bounds.keys()
         self.bins = {}
 
         init_xyz = self.compute_xyz(init_depth, init_info)
         for bin in bin_names:
-            self.bins[bin] = Bin(bin, bounds=config['bounds'][bin], init_depth=init_xyz)
+            self.bins[bin] = Bin(bin, bounds=bounds[bin], init_depth=init_xyz)
+
 
         self.H, self.W = None, None
 
