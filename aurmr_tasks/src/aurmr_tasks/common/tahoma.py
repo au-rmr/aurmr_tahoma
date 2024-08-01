@@ -357,7 +357,7 @@ class Tahoma:
                            plan_only=False,
                            replan=False,
                            replan_attempts=5,
-                           tolerance=0.01,
+                           tolerance=0.005,
                            path_constraints=None):
         """Moves the end-effector to a pose, using motion planning.
 
