@@ -28,3 +28,9 @@
 [submodule "industrial_robot_status_controller"]
 	path = industrial_robot_status_controller
 	url = https://github.com/gavanderhoorn/industrial_robot_status_controller.git
+[submodule "third-party/robotiq"]
+	path = third-party/robotiq
+	url = https://github.com/au-rmr/robotiq.git
+[submodule "third-party/universal_robot"]
+	path = third-party/universal_robot
+	url = https://github.com/fmauch/universal_robot.git
