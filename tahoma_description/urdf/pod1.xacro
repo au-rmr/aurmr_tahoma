@@ -1,0 +1,176 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="pod">
+  <xacro:macro name="pod" params="prefix recipe_a">
+    <xacro:arg name="prefix" default="pod_"/>
+    <xacro:arg name="recipe_a" default="[]"/> <!-- bin heights in meters -->
+    <xacro:property name="POD_BASE_WIDTH" value="0.9398"/>
+    <xacro:property name="POD_BASE_HEIGHT" value="0.295"/>
+    <xacro:property name="POD_BRACE_WIDTH" value="0.9188"/>
+    <xacro:property name="POD_BRACE_HEIGHT" value="2.311"/>
+    <xacro:property name="POD_BASE_TO_BRACE_XY_OFFSET" value="0.010"/>
+    <xacro:property name="POD_BASE_TO_BRACE_Z_OFFSET" value="0.083"/>
+    <xacro:property name="POD_BIN_DEPTH" value="0.152"/>
+    <xacro:property name="POD_BIN_WALL_THICKNESS" value="0.002"/>
+    <xacro:property name="POD_BIN_BOTTOM_THICKNESS" value="0.007"/>
+    <xacro:property name="POD_BIN_FLAP_HEIGHT" value="0.032"/> <!-- supposedly 1 inch, but in reality 32 mm -->
+    <xacro:property name="alphabet" value="abcdefghijklmnopqrstuvwxyz"/>
+
+    <material name="yellow_fabric">
+      <color rgba="1 .91 .2 1"/>
+    </material>
+    <material name="steel">
+      <color rgba=".6 .6 .6 1"/>
+    </material>
+    <link name="${prefix}base_link">
+      <inertial>
+        <mass value="30.0"/>
+        <inertia ixx="0.0002835" ixy="0.0" ixz="0.0" iyy="0.0002835" iyz="0.0" izz="0.000324"/>
+      </inertial>
+      <visual>
+        <origin rpy="0 0 0" xyz="${POD_BASE_WIDTH / 2} ${POD_BASE_WIDTH / 2} ${(POD_BRACE_HEIGHT + POD_BASE_HEIGHT) / 2}"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/pod/pod_frame.stl"/>
+        </geometry>
+      </visual>
+      <collision>
+        <origin rpy="0 0 0" xyz="${POD_BASE_WIDTH / 2} ${POD_BASE_WIDTH / 2} ${(POD_BRACE_HEIGHT + POD_BASE_HEIGHT) / 2}"/>
+        <geometry>
+          <mesh filename="package://tahoma_description/meshes/pod/pod_frame.stl"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="${prefix}brace"/>
+    <joint name="${prefix}base_link_${prefix}brace_joint" type="fixed">
+      <!-- z = 0.295 in .stl file, but in reality is 0.257 -->
+      <origin xyz="0 0 ${POD_BASE_HEIGHT}"/>
+      <parent link="${prefix}base_link"/>
+      <child link="${prefix}brace"/>
+    </joint>
+
+    <link name="${prefix}fabric_base"/>
+    <joint name="${prefix}brace_${prefix}fabric_base_joint" type="fixed">
+      <origin xyz="${POD_BASE_TO_BRACE_XY_OFFSET} ${POD_BASE_TO_BRACE_XY_OFFSET} ${POD_BASE_TO_BRACE_Z_OFFSET}"/>
+      <parent link="${prefix}brace"/>
+      <child link="${prefix}fabric_base"/>
+    </joint>
+    <xacro:macro name="shifted_box" params="name width height length">
+      <link name="${name}">
+        <inertial>
+          <mass value="0.01"/>
+          <inertia ixx="0.0002835" ixy="0.0" ixz="0.0" iyy="0.0002835" iyz="0.0" izz="0.000324"/>
+        </inertial>
+        <visual>
+          <origin xyz="${width / 2} ${height / 2} 0"/> <!-- <origin xyz="${width / 2} ${height / 2} -${length / 2}"/> -->
+          <geometry>
+            <box size="${width} ${height} ${length}"/>
+          </geometry>
+          <material name="yellow_fabric"/>
+        </visual>
+        <collision>
+          <origin xyz="${width / 2} ${height / 2} 0"/> <!-- <origin xyz="${width / 2} ${height / 2} -${length / 2}"/> -->
+          <geometry>
+            <box size="${width} ${height} ${length}"/>
+          </geometry>
+        </collision>
+      </link>
+    </xacro:macro>
+
+    <xacro:macro name="bin" params="prefix:=^ id width height depth">
+      <xacro:property name="bin_name" value="${prefix}bin_${id}"/>
+      <link name="${bin_name}"/>
+
+      <xacro:shifted_box name="${bin_name}_bottom" width="${width}" height="${depth}" length="${POD_BIN_BOTTOM_THICKNESS}"/>
+      <joint name="${bin_name}_${bin_name}_bottom" type="fixed">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="${bin_name}"/>
+        <child link="${bin_name}_bottom"/>
+      </joint>
+
+      <xacro:shifted_box name="${bin_name}_left" width="${depth}" height="${height}" length="${POD_BIN_WALL_THICKNESS}"/>
+      <joint name="${bin_name}_${bin_name}_left" type="fixed">
+        <origin xyz="0 0 0" rpy="${pi / 2} 0 ${pi / 2}"/>
+        <parent link="${bin_name}"/>
+        <child link="${bin_name}_left"/>
+      </joint>
+
+      <xacro:if value="${id[0] == '4'}">
+        <xacro:shifted_box name="${bin_name}_right" width="${depth}" height="${height}" length="${POD_BIN_WALL_THICKNESS}"/>
+        <joint name="${bin_name}_${bin_name}_right" type="fixed">
+          <origin xyz="${width} 0 0" rpy="${pi / 2} 0 ${pi / 2}"/>
+          <parent link="${bin_name}"/>
+          <child link="${bin_name}_right"/>
+        </joint> 
+      </xacro:if>
+
+      <xacro:shifted_box name="${bin_name}_back" width="${width}" height="${height}" length="${POD_BIN_WALL_THICKNESS}"/>
+      <joint name="${bin_name}_${bin_name}_back" type="fixed">
+        <origin xyz="0 ${depth} 0" rpy="${pi / 2} 0 0"/>
+        <parent link="${bin_name}"/>
+        <child link="${bin_name}_back"/>
+      </joint>
+
+      <xacro:shifted_box name="${bin_name}_flap" width="${width}" height="${POD_BIN_FLAP_HEIGHT}" length="${POD_BIN_WALL_THICKNESS}"/>
+      <joint name="${bin_name}_${bin_name}_flap" type="fixed">
+        <origin xyz="0 0 0" rpy="${pi / 2} 0 0"/>
+        <parent link="${bin_name}"/>
+        <child link="${bin_name}_flap"/>
+      </joint>
+
+      <xacro:if value="${id[1] == 'm'}">
+        <xacro:shifted_box name="${bin_name}_top" width="${width}" height="${depth}" length="${POD_BIN_WALL_THICKNESS}"/>
+        <joint name="${bin_name}_${bin_name}_top" type="fixed">
+          <origin xyz="0 0 ${height}" rpy="0 0 0"/>
+          <parent link="${bin_name}"/>
+          <child link="${bin_name}_top"/>
+        </joint>
+      </xacro:if>
+
+    </xacro:macro>
+
+    <xacro:macro name="bin_row" params="prefix:=^ id parent sections i:=0 width height depth">
+      <xacro:bin prefix="${prefix}" id="${i+1}${id}" width="${width}" height="${height}" depth="${depth}"/>
+      <xacro:property name="bin_name" value="${prefix}bin_${i+1}${id}"/>
+      <joint name="${parent}_${bin_name}_joint" type="fixed">
+        <origin xyz="${width * (i)} 0 0"/>
+        <parent link="${parent}"/>
+        <child link="${bin_name}"/>
+      </joint>
+      <xacro:if value="${sections > 1}">
+        <!-- recurse for the remaining bins -->
+        <xacro:bin_row id="${id}" parent="${parent}" sections="${sections - 1}" i="${i + 1}"
+                       width="${width}" height="${height}" depth="${depth}"/>
+      </xacro:if>
+    </xacro:macro>
+
+    <xacro:macro name="shelf" params="prefix:=^ id sections:=4 width:=${POD_BRACE_WIDTH} height depth:=${POD_BIN_DEPTH}">
+      <xacro:property name="shelf_name" value="${prefix}shelf_${id}"/>
+
+      <link name="${shelf_name}"/>
+      <xacro:bin_row id="${id}" parent="${shelf_name}" sections="${sections}" width="${width / 4}"
+                     height="${height}" depth="${depth}"/>
+    </xacro:macro>
+
+    <xacro:macro name="shelf_stack" params="prefix:=^ parent recipe offset:=0 width:=${POD_BRACE_WIDTH} depth:=${POD_BIN_DEPTH} i:=0">
+      <xacro:property name="shelf_height" value="${recipe[0]}"/>
+      <xacro:property name="shelf_name" value="${prefix}shelf_${alphabet[i]}"/>
+      <xacro:shelf prefix="${prefix}" id="${alphabet[i]}" width="${width}" height="${shelf_height}" depth="${depth}"/>
+      <joint name="${parent}_${shelf_name}_joint" type="fixed">
+        <origin xyz="0 0 ${offset}"/>
+        <parent link="${parent}"/>
+        <child link="${shelf_name}"/>
+      </joint>
+      <xacro:if value="${len(recipe) > 1}">
+        <!-- recurse -->
+        <xacro:shelf_stack parent="${parent}" recipe="${recipe[1:]}" width="${width}" depth="${depth}"
+                           offset="${offset + shelf_height}" i="${i+1}"/>
+      </xacro:if>
+    </xacro:macro>
+
+    <xacro:shelf_stack prefix="${prefix}" parent="${prefix}fabric_base" recipe="${recipe_a}" width="${POD_BRACE_WIDTH}"
+                       depth="${POD_BIN_DEPTH}"/>
+    <!-- Front left corner -->
+    <!-- Layers, frame at bottom left of each bin -->
+
+  </xacro:macro>
+</robot>
