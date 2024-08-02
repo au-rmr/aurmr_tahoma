@@ -161,7 +161,6 @@ class PodPerceptionROS:
 
 
         self.net = SegNet(config=updated_config, init_depth=first_depth, init_info=K)
-        # (henrifung)NOTE: PERHAPS OTHER THINGS NEED TO BE CLEARED
         self.model.reset_model()
         self.model.net = self.net
 
@@ -540,9 +539,9 @@ class DiffPodModel:
         bin_crop = [100,250,35,500]
         rgb_image_croppped = rgb_image[bin_crop[0]:bin_crop[1], bin_crop[2]:bin_crop[3], :]
         masks, full_masks = self.table_net.mask_generator(rgb_image_croppped)
+        if not masks or not full_masks:
+            return False, f"No masks were found", None
         full_masks_ret[bin_crop[0]:bin_crop[1], bin_crop[2]:bin_crop[3]] = full_masks
-        if not masks:
-            return True, f"No masks were found", None
         self.table_mask = full_masks_ret
         # viz = self.table_net.vis_masks(rgb_image, full_masks_ret)
         # plt.imsave('viz.png', viz)
