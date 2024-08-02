@@ -244,7 +244,7 @@ class GraspDetectionROS:
         )
         plt.savefig(os.path.join(img_path, f"grasp_point_img_{result.tm_mday}_{result.tm_hour}_{result.tm_min}_{result.tm_sec}.png"))
 
-        pointz = 0.6
+        pointz = 0.5
         pointx = (grasp_point[0] - cx) * pointz / fx
         pointy = (grasp_point[1] - cy) * pointz / fy
 
