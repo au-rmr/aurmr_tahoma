@@ -617,6 +617,56 @@ class AddPodCollisionGeometry(State):
         # If we exited the while loop without returning then we timed out
         return "aborted"
 
+class AddPartialPodCollisionGeometryTableDropHide(State):
+    def __init__(self, robot):
+        State.__init__(self, outcomes=['succeeded', 'aborted'])
+        self.robot = robot
+
+    def execute(self, ud):
+        # FIXME: We should probably read this in from transforms or something
+        POD_SIZE = .9148
+        HALF_POD_SIZE = POD_SIZE / 2
+        WALL_WIDTH = 0.003
+        SIDE_WALL_WIDTH = 0.033
+
+        self.robot.scene.add_box("front_frame", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                    pose=Pose(position=Point(x=POD_SIZE/2, y=0., z=1.34),
+                                                              orientation=I_QUAT)), (1.8, .04, 3.0))
+
+        self.robot.scene.add_box("left_side_frame", PoseStamped(header=Header(frame_id="base_link"),
+                                                    pose=Pose(position=Point(x=0.25, y=1.10, z=1.34),
+                                                              orientation=I_QUAT)), (2.00, .05, 3.0))
+
+        self.robot.scene.add_box("right_side_frame", PoseStamped(header=Header(frame_id="base_link"),
+                                                    pose=Pose(position=Point(x=0.25, y=-1.00, z=1.34),
+                                                              orientation=I_QUAT)), (2.00, .05, 3.0))
+
+
+        self.robot.scene.add_box("table", PoseStamped(header=Header(frame_id="base_link"),
+                                                    pose=Pose(position=Point(x=0.71, y=0.01, z=1.1),
+                                                              orientation=I_QUAT)), (0.5, 1.6, 0.1 ))
+
+
+        number_collision_box = 4
+
+        start = rospy.get_time()
+        seconds = rospy.get_time()
+        timeout = 50.0
+        while (seconds - start < timeout) and not rospy.is_shutdown():
+            objects = self.robot.scene.get_objects()
+
+            # Test if we are in the expected state
+            if len(objects) == number_collision_box:
+                return "succeeded"
+
+            # Sleep so that we give other threads time on the processor
+            rospy.sleep(0.1)
+            seconds = rospy.get_time()
+
+        # If we exited the while loop without returning then we timed out
+        return "aborted"
+
+
 class AddFullPodCollisionGeometryTableDropHide(State):
     def __init__(self, robot):
         State.__init__(self, outcomes=['succeeded', 'aborted'])
@@ -634,7 +684,7 @@ class AddFullPodCollisionGeometryTableDropHide(State):
                                                               orientation=I_QUAT)), (1.8, .06, 3.0))
 
         self.robot.scene.add_box("left_side_frame", PoseStamped(header=Header(frame_id="base_link"),
-                                                    pose=Pose(position=Point(x=0.25, y=1.00, z=1.34),
+                                                    pose=Pose(position=Point(x=0.25, y=1.10, z=1.34),
                                                               orientation=I_QUAT)), (2.00, .05, 3.0))
 
         self.robot.scene.add_box("right_side_frame", PoseStamped(header=Header(frame_id="base_link"),
@@ -643,7 +693,7 @@ class AddFullPodCollisionGeometryTableDropHide(State):
 
 
         self.robot.scene.add_box("table", PoseStamped(header=Header(frame_id="base_link"),
-                                                    pose=Pose(position=Point(x=0.71, y=0.01, z=1.15),
+                                                    pose=Pose(position=Point(x=0.71, y=0.01, z=1.1),
                                                               orientation=I_QUAT)), (0.5, 1.6, 0.1 ))
 
 
@@ -684,7 +734,7 @@ class AddFullPodCollisionGeometryDropHide(State):
                                                               orientation=I_QUAT)), (1.8, .05, 3.0))
 
         self.robot.scene.add_box("left_side_frame", PoseStamped(header=Header(frame_id="base_link"),
-                                                    pose=Pose(position=Point(x=0.25, y=1.00, z=1.34),
+                                                    pose=Pose(position=Point(x=0.25, y=1.10, z=1.34),
                                                               orientation=I_QUAT)), (2.00, .05, 3.0))
 
         self.robot.scene.add_box("right_side_frame", PoseStamped(header=Header(frame_id="base_link"),
@@ -728,7 +778,7 @@ class AddFullPodCollisionGeometry(State):
                                                               orientation=I_QUAT)), (1.8, .05, 3.0))
 
         self.robot.scene.add_box("left_side_frame", PoseStamped(header=Header(frame_id="base_link"),
-                                                    pose=Pose(position=Point(x=0.25, y=1.00, z=1.34),
+                                                    pose=Pose(position=Point(x=0.25, y=1.10, z=1.34),
                                                               orientation=I_QUAT)), (2.00, .05, 3.0))
 
         self.robot.scene.add_box("right_side_frame", PoseStamped(header=Header(frame_id="base_link"),
