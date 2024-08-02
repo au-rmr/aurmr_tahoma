@@ -83,14 +83,18 @@ class CaptureTable(State):
         self.capture_table.wait_for_service(timeout=rospy.Duration(5))
 
     def execute(self, userdata):
-        capture_table_req = CaptureTableRequest()
-        rospy.loginfo("in CAPTURETABLE")
-        capture_response = self.capture_table(capture_table_req)
+        try:
+            capture_table_req = CaptureTableRequest()
+            rospy.loginfo("in CAPTURETABLE")
+            capture_response = self.capture_table(capture_table_req)
 
-        if capture_response.success:
-            return "succeeded"
-        else:
-            return "aborted"
+            if capture_response.success:
+                return "succeeded"
+            else:
+                return "aborted"
+        except Exception as e:
+            rospy.logerr(e)
+        return "aborted"
 
 
 class StowObject(State):
@@ -235,10 +239,10 @@ class GetGraspPose(State):
                     return "aborted"
 
                 # NOTE: No extra filtering or ranking on our part. Just take the first one
-                # As the arm_tool0 is 20cm in length w.r.t tip of suction cup thus adding 0.2m offset
+                # As the arm_tool0 is 26cm in length w.r.t tip of suction cup thus adding 0.26m offset
                 grasp_pose = grasp_response.poses[0]
 
-            grasp_pose = self.add_offset(-0.20, grasp_pose)
+            grasp_pose = self.add_offset(-0.26, grasp_pose)
 
             userdata['grasp_pose'] = grasp_pose
 
