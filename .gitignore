@@ -61,3 +61,9 @@ qtcreator-*
 
 _build
 _autosummary
+
+# pickles, arrays
+*.npy
+
+# Python installation
+*.egg-info

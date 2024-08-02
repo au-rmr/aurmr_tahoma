@@ -8,4 +8,4 @@ moveit_setup_assistant_config:
   CONFIG:
     author_name: Nick Walker
     author_email: nswalker@cs.washington.edu
-    generated_timestamp: 1611154369
+    generated_timestamp: 1677713146

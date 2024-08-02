@@ -21,26 +21,26 @@ from visualization_msgs.msg import Marker
 import image_geometry
 
 
-# # Copied from: https://github.com/au-rmr/aurmr_tahoma/blob/uois_multi_frame_with_service/aurmr_unseen_object_clustering/src/aurmr_unseen_object_clustering/tools/segmentation_net.py#LL65C1-L82C14
-# # TODO: Move somewhere shared (or use the upcoming automated process)
-# bin_bounds = {
-#     '1H':[297*4, 353*4, 315*4, 406*4],
-#     '2H':[300*4, 355*4, 409*4, 514*4],
-#     '3H':[303*4, 356*4, 515*4, 620*4],
-#     '4H':[302*4, 355*4, 619*4, 711*4],
-#     '1G':[365*4, 409*4, 315*4, 405*4],
-#     '2G':[367*4, 407*4, 407*4, 512*4],
-#     '3G':[370*4, 411*4, 513*4, 619*4],
-#     '4G':[371*4, 412*4, 619*4, 711*4],
-#     '1F':[420*4, 514*4, 314*4, 405*4],
-#     '2F':[424*4, 511*4, 407*4, 512*4],
-#     '3F':[425*4, 515*4, 515*4, 620*4],    
-#     '4F':[426*4, 514*4, 621*4, 714*4],
-#     '1E':[527*4, 572*4, 311*4, 405*4],
-#     '2E':[529*4, 571*4, 407*4, 513*4],
-#     '3E':[527*4, 574*4, 515*4, 620*4],
-#     '4E':[531*4, 574*4, 622*4, 714*4],
-# }
+# Copied from: https://github.com/au-rmr/aurmr_tahoma/blob/uois_multi_frame_with_service/aurmr_unseen_object_clustering/src/aurmr_unseen_object_clustering/tools/segmentation_net.py#LL65C1-L82C14
+# TODO: Move somewhere shared (or use the upcoming automated process)
+#bin_bounds = {
+#    '1H':[297*4, 353*4, 315*4, 406*4],
+#    '2H':[300*4, 355*4, 409*4, 514*4],
+#    '3H':[303*4, 356*4, 515*4, 620*4],
+#    '4H':[302*4, 355*4, 619*4, 711*4],
+#    '1G':[365*4, 409*4, 315*4, 405*4],
+#    '2G':[367*4, 407*4, 407*4, 512*4],
+#    '3G':[370*4, 411*4, 513*4, 619*4],
+#    '4G':[371*4, 412*4, 619*4, 711*4],
+#    '1F':[420*4, 514*4, 314*4, 405*4],
+#    '2F':[424*4, 511*4, 407*4, 512*4],
+#    '3F':[425*4, 515*4, 515*4, 620*4],    
+#    '4F':[426*4, 514*4, 621*4, 714*4],
+#    '1E':[527*4, 572*4, 311*4, 405*4],
+#    '2E':[529*4, 571*4, 407*4, 513*4],
+#    '3E':[527*4, 574*4, 515*4, 620*4],
+#    '4E':[531*4, 574*4, 622*4, 714*4],
+#}
 with open('/tmp/calibration_pixel_coords_pod.pkl', 'rb') as f:
     bin_bounds = pickle.load(f)
 
@@ -100,7 +100,6 @@ class UserPromptForRetry(State):
         width = int(rgb_image.shape[1] * scale_percent / 100)
         height = int(rgb_image.shape[0] * scale_percent / 100)
         dim = (width, height)
-        
         # resize image
         resized = cv2.resize(rgb_image, dim, interpolation = cv2.INTER_AREA)
         cv2.imshow('rgb_image', resized)
@@ -141,7 +140,6 @@ class UserPromptForRetry(State):
         marker.lifetime = rospy.rostime.Duration()
 
         self.marker_publisher.publish(marker)
-    
     def visualize_point_marker(self, point, frame_id):
         marker2 = Marker()
         # marker2.header.frame_id = self.camera_model.tfFrame()
@@ -258,9 +256,32 @@ class UserPromptForRetry(State):
         grasp_pose = self.tf_buffer.transform(grasp_pose, "base_link")
         grasp_pose.pose.orientation = quaternion
 
-        POD_OFFSET = 0.025 #-0.1
-        transform = self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
+        transform= self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
+        POD_OFFSET = 0.1
+        RGB_TO_DEPTH_FRAME_OFFSET = transform.transform.translation.y-0.47
+        DEPTH_TILT = -transform.transform.translation.z-0.02
+        
+        grasp_pose.pose.position.z += DEPTH_TILT
+        grasp_pose.pose.position.y -= RGB_TO_DEPTH_FRAME_OFFSET
         grasp_pose.pose.position.x = transform.transform.translation.x - POD_OFFSET
+
+        def visualize(pose, frame='base_link'):
+            self.visualize_point_marker([
+                pose.position.x,
+                pose.position.y,
+                pose.position.z
+            ], frame)
+        
+        # visualize(grasp_pose.pose)
+        # import pdb; pdb.set_trace()
+        
+        # visualize()
+
+        # import pdb; pdb.set_trace()
+
+        # NOTE: No extra filtering or ranking on our part. Just take the first one
+        # As the arm_tool0 is 20cm in length w.r.t tip of suction cup thus adding 0.2m offset
+        # grasp_pose = self.add_offset(-0.22, grasp_pose)
 
         userdata['human_grasp_pose'] = grasp_pose
 

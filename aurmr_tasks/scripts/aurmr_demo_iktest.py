@@ -47,7 +47,7 @@ class PublishStatus(State):
     def execute(self, userdata):
         now = rospy.get_rostime()
         now = now.secs + now.nsecs*10**(-9)
-        time_delta = now - userdata["start_time"]
+        time_delta = now - userdata["start_time"] 
 
 
         msg = PickStatus()
@@ -62,12 +62,12 @@ class PublishStatus(State):
 class RecordTime(State):
     def __init__(self):
         State.__init__(self, outcomes=['succeeded'], output_keys=["start_time"])
-
+    
     def execute(self, userdata):
         now = rospy.get_rostime()
         userdata["start_time"] = now.secs + now.nsecs*10**(-9)
         return "succeeded"
-
+        
 class WaitForPickStow(State):
     def __init__(self):
         State.__init__(self, outcomes=['pick', 'stow', 'done'], output_keys=["request"])
@@ -139,8 +139,6 @@ def main():
     rospy.init_node("aurmr_demo")
     pose_pub_test = rospy.Publisher("/tote_drop", PoseStamped, queue_size=5, latch=True)
     status_pub = rospy.Publisher("/demo_status", PickStatus, queue_size=5, latch=True)
-    cont_status_pub = rospy.Publisher("/cont_status", PickStatus, queue_size=5, latch=True)
-
     TOTE_APPROACH_POSE.header.stamp = rospy.Time.now()
     pose_pub_test.publish(TOTE_APPROACH_POSE)
     simulation = rospy.get_param("/use_sim_time", False)
@@ -155,66 +153,52 @@ def main():
     # stows = [["3f", "mouthwash"], ['3f', 'lysol'], ['2f', 'box']]
     # picks = [["3f", "lysol"], ['2f', 'box'], ['3f', 'mouthwash']]
 
+
     with demo_sm:
 
         with pick_sm:
             StateMachine.add_auto("RECORD_TIME", RecordTime(), ["succeeded"])
             cf.splat_auto("SPLAT_PICK", "request", ["target_bin_id", "target_object_id", "target_object_asin"])
-            # StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX_PRE_GRASP", motion.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
-            StateMachine.add("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=.015),
-                            {"succeeded": "PUBLISH_CURRENTLY_PICKING", "aborted":"OBJ_NOT_FOUND", "preempted":"OBJ_NOT_FOUND"})
+            StateMachine.add_auto("CLEAR_SCENE_PREMOVE", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
+            StateMachine.add_auto("SETUP_COLLISION_SCENE_PREMOVE", motion.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
+            StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX_PRE_GRASP", motion.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
+            StateMachine.add("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=.015),    
+                            {"succeeded": "PUBLISH_CURRENTLY_PICKING", "aborted":"PASS", "preempted":"PASS"})
             StateMachine.add("PASS", PublishStatus(status_pub, wait_time=3), {"succeeded": "done"})
             StateMachine.add_auto("PUBLISH_CURRENTLY_PICKING", PublishStatus(status_pub), ["succeeded"])
             StateMachine.add_auto("REMAP_PRE_GRASP_POSE", cf.input_to_output("pre_grasp_pose", "pose"), ["succeeded"])
-            # StateMachine.add_auto("PREPARE_JOINT_POSITION_IF_1F4H4F", motion.AdjustJointPositionsIfBin1F4H4F(robot), ["succeeded", "aborted", "pass"])
-            # StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPose(robot), ["succeeded", "aborted", "preempted"])
+            StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPose(robot), ["succeeded", "aborted", "preempted"])
+            StateMachine.add_auto("MOVE_TO_HIDE1", motion.MoveToJointAngles(robot, "drop_hide"),  ["succeeded", "aborted"])
+            StateMachine.add_auto("MOVE_TO_PRE_GRASP2", motion.MoveEndEffectorToPose(robot), ["succeeded", "aborted", "preempted"])
+            StateMachine.add_auto("MOVE_TO_HIDE2", motion.MoveToJointAngles(robot, "drop_hide"),  ["succeeded", "aborted"])
+            StateMachine.add_auto("MOVE_TO_PRE_GRASP3", motion.MoveEndEffectorToPose(robot), ["succeeded", "aborted", "preempted"])
 
-            StateMachine.add_auto("CLEAR_SCENE_PREMOVE", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
-            StateMachine.add_auto("SETUP_COLLISION_SCENE_PREMOVE", motion.AddFullPodCollisionGeometryTableDropHide(robot), ["succeeded", "aborted"])
-
-            StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPoseManipulable(robot), ["succeeded", "aborted", "preempted"])
+            
+            
+            # StateMachine.add_auto("OPEN_BEFORE_GRASP", motion.OpenGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
             StateMachine.add_auto("CLEAR_SCENE_PREGRASP", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_PREGRASP", motion.AddPartialPodCollisionGeometry(robot), ["succeeded", "aborted"])
-            StateMachine.add_auto("MOVE_TO_GRASP", motion.grasp_move_to_offset(robot, (0, 0, 0.8)), ["succeeded", "aborted", "preempted"])
+            StateMachine.add_auto("MOVE_TO_GRASP", motion.grasp_move_to_offset(robot, (0, 0, 0.300)), ["succeeded", "aborted", "preempted"])
             StateMachine.add_auto("LIFT_OBJ", motion.robust_move_to_offset(robot, (0, 0, 0.035), 'base_link'), ["succeeded", "aborted", "preempted"])
-            # StateMachine.add_auto("ADJUST_RIGHT_IF_COLUMN_1", motion.AdjustRightIfColumn1(robot, (0, 0.05, 0)), ["succeeded", "aborted", "pass"])
-            # StateMachine.add_auto("ADJUST_LEFT_IF_COLUMN_4", motion.AdjustLeftIfColumn4(robot, (0, -0.05, 0)), ["succeeded", "aborted", "pass"])
-            StateMachine.add_auto("RETRACT_ARM", motion.robust_move_to_offset(robot, (0, 0, -0.3)), ["succeeded", "aborted", "preempted"])
+            StateMachine.add_auto("RETRACT_ARM", motion.robust_move_to_offset(robot, (0, 0, -0.35)), ["succeeded", "aborted", "preempted"])
+            StateMachine.add_auto("TURN_OFF_GRIPPER_IF_NO_ITEM", motion.ReleaseGripperIfNoItem(robot), ['succeeded'])
             StateMachine.add_auto("CLEAR_SCENE_POSTGRASP", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
-            StateMachine.add_auto("SETUP_COLLISION_SCENE_POSTGRASP", motion.AddFullPodCollisionGeometryTableDropHide(robot), ["succeeded", "aborted"])
-            # StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX", motion.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
-            # StateMachine.add("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "drop_hide"),
-            #                     {"succeeded": "PICTURE_WAIT", "aborted": "MOVE_INTO_JOINT_LIMITS"})
-            StateMachine.add("CHECK_FOR_ITEM", motion.CheckGripperItem(robot), {'item_detected': "LIFT_OBJ_PLACE", 'no_item_detected':"CONT_PICK_FAIL"})
-            StateMachine.add_auto("LIFT_OBJ_PLACE", motion.robust_move_to_offset(robot, (0, 0, 0.005), 'base_link'), ["succeeded", "aborted", "preempted"])
-            StateMachine.add_auto("REPLACE_OBJECT", motion.robust_move_to_offset(robot, (0, 0, 0.6)), ["succeeded", "aborted", "preempted"])
-            StateMachine.add_auto("BLOW_OFF_GRIPPER_AFTER_REPLACING_OBJECT", motion.BlowOffGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
-            cf.inject_userdata("CONT_PICK_SUCCESS", "RETRACT_ARM_AFTER_REPLACING_OBJECT", "status", "Success")
-            StateMachine.add("RETRACT_ARM_AFTER_REPLACING_OBJECT", motion.robust_move_to_offset(robot, (0, 0, -0.5)), {"succeeded": "CONT_PUBLISH_PICK_STATUS", "aborted":"CONT_PUBLISH_PICK_STATUS", "preempted":"CONT_PUBLISH_PICK_STATUS"})
-
-
-
-            cf.inject_userdata("CONT_PICK_FAIL", "CONT_PUBLISH_PICK_STATUS", "status", "Fail")
-            StateMachine.add_auto("CONT_PUBLISH_PICK_STATUS", PublishStatus(cont_status_pub), ["succeeded"])
+            StateMachine.add_auto("SETUP_COLLISION_SCENE_POSTGRASP", motion.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
+            StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX", motion.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "drop_hide"), ["succeeded", "aborted"])
-            # StateMachine.add_auto("MOVE_INTO_JOINT_LIMITS", motion.MoveIntoJointLimits(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("PICTURE_WAIT", Wait(2), ["succeeded"])
-            # StateMachine.add("CHECK_FOR_GRIPPER_ITEM", motion.CheckGripperItem(robot),
-            #                 {"item_detected": "POST_PICK_UPDATE_MASKS", "no_item_detected": "UPDATE_BIN_MASKS"})
-            # StateMachine.add("POST_PICK_UPDATE_MASKS", perception.PickObject(),
-            #                 {"succeeded": "PUBLISH_PICK_STATUS", "aborted": "PUBLISH_PICK_STATUS", "preempted": "PUBLISH_PICK_STATUS"})
+            StateMachine.add("CHECK_FOR_GRIPPER_ITEM", motion.CheckGripperItem(robot), 
+                            {"item_detected": "POST_PICK_UPDATE_MASKS", "no_item_detected": "UPDATE_BIN_MASKS"})
+            StateMachine.add("POST_PICK_UPDATE_MASKS", perception.PickObject(),
+                            {"succeeded": "PUBLISH_PICK_STATUS", "aborted": "PUBLISH_PICK_STATUS", "preempted": "PUBLISH_PICK_STATUS"})
             StateMachine.add("UPDATE_BIN_MASKS", perception.UpdateBin(),
-                            {"succeeded": "PUBLISH_PICK_STATUS", "aborted": "REMOVE_UPDATE_MASKS", "preempted": "REMOVE_UPDATE_MASKS"})
-            StateMachine.add_auto("REMOVE_UPDATE_MASKS", perception.PickObject(),
-                            ["succeeded", "aborted", "preempted"])
-            cf.inject_userdata("OBJ_NOT_FOUND", "PUB_OBJ_NOT_FOUND", "status", "Not Found")
-            StateMachine.add_auto("PUB_OBJ_NOT_FOUND", PublishStatus(cont_status_pub), ["succeeded"])
-
-            StateMachine.add_auto("PUBLISH_PICK_STATUS", PublishStatus(status_pub), ["succeeded"]) # can be removed for continual??
+                            {"succeeded": "USER_PROMPT_FOR_RETRY", "aborted": "USER_PROMPT_FOR_RETRY", "preempted": "USER_PROMPT_FOR_RETRY"})
+            StateMachine.add('USER_PROMPT_FOR_RETRY', UserPromptForRetry(robot.tf2_buffer, timeout_connection_secs=10.0), {'retry': 'CLEAR_SCENE_PREMOVE', 'continue': 'PUBLISH_PICK_STATUS'})
+            StateMachine.add_auto("PUBLISH_PICK_STATUS", PublishStatus(status_pub), ["succeeded"])
             StateMachine.add("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot, return_before_done=True), {"succeeded": "done", "aborted": "done", "preempted": "done"})
-            # StateMachine.add("BLOW_OFF_GRIPPER", motion.BlowOffGripper(robot, return_before_done=True), {"succeeded": "done", "aborted": "done", "preempted": "done"})
 
-        with stow_sm:
+
+        with stow_sm:   
             cf.splat_auto("SPLAT_STOW", "request", ["target_bin_id", "target_object_id", "target_object_asin"])
             StateMachine.add("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "drop_hide"),
                             {"succeeded": "PRE_PERCEIVE", "aborted": "PICK_FAILED"})
@@ -227,49 +211,14 @@ def main():
                             {"succeeded": "PICK_SUCCESS", "aborted": "PICK_FAILED", "preempted": "PICK_FAILED"})
             cf.inject_userdata("PICK_FAILED", "done", "status", False)
             cf.inject_userdata("PICK_SUCCESS", "done", "status", True)
-        StateMachine.add_auto("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot, return_before_done=True), ['succeeded', 'preempted', 'aborted'])
 
         cf.inject_userdata_auto("INITIALIZE_HUMAN_GRASP_POSE", "human_grasp_pose", None)
         StateMachine.add_auto("CLEAR_SCENE", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
-        StateMachine.add_auto("SETUP_COLLISION_SCENE", motion.AddFullPodCollisionGeometryTableDropHide(robot), ["succeeded", "aborted"])
-        # StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "drop_hide"),  ["succeeded", "aborted"])
+        StateMachine.add_auto("SETUP_COLLISION_SCENE", motion.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
+        StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "drop_hide"),  ["succeeded", "aborted"])
         StateMachine.add_auto("CHECK_GRIPPER_CLOSE", motion.CloseGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
         StateMachine.add_auto("CHECK_GRIPPER_OPEN", motion.OpenGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
         StateMachine.add_auto("CAPTURE_EMPTY_POD", perception.CaptureEmptyPod(),  ["succeeded"])
-        StateMachine.add_auto("MOVE_TO_VIEW_TABLE", motion.MoveToJointAngles(robot, "view_table"), ["succeeded", "aborted"])
-        StateMachine.add_auto("PICTURE_WAIT_TABLE", Wait(2), ["succeeded"])
-
-        StateMachine.add_auto("GET_MASKS_TABLE", perception.CaptureTable(), ["succeeded", "aborted"])
-        StateMachine.add_auto("GET_GRASP_POSE", perception.GetTableGraspPose(pre_grasp_offset=.015), ['succeeded', 'preempted', 'aborted'])
-        StateMachine.add_auto("REMAP_PRE_GRASP_POSE", cf.input_to_output("pre_grasp_pose", "pose"), ["succeeded"])
-        StateMachine.add_auto("CLEAR_SCENE_PREMOVE", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
-        StateMachine.add_auto("SETUP_COLLISION_SCENE_PREMOVE", motion.AddFullPodCollisionGeometryTableDropHide(robot), ["succeeded", "aborted"])
-
-        StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPoseManipulable(robot), ["succeeded", "aborted", "preempted"])
-        StateMachine.add_auto("CLEAR_SCENE_GRASP", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
-
-        StateMachine.add_auto("MOVE_TO_GRASP", motion.grasp_move_to_offset(robot, (0, 0, 0.8)), ["succeeded", "aborted", "preempted"])
-        StateMachine.add_auto("LIFT_OBJ", motion.robust_move_to_offset(robot, (0, 0, 0.2), 'base_link'), ["succeeded", "aborted", "preempted"])
-        StateMachine.add_auto("CLEAR_SCENE_PRESTOW", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
-        StateMachine.add_auto("SETUP_COLLISION_SCENE_PRESTOW", motion.AddFullPodCollisionGeometryTableDropHide(robot), ["succeeded", "aborted"])
-        StateMachine.add_auto("MOVE_TO_PRESTOW", motion.MoveToJointAngles(robot, "pre_bin_3f"), ["succeeded", "aborted"])
-        StateMachine.add_auto("CLEAR_SCENE_STOW", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
-        StateMachine.add_auto("SETUP_COLLISION_SCENE_STOW", motion.AddPartialPodCollisionGeometry(robot), ["succeeded", "aborted"])
-        StateMachine.add_auto("MOVE_TO_STOW", motion.robust_move_to_offset(robot, (0, 0, 0.2)), ["succeeded", "aborted", "preempted"])
-        StateMachine.add_auto("BLOW_OFF_GRIPPER_AFTER_STOW", motion.BlowOffGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
-        StateMachine.add_auto("RETRACT_ARM_AFTER_STOW", motion.robust_move_to_offset(robot, (0, 0, -0.2)), ["succeeded", "aborted", "preempted"])
-
-
-        StateMachine.add_auto("MOVE_TO_EJECT", motion.MoveToJointAngles(robot, "pre_bin_3f_eject"), ["succeeded", "aborted"])
-        StateMachine.add_auto("MOVE_TO_GRASP_EJECT", motion.grasp_move_to_offset(robot, (0, 0, 0.8)), ["succeeded", "aborted", "preempted"])
-        StateMachine.add_auto("LIFT_OBJ_EJECT", motion.robust_move_to_offset(robot, (-0.13, 0, 0), 'base_link'), ["succeeded", "aborted", "preempted"])
-        StateMachine.add_auto("LIFT_OBJ_EJECT_REPLACE", motion.robust_move_to_offset(robot, (0.13, 0, 0), 'base_link'), ["succeeded", "aborted", "preempted"])
-        StateMachine.add_auto("BLOW_OFF_GRIPPER_AFTER_EJECT", motion.BlowOffGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
-
-        StateMachine.add_auto("CLEAR_SCENE_HIDE", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
-        StateMachine.add_auto("SETUP_COLLISION_SCENE_HIDE", motion.AddFullPodCollisionGeometryTableDropHide(robot), ["succeeded", "aborted"])
-        StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "drop_hide"),  ["succeeded", "aborted"])
-
         StateMachine.add("WAIT_FOR_COMMAND", WaitForPickStow(), {"stow": "STOW", "pick":"PICK"})
         StateMachine.add("PICK", pick_sm, {"done": "WAIT_FOR_COMMAND"})
         StateMachine.add("STOW", stow_sm, {"done": "WAIT_FOR_COMMAND"})
@@ -289,3 +238,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
