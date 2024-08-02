@@ -20,7 +20,7 @@ add_service_files(
   PickRequest.srv
   StowRequest.srv
   MultiplePickRequest.srv
-  ClearPickRequest.srv
+  ClearRequest.srv
 )
 
 generate_messages(
