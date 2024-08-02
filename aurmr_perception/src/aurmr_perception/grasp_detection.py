@@ -186,6 +186,19 @@ class GraspDetectionROS:
         #     clamp_value = 0
         return clamp_value
 
+    def mean_nonzero_around_grasp(self, depth_img, grasp_point, radius=5):
+        x, y = int(grasp_point[0]), int(grasp_point[1])
+
+        x_min = max(x - radius, 0)
+        x_max = min(x + radius + 1, depth_img.shape[1])
+        y_min = max(y - radius, 0)
+        y_max = min(y + radius + 1, depth_img.shape[0])
+
+        region = depth_img[y_min:y_max, x_min:x_max]
+        non_zero_values = region[region > 0]
+
+        return np.mean(non_zero_values) if non_zero_values.size > 0 else 0.0
+
     def detect_grasps_cb(self, request):
         cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
         # cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
@@ -231,7 +244,7 @@ class GraspDetectionROS:
         )
         plt.savefig(os.path.join(img_path, f"grasp_point_img_{result.tm_mday}_{result.tm_hour}_{result.tm_min}_{result.tm_sec}.png"))
 
-        pointz = 0.6
+        pointz = 0.5
         pointx = (grasp_point[0] - cx) * pointz / fx
         pointy = (grasp_point[1] - cy) * pointz / fy
 
@@ -389,7 +402,6 @@ class GraspDetectionROS:
                         pts['z']], axis=1)
         detections = self.detector.detect(pts)
         crop_bin_bounds = self.bin_bounds[request.bin_id]
-        # assert np.array_equal(crop_bin_bounds, np.array([1097, 1407, 1752, 2149]))
         rgb_image_cropped = self.rgb_img[crop_bin_bounds[0]:crop_bin_bounds[1], crop_bin_bounds[2]:crop_bin_bounds[3], ...]
         segmask_cropped = cv_image[crop_bin_bounds[0]:crop_bin_bounds[1], crop_bin_bounds[2]:crop_bin_bounds[3], ...]
         depth_cropped = self.depth_img[crop_bin_bounds[0]:crop_bin_bounds[1], crop_bin_bounds[2]:crop_bin_bounds[3], ...]
@@ -422,10 +434,9 @@ class GraspDetectionROS:
 
         print(grasp_point, grasp_angle*180/np.pi, crop_bin_bounds)
 
-        center3D_depth_value = self.depth_img[int(grasp_point[1]), int(grasp_point[0])]
-        if center3D_depth_value < 0.01:
-            print("Hole in depth image, setting depth to default 0.018")
-            center3D_depth_value = 0.018
+
+        center3D_depth_value = self.mean_nonzero_around_grasp(self.depth_img, grasp_point)
+
         pointz = center3D_depth_value/1000.0
         pointx = (grasp_point[0] - cx) * pointz / fx
         pointy = (grasp_point[1] - cy) * pointz / fy
@@ -436,31 +447,33 @@ class GraspDetectionROS:
         transform_camera_to_base_link= self.tf_buffer.lookup_transform('base_link', 'rgb_camera_link', rospy.Time())
         # less RGB_TO_DEPTH..... right
         # DEPTH_TILT more in - LOWER
-        if(request.bin_id == "1H"):
-            RGB_TO_DEPTH_FRAME_OFFSET = 0.007
-            DEPTH_TILT = -transform.transform.translation.z - 0.01
-        elif(request.bin_id == "2H"):
-            RGB_TO_DEPTH_FRAME_OFFSET = 0.0
-            DEPTH_TILT = -transform.transform.translation.z - 0.01
-        elif(request.bin_id == "3H"):
-            RGB_TO_DEPTH_FRAME_OFFSET = 0.022
-            DEPTH_TILT = -transform.transform.translation.z - 0.01
-        else:
-            RGB_TO_DEPTH_FRAME_OFFSET = -0.005
-            DEPTH_TILT = -transform.transform.translation.z - 0.01
-        POD_OFFSET = 0.
+        # if(request.bin_id == "1H"):
+        #     RGB_TO_DEPTH_FRAME_OFFSET = 0.007
+        #     DEPTH_TILT = -transform.transform.translation.z - 0.025
+        # elif(request.bin_id == "2H"):
+        #     RGB_TO_DEPTH_FRAME_OFFSET = 0.017
+        #     DEPTH_TILT = -transform.transform.translation.z - 0.025
+        # elif(request.bin_id == "3H"):
+        #     RGB_TO_DEPTH_FRAME_OFFSET = 0.022
+        #     DEPTH_TILT = -transform.transform.translation.z - 0.025
+        # else:
+        #     RGB_TO_DEPTH_FRAME_OFFSET = 0.0225
+        # DEPTH_TILT = -transform.transform.translation.z
+        # POD_OFFSET = 0.1
 
-        point[2] = transform.transform.translation.x - POD_OFFSET - transform_camera_to_base_link.transform.translation.x
-        point[1] -= point[2]*np.sin(DEPTH_TILT)
-        point[0] -= RGB_TO_DEPTH_FRAME_OFFSET
+        point[2] = transform.transform.translation.x - transform_camera_to_base_link.transform.translation.x
+        # point[1] -= point[2]*np.sin(DEPTH_TILT)
+        # point[0] -= RGB_TO_DEPTH_FRAME_OFFSET
 
         clamped_euler_angles = [0., 0., 0.]
 
         clamped_euler_angles[0] = grasp_angle[0]
         clamped_euler_angles[1] = -grasp_angle[1]
 
-        point[0] += 0.245*np.sin(clamped_euler_angles[0])
-        point[1] += 0.245*np.sin(clamped_euler_angles[1])
+        # TODO: (henrifung) move this to SM
+        pre_grasp_x_dist = 0.1
+        point[0] += pre_grasp_x_dist*np.sin(clamped_euler_angles[0])
+        point[1] += pre_grasp_x_dist*np.sin(clamped_euler_angles[1])
 
         # clamped_euler_angles[1] = 0.0
         print("post euler angles", clamped_euler_angles[0]*180/math.pi, clamped_euler_angles[1]*180/math.pi)
@@ -472,18 +485,18 @@ class GraspDetectionROS:
                                         z=orientation_viz[2], w=orientation_viz[3])
         as_pose_pose = Pose(position=Point(x=point[0], y=point[1], z=point[2]), orientation=as_quat_pose)
         t_header= deepcopy(request.points.header)
-        t_header.frame_id = 'rgb_camera_link_offset'
+        t_header.frame_id = 'rgb_camera_link_offset' # rgb_camera_link
         vis_pose = PoseStamped(header=t_header, pose=as_pose_pose)
         self.grasp_viz_perception.publish(vis_pose)
-
         output_pose_stamped = self.transform_pose(vis_pose, 'base_link')
         r_prefix = R.from_euler('xyz', [math.pi/2., -math.pi/2., math.pi/2.], degrees=False)
         r3 = r_prefix * r_cam
         orientation = r3.as_quat()
         output_pose_stamped.pose.orientation = Quaternion(x=orientation[0], y=orientation[1],
                                         z=orientation[2], w=orientation[3])
-        self.visualize_grasps([output_pose_stamped])
+
         return True, "", [output_pose_stamped]
+
 
     def detect_dexnet_grasps_cb(self, request):
         cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
