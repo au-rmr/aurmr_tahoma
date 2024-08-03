@@ -19,7 +19,7 @@
     <param name="segmentation_method"                   value="$(arg segmentation_method)" />
     <param name="camera_type" value="$(arg camera_type)"/>
   </node>
-  
+
   <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="rgb_camera_link_offset_broadcaster" args="-0.032 0 0.004 0 0 0 1 rgb_camera_link rgb_camera_link_offset" /> -->
   <node pkg="tf2_ros" type="static_transform_publisher" name="rgb_camera_link_offset_broadcaster" args="-0.01 0 0 0 0 0 1 rgb_camera_link rgb_camera_link_offset" />
 
