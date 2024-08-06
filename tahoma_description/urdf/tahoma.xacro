@@ -4,8 +4,6 @@
   <xacro:include filename="$(find tahoma_description)/urdf/stand.xacro"/>
   <!-- <xacro:include filename="$(find robotiq_2f_85_gripper_visualization)/urdf/robotiq_arg2f_85_macro.xacro"/> -->
   <xacro:include filename="$(find robotiq_epick_visualization)/urdf/robotiq_epick_model_macro.xacro" />
-  <xacro:include filename="$(find tahoma_description)/urdf/_l515.urdf.xacro" />
-
 
   <!-- <xacro:include filename="$(find realsense2_description)/urdf/_l515.urdf.xacro"/> -->
   <xacro:macro name="tahoma" params="
@@ -175,7 +173,7 @@
         <parent link="base_link"/>
         <child link="camera_base"/>
         <!-- Link is centered on the optical frames. Slight offset in Y direction to compensate -->
-        <origin xyz="-0.20750794 -0.01815336  1.40753882" rpy="3.14 3.14 -3.14" />
+        <origin xyz="-0.21 -0.01  1.375" rpy="0.0 -0.08 0.0" />
         <!-- <origin xyz="-0.2426 -0.0277 1.4078" rpy="3.14 3.14 -3.14" /> -->
       </joint>
     </xacro:if>
@@ -184,8 +182,8 @@
     <xacro:arg name="add_plug" default="false" />
     <xacro:arg name="use_mesh" default="true" />
     <xacro:include filename="$(find tahoma_description)/urdf/_l515.urdf.xacro" />
-    
-  
+
+
     <link name="realsense_back_gripper_mount">
       <collision>
         <origin xyz="0.010227 -0.005 0.035" rpy="0 0 0"/>
@@ -201,40 +199,24 @@
       </visual>
     </link>
 
+
+    <xacro:sensor_l515 parent="coupling" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
+      <origin xyz="0.0 0.046 0.06" rpy="${pi} -${0.5 * pi} ${0.5 * pi}"/>
+    </xacro:sensor_l515>
+
+
+    <joint name="realsense_back_gripper_mount_joint" type="fixed">
+        <parent link="camera_link"/>
+        <child link="realsense_back_gripper_mount"/>
+        <origin xyz="-0.018 0.010227 -0.036" rpy="0 0 ${-0.5 * pi}" />
+    </joint>
 
     <xacro:if value="${realsense}">
       <xacro:sensor_l515 name="camera_lower_right" parent="camera_lower_right_mount" use_nominal_extrinsics="${use_nominal_camera_extrinsics}">
         <origin xyz="0 0 0" rpy="0 0 0"/>
       </xacro:sensor_l515>
 
-    <link name="realsense_back_gripper_mount">
-      <collision>
-        <origin xyz="0.010227 -0.005 0.035" rpy="0 0 0"/>
-        <geometry>
-          <box size="0.04 0.02 0.08"/>
-        </geometry>
-      </collision>
-      <visual>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <geometry>
-          <mesh filename="package://tahoma_description/meshes/realsense/couple_l515_mount.obj"/>
-        </geometry>
-      </visual>
-    </link>
     </xacro:if>
-
-
-    <!-- L515 Realsense Camera -->
-    <xacro:sensor_l515 parent="realsense_back_gripper_mount" use_nominal_extrinsics="${use_nominal_camera_extrinsics}" add_plug="false" use_mesh="true">
-      <origin xyz="0.0 0.046 0.06" rpy="${pi} -${0.5 * pi} ${0.5 * pi}"/>
-    </xacro:sensor_l515>
-
-    <joint name="realsense_back_gripper_mount_joint" type="fixed">
-        <parent link="coupling"/>
-        <child link="realsense_back_gripper_mount"/>
-        <origin xyz="-0.018 0.010227 -0.036" rpy="0 0 ${-0.5 * pi}" />
-    </joint>
-
 
   <link name="gripper_equilibrium_grasp"/>
 
