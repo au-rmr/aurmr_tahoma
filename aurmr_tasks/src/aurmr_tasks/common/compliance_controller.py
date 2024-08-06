@@ -7,7 +7,7 @@ import time
 
 from aurmr_tasks.common.visualization_utils import EEFVisualization
 class MoveToOffset(State):
-    def __init__(self, robot, offset, frame_id, detect_object):
+    def __init__(self, robot, offset, frame_id, detect_object,idle_timeout=3):
         super().__init__(outcomes=['succeeded', 'aborted'],  output_keys=['starting_grasp_pose_out'], input_keys=['target_pose_in'])
         self.robot = robot
         self.offset = offset
@@ -17,6 +17,7 @@ class MoveToOffset(State):
         self.target_frame = 'arm_base_link'
         self.vis = EEFVisualization()
         self.vis_out = EEFVisualization("/visualization_eef_target", (0, 1, 0))
+        self.idle_timeout = idle_timeout
 
     def stop(self):
         start_pose = self.robot.move_group.get_current_pose()
@@ -42,9 +43,9 @@ class MoveToOffset(State):
             self.robot.force_values_init = True
 
         self.vis.visualize_eef(target_pose)
-
         self.publish_target_pose(target_pose)
-        return self.wait_for_target_pose_or_timeout(target_pose)
+
+        return self.wait_until_stopped(0.001, self.idle_timeout)
 
     def close_robot_gripper(self):
         self.robot.close_gripper(return_before_done=True)
@@ -56,21 +57,51 @@ class MoveToOffset(State):
     def publish_target_pose(self, target_pose):
         self.pub.publish(target_pose)
 
-    def wait_for_target_pose_or_timeout(self, target_pose):
-        timeout = 5.0
+
+    def wait_until_stopped(self, min_delta, idle_timeout, timeout=20):
+        """
+        Return if the end-effector is moving only marginally for a certain amount of time or if an object has been detected
+        """
+
         start_time = time.time()
+        previous_pose = self.current_pose_in_target_frame()
+        last_moved = time.time()
+
         while ((time.time() - start_time) < timeout) and not rospy.is_shutdown():
-            if self.has_reached_target_pose(target_pose):
+            current_pose = self.current_pose_in_target_frame()
+            translation_delta, cos_phi_half = pose_dist(current_pose, previous_pose)
+            previous_pose = current_pose
+
+            if translation_delta > min_delta:
+                last_moved = time.time()
+
+            if ((time.time() - last_moved) >= idle_timeout):
                 self.stop()
                 return 'succeeded'
-            rospy.sleep(0.005)
+
+            if self.check_object_condition():
+                self.stop()
+                return 'succeeded'
+
+            rospy.sleep(0.05)
+
+        rospy.logwarn("Global timeout.")
+
         return 'succeeded'
 
-    def has_reached_target_pose(self, target_pose):
+
+
+    def current_pose_in_target_frame(self):
         current_pose = self.robot.move_group.get_current_pose()
         current_pose.header.stamp = rospy.Time(0)
         current_pose = self.robot.tf2_buffer.transform(current_pose, self.target_frame, rospy.Duration(1))
-        return (self.detect_object and self.robot.check_gripper_item()) or all_close(target_pose, current_pose, 0.03)
+
+        return current_pose
+
+
+
+    def check_object_condition(self):
+        return (self.detect_object and self.robot.check_gripper_item())
 
 
 
@@ -88,7 +119,6 @@ class ZeroFT(State):
         try:
             zero_ftsensor_service = rospy.ServiceProxy(service_name, Trigger)
             response = zero_ftsensor_service()
-            print(f"Service call response: {response}")
             if response.success:
                 return 'succeeded'
             else:
