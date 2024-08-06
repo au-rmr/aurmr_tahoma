@@ -194,10 +194,11 @@ class GetGraspPose(State):
             return "aborted"
 
         # NOTE: No extra filtering or ranking on our part. Just take the first one
-        # As the arm_tool0 is 20cm in length w.r.t tip of suction cup thus adding 0.2m offset
+        # As the arm_tool0 is 26cm in length w.r.t tip of suction cup thus adding 0.26m offset
+        # TODO(henrifung): Pull this number from xacro, perhaps from userdata
         grasp_pose = grasp_response.poses[0]
 
-        grasp_pose = add_offset(-0.20, grasp_pose)
+        grasp_pose = add_offset(-0.26, grasp_pose)
 
         userdata['grasp_pose'] = grasp_pose
 
