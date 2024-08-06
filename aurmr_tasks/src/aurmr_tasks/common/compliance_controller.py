@@ -70,4 +70,4 @@ class MoveToOffset(State):
         current_pose = self.robot.move_group.get_current_pose()
         current_pose.header.stamp = rospy.Time(0)
         current_pose = self.robot.tf2_buffer.transform(current_pose, self.target_frame, rospy.Duration(1))
-        return (self.detect_object and self.robot.object_detected) or all_close(target_pose, current_pose, 0.03)
+        return (self.detect_object and self.robot.check_gripper_item()) or all_close(target_pose, current_pose, 0.03)
