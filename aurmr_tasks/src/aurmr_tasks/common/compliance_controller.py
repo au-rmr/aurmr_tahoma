@@ -71,3 +71,29 @@ class MoveToOffset(State):
         current_pose.header.stamp = rospy.Time(0)
         current_pose = self.robot.tf2_buffer.transform(current_pose, self.target_frame, rospy.Duration(1))
         return (self.detect_object and self.robot.check_gripper_item()) or all_close(target_pose, current_pose, 0.03)
+
+
+
+
+from std_srvs.srv import Trigger
+
+class ZeroFT(State):
+    def __init__(self):
+        State.__init__(self, outcomes=["succeeded", "aborted"])
+
+    def execute(self, _userdata):
+        service_name = "/ur_hardware_interface/zero_ftsensor"
+
+        rospy.wait_for_service(service_name)
+        try:
+            zero_ftsensor_service = rospy.ServiceProxy(service_name, Trigger)
+            response = zero_ftsensor_service()
+            print(f"Service call response: {response}")
+            if response.success:
+                return 'succeeded'
+            else:
+                return 'aborted'
+
+        except rospy.ServiceException as e:
+            print(f"Service call failed: {e}")
+            return 'aborted'
