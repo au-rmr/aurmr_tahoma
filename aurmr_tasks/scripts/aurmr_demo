@@ -169,7 +169,7 @@ def main():
 
             with pick_success_cleanup_sm:
                 StateMachine.add_auto("BLOW_OFF_GRIPPER", motion.BlowOffGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
-                StateMachine.add_auto("UNBLOCK_VIEW", motion.MoveToJointAngles(robot, "hide"), ["succeeded", "aborted"])
+                StateMachine.add_auto("UNBLOCK_VIEW", motion.MoveToJointAngles(robot, "drop_hide"), ["succeeded", "aborted"])
                 StateMachine.add_auto("PICTURE_WAIT", Wait(2), ["succeeded"])
                 StateMachine.add_auto("POST_PICK_UPDATE_MASKS", perception.PickObject(), ["succeeded", "preempted", "aborted"])
                 StateMachine.add("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot, return_before_done=True), {"succeeded": "succeeded", "preempted": "succeeded", "aborted": "succeeded"})
@@ -189,7 +189,7 @@ def main():
 
         with stow_sm:
             cf.splat_auto("SPLAT_STOW", "request", ["target_bin_id", "target_object_id", "target_object_asin"])
-            StateMachine.add("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "hide"),
+            StateMachine.add("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "drop_hide"),
                             {"succeeded": "PRE_PERCEIVE", "aborted": "STOW_FAILED"})
             #TODO: Check that this state actually does anything
             StateMachine.add("PRE_PERCEIVE", perception.CaptureEmptyBin(),
@@ -203,7 +203,7 @@ def main():
 
         StateMachine.add_auto("CLEAR_SCENE", planning_scene.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
         StateMachine.add_auto("SETUP_COLLISION_SCENE", planning_scene.AddFullPodCollisionGeometryDropHide(robot), ["succeeded", "aborted"])
-        StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "hide"),  ["succeeded"], {"aborted": "done"})
+        StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "drop_hide"),  ["succeeded"], {"aborted": "done"})
         StateMachine.add_auto("CAPTURE_EMPTY_POD", perception.CaptureEmptyPod(),  ["succeeded"], {"aborted": "done"})
         StateMachine.add("WAIT_FOR_COMMAND", WaitForPickStow(task_queue), {"stow": "STOW", "pick":"PICK"})
         StateMachine.add("PICK", pick_sm, {"done": "REPORT_OUTCOME"})
