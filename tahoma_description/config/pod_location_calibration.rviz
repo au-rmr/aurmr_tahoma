@@ -5,6 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /TF1/Frames1
+        - /PointCloud21
       Splitter Ratio: 0.5
     Tree Height: 140
   - Class: rviz/Selection
@@ -64,6 +65,7 @@ Visualization Manager:
       Visibility:
         Grid: true
         Image: true
+        PointCloud2: true
         Pose: true
         RobotModel: true
         TF: true
@@ -1858,6 +1860,34 @@ Visualization Manager:
         {}
       Update Interval: 0
       Value: false
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: RGB8
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Min Color: 0; 0; 0
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.009999999776482582
+      Style: Flat Squares
+      Topic: /camera_lower_right/points2
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -1886,7 +1916,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 4.390259265899658
+      Distance: 2.9756739139556885
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -1894,17 +1924,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.4211328327655792
-        Y: 0.09985066950321198
-        Z: 1.470218539237976
+        X: 1.3745980262756348
+        Y: 0.08114157617092133
+        Z: 1.113216757774353
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.43479591608047485
+      Pitch: 0.03479549288749695
       Target Frame: <Fixed Frame>
-      Yaw: 2.1854090690612793
+      Yaw: 3.865402936935425
     Saved: ~
 Window Geometry:
   Camera:
