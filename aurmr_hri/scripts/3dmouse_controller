@@ -1,0 +1,118 @@
+#!/usr/bin/env python
+import rospy
+from geometry_msgs.msg import TwistStamped, PoseStamped
+import numpy as np
+import copy
+import tf2_ros
+from std_msgs.msg import Header
+from tf_conversions import transformations
+from std_msgs.msg import String
+import json
+from vacuum_gripper_control.msg import vacuum_gripper_input, vacuum_gripper_output
+import actionlib
+from control_msgs.msg import FollowJointTrajectoryAction, GripperCommandAction, GripperCommandGoal
+
+GRIPPER_ACTION_SERVER = '/gripper_controller/gripper_cmd'
+
+def normalize(v, axis=-1):
+    l2 = np.atleast_1d(np.linalg.norm(v, axis=axis))
+    l2[l2==0] = 1
+    return np.squeeze(v / np.expand_dims(l2, axis))
+
+
+def normalized(v, axis=-1):
+    if v is None:
+        return None
+    return normalize(copy.deepcopy(v), axis=axis)
+
+
+def integrate_twist(v: np.ndarray, w: np.ndarray, time=1):
+    """
+    Find the matrix exponential of the 6 element twist, parameterized by
+    by time. Integrates the application of this twist over time.
+    """
+    v = np.atleast_1d(v)
+    theta = np.linalg.norm(w)
+    if theta == 0:
+        return np.array([[1, 0, 0, v[0] * time],
+                         [0, 1, 0, v[1] * time],
+                         [0, 0, 1, v[2] * time],
+                         [0, 0, 0, 1]])
+    else:
+        w_n = normalized(w)
+        theta *= time
+        # theta = time / theta
+        skew_w = np.array([[0, -w_n[2], w_n[1]],
+                    [w_n[2], 0, -w_n[0]],
+                    [-w_n[1], w_n[0], 0]])
+        skew_w_2 = skew_w @ skew_w
+        # Rodrigues' formula, forward exponential map (modern robotics 3.51)
+        R = np.eye(3) + (np.sin(theta) * skew_w) + ((1-np.cos(theta)) * skew_w_2)
+        # modern robotics 3.88, but we the amount which we move down the screw axis
+        # by the magnitude of the rotation
+        p = ((np.eye(3) * theta) + (1 - np.cos(theta)) * skew_w + (theta - np.sin(theta)) * (skew_w_2)) @ (v / np.linalg.norm(w))
+        return np.array([[R[0,0], R[0,1], R[0,2], p[0]],
+                         [R[1,0], R[1,1], R[1,2], p[1]],
+                         [R[2,0], R[2,1], R[2,2], p[2]],
+                         [0, 0, 0, 1]])
+
+class MouseController:
+    def __init__(self):
+        self.mouse_sub = rospy.Subscriber('/threedmouse/twist', TwistStamped, self.mouse_callback)
+        self.pose_pub = rospy.Publisher('/ur_cartesian_compliance_controller/target_frame', PoseStamped, queue_size=10)
+        self.button_sub = rospy.Subscriber('/threedmouse/button_change', String, self.button_callback)
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
+        self._gripper_client = actionlib.SimpleActionClient(GRIPPER_ACTION_SERVER, GripperCommandAction)
+
+    def mouse_callback(self, msg):
+        # The mouse is sending in the "arm_tool0" frame
+        twist = np.array([msg.twist.linear.x, msg.twist.linear.y, msg.twist.linear.z, msg.twist.angular.x, msg.twist.angular.y, msg.twist.angular.z])
+        # Calculate the pose result of applying the twist for unit time
+        integrated = integrate_twist(twist[:3] * .35, twist[3:] * .75)
+        # Controller requires that the transform be in `arm_base_link` frame
+        to_arm_base = self.tf_buffer.lookup_transform("arm_base_link", "arm_tool0", rospy.Time(0), rospy.Duration(1.0))
+        to_arm_base_T = transformations.quaternion_matrix([to_arm_base.transform.rotation.x, to_arm_base.transform.rotation.y, to_arm_base.transform.rotation.z, to_arm_base.transform.rotation.w])
+        to_arm_base_T[:3, 3] = [to_arm_base.transform.translation.x, to_arm_base.transform.translation.y, to_arm_base.transform.translation.z]
+        integrated = to_arm_base_T @ integrated
+        # Convert to position + quaternion
+        quaternion = transformations.quaternion_from_matrix(integrated)
+        position = integrated[:3, 3]
+        as_pose = PoseStamped()
+        as_pose.header = Header(frame_id="arm_base_link")
+        as_pose.pose.position.x = position[0]
+        as_pose.pose.position.y = position[1]
+        as_pose.pose.position.z = position[2]
+        as_pose.pose.orientation.x = quaternion[0]
+        as_pose.pose.orientation.y = quaternion[1]
+        as_pose.pose.orientation.z = quaternion[2]
+        as_pose.pose.orientation.w = quaternion[3]
+        self.pose_pub.publish(as_pose)
+
+    def button_callback(self, msg):
+        btn, state = msg.data.split(',')
+        # Temporary suction: hold down required
+	if btn == "LEFT":
+            if state == 'down':
+                goal = GripperCommandGoal()
+                goal.command.position = 1
+                goal.command.max_effort = 1
+                self._gripper_client.send_goal(goal)
+            else:
+                goal = GripperCommandGoal()
+                goal.command.position = 0
+                goal.command.max_effort = 1
+                self._gripper_client.send_goal(goal)
+        elif btn == "RIGHT":
+            # Modal suction: on until you tap the left button to disengage
+            if state == 'down':
+                goal = GripperCommandGoal()
+                goal.command.position = 1
+                goal.command.max_effort = 1
+                self._gripper_client.send_goal(goal)
+
+
+if __name__ == '__main__':
+    rospy.init_node('threedmouse_controller')
+    mc = MouseController()
+    rospy.spin()
