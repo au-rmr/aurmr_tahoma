@@ -13,6 +13,7 @@ add_action_files(
   FILES
   MaskObject.action
   RetryGrasp.action
+  SpecifyGraspPose.action
 )
 
 generate_messages(

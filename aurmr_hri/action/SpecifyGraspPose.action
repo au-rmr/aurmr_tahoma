@@ -1,0 +1,10 @@
+# Goal
+string object_asin
+string bin_id
+sensor_msgs/CompressedImage camera_image
+sensor_msgs/CompressedImage depth_image
+---
+# Result
+geometry_msgs/PoseStamped grasp_pose
+---
+# Feedback
