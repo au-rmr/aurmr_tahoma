@@ -8,6 +8,7 @@
   <arg name="camera_type" default="azure_kinect" />
   <arg name="gripper_camera" default="True" />
   <arg name="gripper_camera_name" default="gripper_camera" />
+  <arg name="gripper_camera_rotate_180" default="false" />
   <!-- normal or centroid for grasp type -->
   <arg name="grasp_type" default="normal" />
 
@@ -37,6 +38,7 @@
   <include file="$(find tahoma_bringup)/launch/usb_camera.launch">
     <arg name="name" value="gripper_camera"/>
     <arg name="config" value="$(find tahoma_bringup)/config/gripper_camera_calibration.yaml"/>
+    <arg name="rotate_180" value="$(arg gripper_camera_rotate_180)"/>
   </include>
   <node pkg="tf2_ros" type="static_transform_publisher" name="gripper_camera_link_offset_broadcaster" args="0 0.04 0.01 3.14 0 0 gripper_base_link gripper_camera" />
 

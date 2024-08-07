@@ -3,10 +3,10 @@
   <arg name="video_device" default="/dev/tahoma-gripper-camera"/>
   <arg name="name" />
   <arg name="config" />
-
+  <arg name="rotate_180" default="False" />
   <!-- Use `v4l2-ctl \-\-all` to look at what the camera supports -->
   <!-- Other tips: http://wiki.ros.org/usb_cam/Troubleshooting -->
-  <node name="$(arg name)" pkg="usb_cam" type="usb_cam_node" output="screen">
+  <node name="$(arg name)" pkg="usb_cam" type="usb_cam_node" output="screen"  respawn="true" respawn_delay="5">
     <param name="camera_name"  value="$(arg name)" />
     <param name="camera_frame_id"  value="$(arg name)" />
     <param name="video_device" value="$(arg video_device)"/>
@@ -14,6 +14,8 @@
     <param name="image_width" value="640" />
     <param name="image_height" value="480" />
     <param name="framerate" value="10" />
+    <param name="image_flip" value="true" if="$(arg rotate_180)"/>
+    <param name="image_flip_code" value="-1" if="$(arg rotate_180)"/>
     <param name="camera_info_url" value="file://$(arg config)"/>
   </node>
 
