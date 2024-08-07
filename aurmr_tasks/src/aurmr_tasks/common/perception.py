@@ -9,12 +9,13 @@ from aurmr_perception.srv import (
     DetectGraspPoses,
     ResetBin,
     ResetBinRequest,
-    GetObjectPoints,
-    GetObjectPointsRequest,
     CaptureObjectRequest,
 )
+import aurmr_perception.srv
 from std_srvs.srv import Trigger
 from aurmr_tasks.util import add_offset
+from geometry_msgs.msg import PoseStamped
+import tf2_ros
 
 class CaptureEmptyBin(State):
     def __init__(self):
@@ -29,8 +30,6 @@ class CaptureEmptyBin(State):
                 return "succeeded"
         except Exception as e:
             rospy.logerr(e)
-
-
 
         return "aborted"
 
@@ -150,33 +149,21 @@ class UpdateBin(State):
         return "aborted"
 
 
-class GetGraspPose(State):
-    def __init__(self, tf_buffer, frame_id='base_link', pre_grasp_offset=.12):
+
+class GetObjectPoints(State):
+    def __init__(self, frame_id='base_link'):
         State.__init__(
             self,
             input_keys=['target_bin_id', 'target_object_id'],
-            output_keys=['grasp_pose', 'pre_grasp_pose'],
+            output_keys=['object_points', 'object_mask'],
             outcomes=['succeeded', 'preempted', 'aborted']
         )
-        self.get_points = rospy.ServiceProxy('/aurmr_perception/get_object_points', GetObjectPoints)
-        self.get_grasp = rospy.ServiceProxy('/grasp_detection/detect_grasps', DetectGraspPoses)
-        # Crash during initialization if these aren't running so see the problem early
+        self.get_points = rospy.ServiceProxy('/aurmr_perception/get_object_points', aurmr_perception.srv.GetObjectPoints)
         self.get_points.wait_for_service(timeout=5)
-        self.get_grasp.wait_for_service(timeout=5)
         self.frame_id = frame_id
-        self.pre_grasp_offset = pre_grasp_offset
-        self.pose_viz = rospy.Publisher("~selected_grasp_pose", geometry_msgs.msg.PoseStamped,
-                                                      queue_size=1, latch=True)
-        self.pre_grasp_viz = rospy.Publisher("~selected_pre_grasp_pose", geometry_msgs.msg.PoseStamped,
-                                        queue_size=1, latch=True)
-        self.grasp_to_arm_tool0 = tf_buffer.lookup_transform("arm_tool0", "gripper_equilibrium_grasp", rospy.Time(0),
-                                               rospy.Duration(1)).transform
-
 
     def execute(self, userdata):
-
-        rospy.loginfo("Using perception system to get grasp pose")
-        get_points_req = GetObjectPointsRequest(
+        get_points_req = aurmr_perception.srv.GetObjectPointsRequest(
             bin_id=userdata['target_bin_id'],
             object_id=userdata['target_object_id'],
             frame_id=self.frame_id
@@ -186,25 +173,55 @@ class GetGraspPose(State):
         if not points_response.success:
             return "aborted"
 
-        grasp_response = self.get_grasp(points=points_response.points,
-                                        mask=points_response.mask,
-                                        dist_threshold=self.pre_grasp_offset, bin_id=userdata['target_bin_id'])
+        userdata['object_points'] = points_response.points
+        userdata['object_mask'] = points_response.mask
+
+        return "succeeded"
+
+
+class GetGraspPose(State):
+    def __init__(self, tf_buffer: tf2_ros.Buffer, frame_id='base_link', pre_grasp_offset=0.12):
+        State.__init__(
+            self,
+            input_keys=['target_bin_id', 'target_object_id', 'object_points', 'object_mask'],
+            output_keys=['grasp_pose', 'pre_grasp_pose'],
+            outcomes=['succeeded', 'preempted', 'aborted']
+        )
+        self.get_grasp = rospy.ServiceProxy('/grasp_detection/detect_grasps', DetectGraspPoses)
+        self.get_grasp.wait_for_service(timeout=5)
+        self.frame_id = frame_id
+        self.pre_grasp_offset = pre_grasp_offset
+        self.pose_viz = rospy.Publisher("~selected_grasp_pose", PoseStamped, queue_size=1, latch=True)
+        self.pre_grasp_viz = rospy.Publisher("~selected_pre_grasp_pose", PoseStamped, queue_size=1, latch=True)
+        self.tf_buffer = tf_buffer
+
+        self.grasp_to_arm_tool0 = self.tf_buffer.lookup_transform(
+            "arm_tool0", "gripper_equilibrium_grasp", rospy.Time(0), rospy.Duration(1)
+        ).transform
+
+    def execute(self, userdata):
+        rospy.loginfo("Using perception system to get grasp pose")
+
+        grasp_response = self.get_grasp(
+            points=userdata['object_points'],
+            mask=userdata['object_mask'],
+            dist_threshold=self.pre_grasp_offset,
+            bin_id=userdata['target_bin_id']
+        )
 
         if not grasp_response.success:
             return "aborted"
 
         # NOTE: No extra filtering or ranking on our part. Just take the first one
-        # As the arm_tool0 is 26cm in length w.r.t tip of suction cup thus adding 0.26m offset
         # TODO(henrifung): Pull this number from xacro, perhaps from userdata
         grasp_pose = grasp_response.poses[0]
 
+        # As the arm_tool0 is 26cm in length w.r.t tip of suction cup thus adding 0.26m offset
         grasp_pose = add_offset(-0.26, grasp_pose)
 
         userdata['grasp_pose'] = grasp_pose
 
-        # adding 0.12m offset for pre grasp pose to prepare it for grasp pose which is use to pick the object
         pregrasp_pose = add_offset(-self.pre_grasp_offset, grasp_pose)
-
         userdata['pre_grasp_pose'] = pregrasp_pose
 
         self.pose_viz.publish(grasp_pose)

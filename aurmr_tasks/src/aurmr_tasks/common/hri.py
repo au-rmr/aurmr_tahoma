@@ -12,9 +12,9 @@ import pickle
 from smach import State
 from cv_bridge import CvBridge
 from tf_conversions import transformations
-from aurmr_perception.util import qv_mult, quat_msg_to_vec
+from aurmr_perception.util import qv_mult, quat_msg_to_vec, compute_xyz
 
-from aurmr_hri.msg import RetryGraspAction, RetryGraspGoal
+from aurmr_hri.msg import RetryGraspAction, RetryGraspGoal, MaskObjectAction, MaskObjectGoal
 from sensor_msgs.msg import CompressedImage, Image, PointCloud2, CameraInfo
 from geometry_msgs.msg import PoseStamped, Quaternion, Pose, Point
 from visualization_msgs.msg import Marker
@@ -289,6 +289,95 @@ class AskForHumanAction(State):
         else:
             return "aborted"
 
+
+class UserPromptForSegmentation(State):
+    def __init__(self, robot, bin_bounds, tf_buffer, frame_id='base_link', use_depth=False):
+        State.__init__(
+            self,
+            input_keys=['target_bin_id', 'target_object_id', 'target_object_asin'],
+            output_keys=['object_points', 'object_mask'],
+            outcomes=['succeeded', 'preempted', 'aborted']
+        )
+        self.robot = robot
+        self.bin_bounds = bin_bounds
+        self.frame_id = frame_id
+        self.tf_buffer = tf_buffer
+        self.use_depth = use_depth  # Either depth or point cloud will be used
+        self.bridge = CvBridge()
+        self.timeout_connection_secs = 10
+        self.camera_info = robot.camera.get_camera_info()
+
+    def execute(self, userdata):
+        self.robot.camera.request_capture()
+
+        if userdata['target_bin_id'] not in self.bin_bounds:
+            rospy.loginfo(f"No bin configuration found for {userdata['target_bin_id']}")
+            return "aborted"
+
+        client = actionlib.SimpleActionClient('/aurmr/hri/mask_object', MaskObjectAction)
+        if not client.wait_for_server(rospy.Duration.from_sec(self.timeout_connection_secs)):
+            rospy.loginfo("UserPromptForSegmentation timed out connecting to server")
+            return "aborted"
+
+        rospy.loginfo("Waiting for camera data")
+        camera_data, metadata = self.robot.camera.get_camera_data()
+        rospy.loginfo("Got camera data")
+
+        bounds = self.bin_bounds[userdata['target_bin_id']]
+        cropped_rgb_image = camera_data.rgb_image[bounds[0]:bounds[1], bounds[2]:bounds[3], 0:3]
+
+        goal = MaskObjectGoal(object_asin =userdata['target_object_asin'],
+                                    bin_id=userdata['target_bin_id'],
+                                    camera_image = self.bridge.cv2_to_compressed_imgmsg(cropped_rgb_image)
+        )
+
+        client.send_goal(goal)
+        client.wait_for_result()
+
+        result = client.get_result()
+        if result is None:
+            rospy.loginfo("User declined help request")
+            return "aborted"
+
+        mask_image = self.bridge.compressed_imgmsg_to_cv2(result.mask, desired_encoding='passthrough')
+        mask = cv2.inRange(mask_image, 1, 255)
+        # Put mask back in original image size
+        mask_full = np.zeros((camera_data.rgb_image.shape[0], camera_data.rgb_image.shape[1]), dtype=np.uint8)
+        mask_full[bounds[0]:bounds[1], bounds[2]:bounds[3]] = mask
+
+        xyz_points = compute_xyz(camera_data.depth_image / 1000, np.array(self.camera_info["rgb"]["K"]).reshape((3,3)))
+        xyz_points = xyz_points[np.where(mask_full != 0)]
+
+        if len(xyz_points) == 0:
+            return "aborted"
+        pc_array = np.zeros(len(xyz_points), dtype=[
+            ('x', np.float32),
+            ('y', np.float32),
+            ('z', np.float32),
+        ])
+        pc_array['x'] = xyz_points[:, 0]
+        pc_array['y'] = xyz_points[:, 1]
+        pc_array['z'] = xyz_points[:, 2]
+
+        points = ros_numpy.point_cloud2.array_to_pointcloud2(pc_array, rospy.Time.from_seconds(metadata["depth_timestamp"]),self.camera_info["rgb"]["header"]["frame_id"])
+        userdata['object_points'] = points
+        mask_ros_img = ros_numpy.image.numpy_to_image(mask_full, "mono8")
+        userdata['object_mask'] = mask_ros_img
+
+        return "succeeded"
+
+
+class AskForHumanExtraction(State):
+    # Request user teleoperate the extraction of a particular object
+    pass
+
+class UserPromptGraspPose(State):
+    # Allow user specification of grasp point (on same machine without web UI)
+    def __init__(self, bin_bounds, tf_buffer, frame_id='base_link', timeout_connection_secs = 10.0):
+        State.__init__(self, outcomes=['succeeded', 'preempted', 'aborted'], input_keys=['prompt'], output_keys=['grasp_pose', 'pre_grasp_pose'])
+
+    def execute(self, userdata):
+        return "aborted"
 
 class WaitForKeyPress(State):
     def __init__(self):

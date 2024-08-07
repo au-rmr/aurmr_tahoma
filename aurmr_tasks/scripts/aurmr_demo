@@ -21,7 +21,7 @@ from aurmr_tasks.srv import StowRequest, PickRequest, StowRequestRequest, PickRe
 from aurmr_tasks.msg import PickStatus
 from aurmr_perception.util import vec_to_quat_msg, I_QUAT
 from aurmr_tasks.common.states import Wait
-from aurmr_tasks.common.hri import UserPromptForRetry
+from aurmr_tasks.common import hri
 
 
 from queue import Empty, Queue
@@ -120,7 +120,10 @@ def main():
     rospy.init_node("aurmr_demo")
     simulation = rospy.get_param("/use_sim_time", False)
     State.simulation = simulation
-    robot = Tahoma(simulation)
+    robot = Tahoma(in_sim=simulation, camera_name="camera_lower_right")
+    if not robot.wait_for_controllers(15):
+        rospy.logerr("Did not find controllers. Are they active?")
+        return
     demo_sm = StateMachine(["done"], input_keys=[], output_keys=[])
     pick_sm = StateMachine(["done"], input_keys=["request"], output_keys=["status"])
     pick_success_cleanup_sm = StateMachine(["succeeded"], input_keys=['target_bin_id', 'target_object_id', 'target_object_asin'], output_keys=[])
@@ -136,8 +139,14 @@ def main():
             # encoding the same information in an explosion of named state transitions
             cf.splat_auto("SPLAT_PICK", "request", ["target_bin_id", "target_object_id", "target_object_asin"])
             # StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX_PRE_GRASP", planning_scene.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
+
+            StateMachine.add("GET_OBJECT_POINTS", perception.GetObjectPoints(),
+                            {"succeeded": "GET_GRASP_POSE", "aborted":"ASK_HUMAN_SEGMENTATION", "preempted":"NOTE_PASS"})
+            StateMachine.add("ASK_HUMAN_SEGMENTATION", hri.UserPromptForSegmentation(robot, rospy.get_param("bin_bounds"), robot.tf2_buffer), {"succeeded": "GET_GRASP_POSE", "aborted": "NOTE_PASS", "preempted": "NOTE_PASS"})
             StateMachine.add("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=.015),
-                            {"succeeded": "REMAP_PRE_GRASP_POSE", "aborted":"NOTE_PASS", "preempted":"NOTE_PASS"})
+                            {"succeeded": "REMAP_PRE_GRASP_POSE", "aborted":"ASK_HUMAN_GRASP_POSE", "preempted":"NOTE_PASS"})
+            StateMachine.add("ASK_HUMAN_GRASP_POSE", hri.UserPromptGraspPose(robot, rospy.get_param("bin_bounds"), robot.tf2_buffer), {"succeeded": "REMAP_PRE_GRASP_POSE", "aborted": "NOTE_PASS", "preempted": "NOTE_PASS"})
+
             cf.inject_userdata("NOTE_PASS", "done", "status", PickRequestResponse.OUTCOME_PERCEPTION_FAILURE)
 
             StateMachine.add_auto("REMAP_PRE_GRASP_POSE", cf.input_to_output("pre_grasp_pose", "pose"), ["succeeded"])
@@ -179,7 +188,7 @@ def main():
                 StateMachine.add_auto("UNBLOCK_VIEW", motion.MoveToJointAngles(robot, "hide"), ["succeeded", "aborted"])
                 StateMachine.add_auto("PICTURE_WAIT", Wait(2), ["succeeded"])
                 StateMachine.add_auto("UPDATE_BIN_MASKS", perception.UpdateBin(), ["succeeded", "preempted", "aborted"])
-                StateMachine.add('USER_PROMPT_FOR_RETRY', UserPromptForRetry(rospy.get_param("bin_bounds"), robot.tf2_buffer, timeout_connection_secs=1.0), {"retry": "REMAP_GRASP", "continue": "continue"})
+                StateMachine.add('USER_PROMPT_FOR_RETRY', hri.UserPromptForRetry(rospy.get_param("bin_bounds"), robot.tf2_buffer, timeout_connection_secs=1.0), {"retry": "REMAP_GRASP", "continue": "continue"})
                 cf.remap_auto("REMAP_GRASP", "human_grasp_pose", "grasp_pose")
                 cf.remap("REMAP_PRE_GRASP", "human_pre_grasp_pose", "pre_grasp_pose", {"succeeded": "retry"})
 

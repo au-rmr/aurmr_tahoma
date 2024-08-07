@@ -35,7 +35,9 @@ from tahoma_moveit_config.msg import ServoToPoseAction, ServoToPoseGoal
 import numpy as np
 
 from typing import Union
+#from aurmr_dataset.recorder import Camera
 
+from aurmr_tasks.common.camera import Camera
 
 ARM_GROUP_NAME = 'manipulator'
 JOINT_ACTION_SERVER = '/pos_joint_traj_controller/follow_joint_trajectory'
@@ -113,9 +115,13 @@ def moveit_error_string(val):
 
 
 class Tahoma:
-    def __init__(self, in_sim=False):
+    def __init__(self, camera_name=None, in_sim=False):
         self.in_sim = in_sim
-        self.point_cloud = None
+        if camera_name:
+            self.camera = Camera(camera_name, {"rgb": True, "depth": True, "point_cloud": True})
+            self.camera.subscribe_to_ros_service()
+        else:
+            self.camera = None
 
         self.tf2_buffer = tf2_ros.Buffer()
         self.tf2_listener = tf2_ros.TransformListener(self.tf2_buffer)
