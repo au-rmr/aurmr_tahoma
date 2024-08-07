@@ -10,7 +10,7 @@ from aurmr_perception.srv import DetectGraspPoses
 from geometry_msgs.msg import PoseStamped, Quaternion, Pose, Point, Vector3
 from tf_conversions import transformations
 from aurmr_perception.visualization import create_gripper_pose_markers
-from sensor_msgs.msg import PointCloud2 
+from sensor_msgs.msg import PointCloud2
 
 # See moveit_grasps for inspiration on improved grasp ranking and filtering:
 # https://ros-planning.github.io/moveit_tutorials/doc/moveit_grasps/moveit_grasps_tutorial.html
@@ -34,15 +34,16 @@ class HeuristicGraspDetector:
         self.tf_buffer = tf2_ros.Buffer()
         self.listener = tf2_ros.TransformListener(self.tf_buffer)
 
-    def detect(self, points):
-        np.save("/tmp/points", points)
+    def detect(self, points, frame_id):
         """
         Hacked together for the first grasp
         :param points:
         :return:
         """
+        #np.save("/tmp/points", points)
+
         # compute the average point of the pointcloud
-        
+
         points_sort_z = np.flip(points[points[:, 2].argsort()], axis=0)
         POINTS_TO_KEEP_FACTOR = .8
         keep_idxs = np.arange(int(points.shape[0]*(1-POINTS_TO_KEEP_FACTOR)), points.shape[0])
@@ -50,33 +51,31 @@ class HeuristicGraspDetector:
         rospy.loginfo(points.shape)
         rospy.loginfo(points_lowered.shape)
         center = np.mean(points_lowered, axis=0)
-    
-        # stamped_transform = self.tf2_buffer.lookup_transform("base_link", "rgb_camera_link", rospy.Time(0),
-        #                                                 rospy.Duration(1))
-        # camera_to_target_mat = ros_numpy.numpify(stamped_transform.transform)
-        # center = np.vstack([center, np.ones(center.shape[1])])  # convert to homogenous
-        # points = np.matmul(camera_to_target_mat, points)[0:3, :].T  # apply transform
 
-        # center[0] = center[0] - 0.02
-        # POD_OFFSET = -0.1
+        # We'll supply a basic, shelf-facing orientation for the gripper in the base frame. The point cloud
+        # can be in an arbitrary frame though, and we have to return our result in the points frame. Look
+        # up the transform and apply it to the orientation manually.
+        points_to_baselink_T = self.tf_buffer.lookup_transform("base_link", frame_id, rospy.Time(0),
+                                                        rospy.Duration(1))
+        points_to_baselink_R = transformations.quaternion_matrix([points_to_baselink_T.transform.rotation.x,
+                                                                  points_to_baselink_T.transform.rotation.y,
+                                                                  points_to_baselink_T.transform.rotation.z,
+                                                                  points_to_baselink_T.transform.rotation.w])
 
-        transform= self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
-        POD_OFFSET = 0.1
-        RGB_TO_DEPTH_FRAME_OFFSET = -0.015
-        DEPTH_TILT = -transform.transform.translation.z-0.03
-        # center[2] += center[0]*np.sin(DEPTH_TILT)
-        center[2] += DEPTH_TILT
-        center[1] -= RGB_TO_DEPTH_FRAME_OFFSET
-        center[0] = transform.transform.translation.x - POD_OFFSET
+        # Points Z "forward" (towards X in base_link), orient the other axes based on arm_tool convention
+        #import pdb; pdb.set_trace()
+        bin_align_base_link = np.array([[0,0,1, 0],
+                                               [0,-1,0, 0],
+                                               [1,0,0, 0],
+                                               [0,0,0,1]], dtype=float)
+        bin_align_points_frame = points_to_baselink_R.T @ bin_align_base_link
+        bin_align_points_frame = transformations.quaternion_from_matrix(bin_align_points_frame)
 
         # NOTE(nickswalker,4-29-22): Hack to compensate for the chunk of points that don't get observed
         # due to the lip of the bin
         #center[2] -= 0.02
-        print(center, points.shape, center.shape)
-        align_to_bin_orientation = transformations.quaternion_from_euler(math.pi / 2., -math.pi / 2., math.pi / 2.)
 
-        poses_stamped = [(center, align_to_bin_orientation)]
-        print(poses_stamped)
+        poses_stamped = [(center, bin_align_points_frame)]
         return poses_stamped
 
 
@@ -87,7 +86,7 @@ class GraspDetectionROS:
             self.detect_grasps_normal = rospy.Service('~detect_grasps', DetectGraspPoses, self.detect_grasps__normal_cb)
         elif(grasp_method == "centroid"):
             self.detect_grasps = rospy.Service('~detect_grasps', DetectGraspPoses, self.detect_grasps_cb)
-        
+
         self.dections_viz_pub = rospy.Publisher("~detected_grasps", MarkerArray, latch=True, queue_size=1)
         self.points_viz_pub = rospy.Publisher("~detected_pts", PointCloud2, latch=True, queue_size=5)
         self.camera_depth_subscriber = rospy.Subscriber('/camera_lower_right/depth_to_rgb/image_raw', Image, self.depth_callback)
@@ -102,6 +101,7 @@ class GraspDetectionROS:
         self.grasp_viz_perception = rospy.Publisher("selected_grasp_pose_perception", geometry_msgs.msg.PoseStamped,
                                         queue_size=1, latch=True)
 
+
     def depth_callback(self, data):
         try:
             self.depth_img = self.bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
@@ -109,7 +109,7 @@ class GraspDetectionROS:
             # self.depth_img = self.depth_img.astype(np.float32)
         except CvBridgeError as e:
             print(e)
-    
+
     def rgb_callback(self, data):
         try:
             self.rgb_img = self.bridge.imgmsg_to_cv2(data, "bgr8")
@@ -127,7 +127,7 @@ class GraspDetectionROS:
     def get_quaternion_from_euler(self, roll, pitch, yaw):
         """
         Convert an Euler angle to a quaternion.
-        
+
         Input
             :param roll: The roll (rotation around x-axis) angle in radians.
             :param pitch: The pitch (rotation around y-axis) angle in radians.
@@ -140,7 +140,7 @@ class GraspDetectionROS:
         qy = np.cos(roll/2) * np.sin(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.cos(pitch/2) * np.sin(yaw/2)
         qz = np.cos(roll/2) * np.cos(pitch/2) * np.sin(yaw/2) - np.sin(roll/2) * np.sin(pitch/2) * np.cos(yaw/2)
         qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
- 
+
         return [qx, qy, qz, qw]
 
     def transfor_pose(self, pose_stamped, to_frame):
@@ -149,7 +149,7 @@ class GraspDetectionROS:
             return output_pose_stemped
         except(tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
-        
+
     def clamp(self, num, min_value, max_value):
         clamp_value = num
         if(num < 0):
@@ -175,14 +175,13 @@ class GraspDetectionROS:
         pts = np.stack([pts['x'],
                         pts['y'],
                         pts['z']], axis=1)
-        detections = self.detector.detect(pts)
+        detections = self.detector.detect(pts, request.points.header.frame_id)
         stamped_detections = []
         for position, orientation in detections:
             as_quat = Quaternion(x=orientation[0], y=orientation[1],
                                             z=orientation[2], w=orientation[3])
             as_pose = Pose(position=Point(x=position[0], y=position[1], z=position[2]), orientation=as_quat)
             stamped_detections.append(PoseStamped(header=request.points.header, pose=as_pose))
-        print(request.points.header)
         self.visualize_grasps(stamped_detections)
         return True, "", stamped_detections
 
@@ -267,7 +266,7 @@ class GraspDetectionROS:
 
         # Comment this if you want to use the normal of the object
         clamped_euler_angles = [0., 0., 0.]
-        
+
         # clamped_euler_angles[1] = 0.0
         print("post euler angles", clamped_euler_angles[0]*180/math.pi, clamped_euler_angles[1]*180/math.pi)
         # transform from the 3d pose to rgb_camera_link
