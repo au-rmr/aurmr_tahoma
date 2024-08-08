@@ -26,43 +26,18 @@ from aurmr_tasks.common.hri import UserPromptForRetry
 
 from queue import Empty, Queue
 
-align_to_tote_orientation = transformations.quaternion_from_euler(math.pi, 0, 0)
-align_to_bin_quat = vec_to_quat_msg(align_to_tote_orientation)
-
-quat_obj = Quaternion(x=0, y=0.707, z=0, w=0.707)
-# quat_obj = Quaternion(0, 0.7071068, 0, 0.7071068)
-TOTE_APPROACH_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=-0.05, y=-0.45,z=1.05), orientation=align_to_bin_quat ))
-
-# TOTE_APPROACH_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=.108, y=-.514,z=0.884), orientation=align_to_bin_quat))
-
-class PublishStatus(State):
-    def __init__(self, task_queue, wait_time=0):
-        State.__init__(self, outcomes=['succeeded'], input_keys=["status", "start_time", "target_object_id"])
-        self.task_queue = task_queue
-        self.wait_time = wait_time
-
-    def execute(self, userdata):
-        now = rospy.get_rostime()
-        now = now.secs + now.nsecs*1E-9
-        time_delta = now - userdata["start_time"]
-
-        msg = PickStatus()
-        msg.status = userdata["status"]
-        msg.object_id = userdata["target_object_id"]
-        msg.time = time_delta
-        self.task_queue.status_pub.publish(msg)
-        rospy.sleep(self.wait_time)
-        return "succeeded"
 
 
 class PickStowQueue:
-    def __init__(self) -> None:
+    def __init__(self, pick_sm) -> None:
         self.stow_service = rospy.Service('~stow', StowRequest, self.stow_cb)
         self.pick_service = rospy.Service('~pick', PickRequest, self.pick_cb)
         self.multi_pick_service = rospy.Service('~multiple_pick', MultiplePickRequest, self.multiple_pick_cb)
         self.pick_status_pub = rospy.Publisher("~pick_status", PickStatus, queue_size=1, latch=True)
         self.task_queue = Queue()
         self.result_queue = Queue()
+        # We'll use this handle to monitor execution status
+        self.pick_sm = pick_sm
 
     def stow_cb(self, request: StowRequestRequest):
         rospy.loginfo("STOW REQUEST: " + str(request))
@@ -88,14 +63,19 @@ class PickStowQueue:
         return True
 
     def pick_cb(self, request: PickRequestRequest):
-        self.pick_status_pub.publish(object_id=request.object_id, bin_id=request.bin_id, object_asin=request.object_asin, object_name=request.object_name)
+        request_data = dict(object_id=request.object_id, bin_id=request.bin_id, object_asin=request.object_asin, object_name=request.object_name)
+        self.pick_status_pub.publish(**request_data)
         self.task_queue.put_nowait(request)
         result = None
         while result is None and not rospy.is_shutdown():
             try:
                 result = self.result_queue.get(False)
             except Empty:
+                # You can publish the latest status information here
+                # self.pick_status_pub.publish(**request_data, status=self.pick_sm.userdata._data)
                 rospy.sleep(.1)
+        if result is None:
+            result = PickRequestResponse.OUTCOME_UNKNOWN_FAILURE
         return {"outcome": result}
 
 
@@ -128,7 +108,7 @@ class WaitForPickStow(State):
 
 class ReportPickStowOutcome(State):
     def __init__(self, task_queue):
-        State.__init__(self, outcomes=['succeeded'], input_keys=["request", "status"])
+        State.__init__(self, outcomes=['succeeded'], input_keys=["status"])
         self.task_queue = task_queue
 
     def execute(self, userdata):
@@ -143,18 +123,17 @@ def main():
     robot = Tahoma(simulation)
     demo_sm = StateMachine(["done"], input_keys=[], output_keys=[])
     pick_sm = StateMachine(["done"], input_keys=["request"], output_keys=["status"])
-    pick_success_cleanup_sm = StateMachine(["succeeded"], input_keys=['target_bin_id', 'target_object_id', 'target_object_asin', "start_time"], output_keys=[])
-    pick_retry_sm = StateMachine(["retry", "continue"], input_keys=['target_bin_id', 'target_object_id', 'target_object_asin', 'grasp_pose', "start_time"], output_keys=['grasp_pose'])
+    pick_success_cleanup_sm = StateMachine(["succeeded"], input_keys=['target_bin_id', 'target_object_id', 'target_object_asin'], output_keys=[])
+    pick_retry_sm = StateMachine(["retry", "continue"], input_keys=['target_bin_id', 'target_object_id', 'target_object_asin', 'grasp_pose'], output_keys=['grasp_pose'])
 
     stow_sm = StateMachine(["done"], input_keys=["request"], output_keys=["status"])
-    task_queue = PickStowQueue()
+    task_queue = PickStowQueue(pick_sm)
 
     with demo_sm:
 
         with pick_sm:
             # These are pre-terminating states that note what went wrong in the userdata. This avoids
             # encoding the same information in an explosion of named state transitions
-
             cf.splat_auto("SPLAT_PICK", "request", ["target_bin_id", "target_object_id", "target_object_asin"])
             # StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX_PRE_GRASP", planning_scene.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=.015),
@@ -182,7 +161,7 @@ def main():
 
             StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "drop_hide"), ["succeeded", "aborted"])
             StateMachine.add("CHECK_FOR_GRIPPER_ITEM", motion.CheckGripperItem(robot),
-                            {"item_detected": "POST_PICK_SUCCESS_CLEANUP", "no_item_detected": "RETRY"})
+                            {"item_detected": "NOTE_SUCCESS", "no_item_detected": "NOTE_MANIPULATION_FAILURE_AND_RETRY"})
             cf.inject_userdata("NOTE_SUCCESS", "POST_PICK_SUCCESS_CLEANUP", "status", PickRequestResponse.OUTCOME_SUCCESS)
             cf.inject_userdata("NOTE_MANIPULATION_FAILURE_AND_RETRY", "RETRY", "status", PickRequestResponse.OUTCOME_MANIPULATION_FAILURE)
             cf.inject_userdata("NOTE_PREEMPTION", "done", "status", PickRequestResponse.OUTCOME_PREEMPTED)
@@ -190,12 +169,14 @@ def main():
 
             with pick_success_cleanup_sm:
                 StateMachine.add_auto("BLOW_OFF_GRIPPER", motion.BlowOffGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
+                StateMachine.add_auto("UNBLOCK_VIEW", motion.MoveToJointAngles(robot, "drop_hide"), ["succeeded", "aborted"])
                 StateMachine.add_auto("PICTURE_WAIT", Wait(2), ["succeeded"])
                 StateMachine.add_auto("POST_PICK_UPDATE_MASKS", perception.PickObject(), ["succeeded", "preempted", "aborted"])
                 StateMachine.add("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot, return_before_done=True), {"succeeded": "succeeded", "preempted": "succeeded", "aborted": "succeeded"})
 
             with pick_retry_sm:
                 StateMachine.add_auto("BLOW_OFF_GRIPPER", motion.BlowOffGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
+                StateMachine.add_auto("UNBLOCK_VIEW", motion.MoveToJointAngles(robot, "hide"), ["succeeded", "aborted"])
                 StateMachine.add_auto("PICTURE_WAIT", Wait(2), ["succeeded"])
                 StateMachine.add_auto("UPDATE_BIN_MASKS", perception.UpdateBin(), ["succeeded", "preempted", "aborted"])
                 StateMachine.add('USER_PROMPT_FOR_RETRY', UserPromptForRetry(rospy.get_param("bin_bounds"), robot.tf2_buffer, timeout_connection_secs=1.0), {"retry": "REMAP_GRASP", "continue": "continue"})
@@ -237,8 +218,6 @@ def main():
     print("State machine introspection server started...")
 
     outcome = demo_sm.execute()
-
-    rospy.spin()
     sis.stop()
 
 

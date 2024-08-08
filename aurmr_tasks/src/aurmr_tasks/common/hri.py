@@ -43,7 +43,7 @@ class UserPromptForRetry(State):
         self.camera_model = None
         self.camera_info_sub = rospy.Subscriber(f'/{camera_name}/rgb/camera_info', CameraInfo, self.camera_info_cb,  queue_size = 1)
         self.depth_image_sub = rospy.Subscriber(f"/{camera_name}/depth/image_raw", Image, self.depth_image_cb)
-        self.marker_publisher = rospy.Publisher("visualization_marker", Marker)
+        self.marker_publisher = rospy.Publisher("visualization_marker", Marker, queue_size=1)
         self.ros_pointcloud = None
         self.ros_rgb_image = None
         self.use_depth = use_depth # Either depth or point cloud will be used
