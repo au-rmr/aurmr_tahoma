@@ -29,6 +29,8 @@ class CropTransform:
         ]
 
 
+INPUT_IMAGE_SIZE = 224
+
 class CustomSingleDataset(Dataset):
     def __init__(self, image, depth, segmask):
         self.image = image
@@ -38,7 +40,7 @@ class CustomSingleDataset(Dataset):
         cv2.imwrite("/tmp/segmask_grasp.png", segmask)
 
         self.resize_transform = transforms.Resize(
-            (224, 224), interpolation=transforms.InterpolationMode.BICUBIC
+            (INPUT_IMAGE_SIZE, INPUT_IMAGE_SIZE), interpolation=transforms.InterpolationMode.BICUBIC
         )
         self.normalize_transform = transforms.Normalize(
             mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
