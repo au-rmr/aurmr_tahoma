@@ -63,12 +63,11 @@ class CustomSingleDataset(Dataset):
         mask = F.pad(mask, padding_size, "constant", 0).squeeze(0)
 
         non_zero_coords = torch.nonzero(mask, as_tuple=False)
-        non_zero_coords = [tuple(coord.tolist()) for coord in non_zero_coords]
-        non_zero_coords = random.sample(
-            non_zero_coords, min(len(non_zero_coords), self.batch_size)
-        )
 
-        return non_zero_coords
+        indices = torch.randint(0, non_zero_coords.shape[0], (self.batch_size, ))
+        patch_indices = torch.index_select(non_zero_coords, dim=0,index=indices)
+        return patch_indices
+
 
     def _extract_patch(self, image, path_idx, pad_size):
         y, x = path_idx
