@@ -197,10 +197,13 @@ class TrainDexNetModel:
         return flat_state_dict
 
     def init_model(self):
-        model = SimpleGQCNN()
-        model.load_state_dict(torch.load("/home/aurmr/workspaces/RGB_grasp_soofiyan_ws/src/NBV-GP/huggingface/Depth-Anything/weights/checkpoint_dexnet_hardware_state_dict.pth"))
 
-        model = model.to("cuda")
+        from aurmr_setup.utils.workspace_utils import get_active_workspace_path
+        model = SimpleGQCNN()
+        workspace_path = get_active_workspace_path()
+        model.load_state_dict(torch.load(f"{workspace_path}/model_weights/checkpoint_dexnet_hardware_state_dict.pth"))
+
+        model = model.to("cuda").eval()
         return model
 
 
@@ -209,7 +212,7 @@ class TrainDexNetModel:
         from torch.nn.parallel import DistributedDataParallel as DDP
         if isinstance(model, DDP):
             model = model.module
-        torch.save(model.state_dict(), "/tmp/foo.pth")
+        torch.save(model.state_dict(), "/tmp/checkpoint_dexnet.pth")
 
     def run_dexnet_hardware_comm_inference(self):
         dataset = CustomSingleDataset(self.image, self.depth, self.mask)
