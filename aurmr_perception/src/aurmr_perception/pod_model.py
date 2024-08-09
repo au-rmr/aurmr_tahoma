@@ -175,7 +175,6 @@ class PodPerceptionROS:
         self.masks_pub.publish(mask_msg)
         self.color_image_pub.publish(colored_img_msg)
 
-        self.masks_pub.publish(mask)
         if request.mask_only:
             return True,\
                f"Mask successfully retrieved for object {request.object_id} in bin {bin_id}",\
