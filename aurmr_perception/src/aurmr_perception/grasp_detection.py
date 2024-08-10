@@ -378,8 +378,9 @@ class GraspDetectionROS:
         transform= self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
         transform_camera_to_base_link= self.tf_buffer.lookup_transform('base_link', 'rgb_camera_link', rospy.Time())
 
-        # fixed depth for grasp point
-        point[2] = transform.transform.translation.x - transform_camera_to_base_link.transform.translation.x
+        if False:
+            # fixed depth for grasp point
+            point[2] = transform.transform.translation.x - transform_camera_to_base_link.transform.translation.x
 
         clamped_euler_angles = [0., 0., 0.]
 
@@ -480,14 +481,16 @@ class GraspDetectionROS:
         RGB_TO_DEPTH_FRAME_OFFSET = 0.02
         DEPTH_TILT = -transform.transform.translation.z - 0.02
 
-        point[2] = transform.transform.translation.x - POD_OFFSET - transform_camera_to_base_link.transform.translation.x
-        point[1] -= point[2]*np.sin(DEPTH_TILT)
-        point[0] -= RGB_TO_DEPTH_FRAME_OFFSET
+        if False:
+            point[2] = transform.transform.translation.x - POD_OFFSET - transform_camera_to_base_link.transform.translation.x
+            point[1] -= point[2]*np.sin(DEPTH_TILT)
+            point[0] -= RGB_TO_DEPTH_FRAME_OFFSET
 
         clamped_euler_angles = [0., 0., 0.]
 
-        clamped_euler_angles[0] = 0.0
-        clamped_euler_angles[1] = 0.0
+        if False:
+            clamped_euler_angles[0] = 0.0
+            clamped_euler_angles[1] = 0.0
 
         # point[0] += 0.265*np.sin(clamped_euler_angles[0])
         # point[1] += 0.265*np.sin(clamped_euler_angles[1])

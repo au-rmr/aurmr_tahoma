@@ -197,6 +197,7 @@ class TrainDexNetModel:
 
     def init_model(self):
         model = SimpleGQCNN()
+        from aur
         model.load_state_dict(torch.load("/home/aurmr/workspaces/RGB_grasp_soofiyan_ws/src/NBV-GP/huggingface/Depth-Anything/weights/checkpoint_dexnet_hardware_state_dict.pth"))
 
         model = model.to("cuda")
