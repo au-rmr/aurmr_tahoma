@@ -208,7 +208,8 @@ class PodPerceptionROS:
         # self.net = SegNet(init_depth=self.model.numpify_pointcloud(self.points_msg, self.rgb_image.shape))
 
         intrinsics_3x3 = np.reshape(self.camera_info.K, (3,3))
-        self.net = SegNet(rospy.get_param("bin_bounds"), init_depth=self.depth_image, init_info=intrinsics_3x3)
+        bin_bounds = rospy.get_param("bin_bounds")
+        self.net = SegNet(bin_bounds, init_depth=self.depth_image, init_info=intrinsics_3x3)
         self.model.net = self.net
         return {"success": True, "message": "empty bin captured"}
 
