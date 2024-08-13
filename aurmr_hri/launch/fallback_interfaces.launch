@@ -1,0 +1,10 @@
+<?xml version="1.0" ?>
+<launch>
+    <!-- Necessary for web-interfaces (e.g. 3d mouse)-->
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
+
+    <node name="threedmouse_controller" pkg="aurmr_hri" type="3dmouse_controller" />
+    <node name="human_mask_object_server" pkg="aurmr_hri" type="human_mask_object_server" output="screen"/>
+    <node name="human_grasp_pose_server" pkg="aurmr_hri" type="human_grasp_pose_server" output="screen"/>
+
+</launch>

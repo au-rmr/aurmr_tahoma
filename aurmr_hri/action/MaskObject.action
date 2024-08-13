@@ -1,6 +1,7 @@
 # Goal
 string object_asin
 string bin_id
+string description
 sensor_msgs/CompressedImage camera_image
 ---
 # Result

@@ -5,6 +5,8 @@ find_package(catkin REQUIRED COMPONENTS
     roslint
     std_msgs
     actionlib_msgs
+    geometry_msgs
+    interactive_markers
     sensor_msgs
     message_generation
 )
@@ -20,6 +22,7 @@ generate_messages(
   DEPENDENCIES
   std_msgs
   actionlib_msgs
+  geometry_msgs
   sensor_msgs
 )
 

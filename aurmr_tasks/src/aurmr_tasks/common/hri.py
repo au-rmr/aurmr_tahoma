@@ -22,6 +22,12 @@ import image_geometry
 
 from aurmr_tasks.util import add_offset
 
+import actionlib
+from aurmr_hri.msg import SpecifyGraspPoseAction, SpecifyGraspPoseGoal
+from geometry_msgs.msg import PoseStamped
+from sensor_msgs.msg import CompressedImage
+from std_msgs.msg import Header
+
 
 class UserPromptForRetry(State):
     def __init__(self, bin_bounds, tf_buffer, frame_id='base_link', timeout_connection_secs = 10.0, \
@@ -306,6 +312,9 @@ class UserPromptForSegmentation(State):
         self.bridge = CvBridge()
         self.timeout_connection_secs = 10
         self.camera_info = robot.camera.get_camera_info()
+        self.masks_pub = rospy.Publisher('/aurmr_perception/detected_masks', Image, queue_size=1, latch=True)
+        self.labels_pub = rospy.Publisher('/aurmr_perception/labeled_images', Image, queue_size=1, latch=True)
+        self.color_image_pub = rospy.Publisher('/aurmr_perception/colored_images', Image, queue_size=1, latch=True)
 
     def execute(self, userdata):
         self.robot.camera.request_capture()
@@ -325,6 +334,9 @@ class UserPromptForSegmentation(State):
 
         bounds = self.bin_bounds[userdata['target_bin_id']]
         cropped_rgb_image = camera_data.rgb_image[bounds[0]:bounds[1], bounds[2]:bounds[3], 0:3]
+        # Ensure image is in RGB format
+        """if cropped_rgb_image.shape[2] == 3:
+            cropped_rgb_image = cv2.cvtColor(cropped_rgb_image, cv2.COLOR_BGR"""
 
         goal = MaskObjectGoal(object_asin =userdata['target_object_asin'],
                                     bin_id=userdata['target_bin_id'],
@@ -364,6 +376,31 @@ class UserPromptForSegmentation(State):
         mask_ros_img = ros_numpy.image.numpy_to_image(mask_full, "mono8")
         userdata['object_mask'] = mask_ros_img
 
+
+        # Real perception puts out these topics. We mimic so the bagger sees the same
+        rgb_image = camera_data.rgb_image[:,:,:3].astype(np.uint8)
+
+        labled_mask = mask_full.astype(np.uint8)
+        labled_mask[labled_mask>0] = 1
+        labled_img = cv2.bitwise_and(rgb_image, rgb_image, mask=labled_mask)
+        mask_msg = ros_numpy.msgify(Image, mask_full.astype(np.uint8), encoding="mono8")
+
+        labled_img_msg = ros_numpy.msgify(Image, labled_img.astype(np.uint8), encoding="rgb8")
+
+        colored_img_msg = ros_numpy.msgify(Image, rgb_image, encoding="rgb8")
+
+        common_header = Header()
+        common_header.stamp = rospy.Time.now()
+
+        mask_msg.header = common_header
+        labled_img_msg.header = common_header
+        colored_img_msg.header = common_header
+
+        self.labels_pub.publish(labled_img_msg)
+        self.masks_pub.publish(mask_msg)
+        self.color_image_pub.publish(colored_img_msg)
+
+
         return "succeeded"
 
 
@@ -371,13 +408,62 @@ class AskForHumanExtraction(State):
     # Request user teleoperate the extraction of a particular object
     pass
 
+
 class UserPromptGraspPose(State):
     # Allow user specification of grasp point (on same machine without web UI)
-    def __init__(self, bin_bounds, tf_buffer, frame_id='base_link', timeout_connection_secs = 10.0):
-        State.__init__(self, outcomes=['succeeded', 'preempted', 'aborted'], input_keys=['prompt'], output_keys=['grasp_pose', 'pre_grasp_pose'])
+    def __init__(self, bin_bounds, tf_buffer, frame_id='base_link', timeout_connection_secs=10.0, pre_grasp_offset=0.12):
+        State.__init__(
+            self,
+            outcomes=['succeeded', 'preempted', 'aborted'],
+            input_keys=['candidate_grasp_pose'],
+            output_keys=['grasp_pose', 'pre_grasp_pose']
+        )
+        self.bin_bounds = bin_bounds
+        self.tf_buffer = tf_buffer
+        self.frame_id = frame_id
+        self.timeout_connection_secs = timeout_connection_secs
+        self.pose_viz = rospy.Publisher("~selected_grasp_pose", PoseStamped, queue_size=1, latch=True)
+        self.pre_grasp_viz = rospy.Publisher("~selected_pre_grasp_pose", PoseStamped, queue_size=1, latch=True)
+        self.pre_grasp_offset = pre_grasp_offset
 
     def execute(self, userdata):
-        return "aborted"
+        client = actionlib.SimpleActionClient('/aurmr/hri/specify_grasp_pose', SpecifyGraspPoseAction)
+        if not client.wait_for_server(rospy.Duration.from_sec(self.timeout_connection_secs)):
+            rospy.loginfo("UserPromptGraspPose timed out connecting to server")
+            return "aborted"
+
+        # Assuming 'prompt' in userdata contains necessary fields like object_asin, bin_id, candidate_grasp_pose, camera_image, depth_image
+        candidate_grasp_pose = userdata['candidate_grasp_pose'] if 'candidate_grasp_pose' in userdata else None
+
+
+
+        goal = SpecifyGraspPoseGoal(
+            object_asin="",
+            bin_id="",
+            candidate_grasp_pose=candidate_grasp_pose
+        )
+
+        client.send_goal(goal)
+        client.wait_for_result()
+
+        result = client.get_result()
+        if result is None:
+            rospy.loginfo("No result returned from SpecifyGraspPose action")
+            return "aborted"
+
+        # As the arm_tool0 is 26cm in length w.r.t tip of suction cup thus adding 0.26m offset
+        grasp_pose = add_offset(-0.26, result.grasp_pose)
+
+        userdata['grasp_pose'] = grasp_pose
+
+        pregrasp_pose = add_offset(-self.pre_grasp_offset, grasp_pose)
+        userdata['pre_grasp_pose'] = pregrasp_pose
+
+        self.pose_viz.publish(grasp_pose)
+        self.pre_grasp_viz.publish(pregrasp_pose)
+
+        return "succeeded"
+
 
 class WaitForKeyPress(State):
     def __init__(self):

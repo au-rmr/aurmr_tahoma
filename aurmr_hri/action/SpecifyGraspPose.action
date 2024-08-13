@@ -1,6 +1,8 @@
 # Goal
 string object_asin
 string bin_id
+string description
+geometry_msgs/PoseStamped candidate_grasp_pose
 sensor_msgs/CompressedImage camera_image
 sensor_msgs/CompressedImage depth_image
 ---

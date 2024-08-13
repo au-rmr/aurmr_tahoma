@@ -92,7 +92,7 @@ class MouseController:
     def button_callback(self, msg):
         btn, state = msg.data.split(',')
         # Temporary suction: hold down required
-	if btn == "LEFT":
+        if btn == "LEFT":
             if state == 'down':
                 goal = GripperCommandGoal()
                 goal.command.position = 1

@@ -26,8 +26,10 @@ class MaskObjectActionServer:
         self.previous_y = None
 
     def execute(self, goal):
+        self.requested_object = goal.object_asin
+        self.requested_object_description = goal.description
         try:
-            self.input_image = self.bridge.compressed_imgmsg_to_cv2(goal.camera_image, desired_encoding='bgr8')
+            self.input_image = self.bridge.compressed_imgmsg_to_cv2(goal.camera_image, desired_encoding='rgb8')
         except CvBridgeError as e:
             rospy.logerr(f"CvBridge Error: {e}")
             self.server.set_aborted()
@@ -41,6 +43,9 @@ class MaskObjectActionServer:
 
         while True:
             display_image = self.apply_tint_to_background(self.working_image, self.mask)
+            # Add target description to bottom left corner
+            # Limit to at most 60 characters
+            cv2.putText(display_image, self.requested_object_description[:60], (10, display_image.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
             cv2.imshow('Image', display_image)
             key = cv2.waitKey(1) & 0xFF
             if key == ord(' '):  # Press space to finish
