@@ -177,19 +177,44 @@ class UpdateBin(State):
         return "aborted"
 
 
+class GetPoints(State):
+    def __init__(self, frame_id='base_link'):
+        State.__init__(
+            self,
+            input_keys=['target_bin_id', 'target_object_id'],
+            output_keys=['points_response'],
+            outcomes=['succeeded', 'aborted']
+        )
+        self.get_points = rospy.ServiceProxy('/aurmr_perception/get_object_points', GetObjectPoints)
+        self.get_points.wait_for_service(timeout=5)
+        self.frame_id = frame_id
+
+    def execute(self, userdata):
+        get_points_req = GetObjectPointsRequest(
+            bin_id=userdata['target_bin_id'],
+            object_id=userdata['target_object_id'],
+            frame_id=self.frame_id
+        )
+        print(get_points_req, get_points_req)
+        points_response = self.get_points(get_points_req)
+
+        if not points_response.success:
+            userdata["status"] = "pass"
+            return "aborted"
+
+        userdata['points_response'] = points_response
+        return "succeeded"
 
 class GetGraspPose(State):
     def __init__(self, tf_buffer, frame_id='base_link', pre_grasp_offset=.12):
         State.__init__(
             self,
-            input_keys=['target_bin_id', 'target_object_id', 'human_grasp_pose'],
+            input_keys=['target_bin_id', 'target_object_id', 'points_response', 'human_grasp_pose'],
             output_keys=['grasp_pose', 'pre_grasp_pose', 'status', 'human_grasp_pose'],
             outcomes=['succeeded', 'preempted', 'aborted']
         )
-        self.get_points = rospy.ServiceProxy('/aurmr_perception/get_object_points', GetObjectPoints)
         self.get_grasp = rospy.ServiceProxy('/grasp_detection/detect_grasps', DetectGraspPoses)
         # Crash during initialization if these aren't running so see the problem early
-        self.get_points.wait_for_service(timeout=5)
         self.get_grasp.wait_for_service(timeout=5)
         self.frame_id = frame_id
         self.pre_grasp_offset = pre_grasp_offset
@@ -218,18 +243,8 @@ class GetGraspPose(State):
 
             else:
                 rospy.loginfo("Using perception system to get grasp pose")
-                get_points_req = GetObjectPointsRequest(
-                    bin_id=userdata['target_bin_id'],
-                    object_id=userdata['target_object_id'],
-                    frame_id=self.frame_id
-                )
-                print(get_points_req, get_points_req)
-                points_response = self.get_points(get_points_req)
 
-                if not points_response.success:
-                    userdata["status"] = "pass"
-                    return "aborted"
-
+                points_response = userdata['points_response']
                 grasp_response = self.get_grasp(points=points_response.points,
                                                 mask=points_response.mask,
                                                 dist_threshold=self.pre_grasp_offset, bin_id=userdata['target_bin_id'])
@@ -239,10 +254,10 @@ class GetGraspPose(State):
                     return "aborted"
 
                 # NOTE: No extra filtering or ranking on our part. Just take the first one
-                # As the arm_tool0 is 26cm in length w.r.t tip of suction cup thus adding 0.26m offset
+                # As the arm_tool0 is 35cm in length w.r.t tip of suction cup thus adding 0.35m offset
                 grasp_pose = grasp_response.poses[0]
 
-            grasp_pose = self.add_offset(-0.26, grasp_pose)
+            grasp_pose = self.add_offset(-0.35, grasp_pose)
 
             userdata['grasp_pose'] = grasp_pose
 

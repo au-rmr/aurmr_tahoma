@@ -314,6 +314,24 @@ class MoveEndEffectorInLineInOut(State):
         else:
             return "succeeded"
 
+class MoveToBin(State):
+    def __init__(self, robot):
+        State.__init__(self, input_keys=["target_bin_id"], outcomes=['succeeded', 'aborted'])
+        self.robot = robot
+
+    def execute(self, ud):
+        target = ud["target_bin_id"]
+        if isinstance(target, JointState):
+            to_log = target.position
+        else:
+            target = "pre_bin_" + target.lower()
+        to_log = target
+        rospy.loginfo(f"Moving to {to_log}")
+        success = self.robot.move_to_joint_angles(target, return_before_done=False)
+        if success:
+            return "succeeded"
+        else:
+            return "aborted"
 
 class MoveToEjector(State):
     def __init__(self, robot):
