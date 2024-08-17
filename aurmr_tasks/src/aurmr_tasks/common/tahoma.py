@@ -361,8 +361,9 @@ class Tahoma:
                            plan_only=False,
                            replan=False,
                            replan_attempts=5,
-                           tolerance=0.01,
-                           path_constraints=None):
+                           tolerance=0.005,
+                           path_constraints=None,
+                           return_before_done=False):
         """Moves the end-effector to a pose, using motion planning.
 
         Args:
@@ -407,7 +408,7 @@ class Tahoma:
             self.move_group.set_named_target(joints)
         else:
             self.move_group.set_joint_value_target(joints)
-        self.move_group.go(wait=True)
+        self.move_group.go(wait=not return_before_done)
 
         # Calling ``stop()`` ensures that there is no residual movement
         self.move_group.stop()
@@ -941,3 +942,8 @@ class Tahoma:
     def cancel_all_goals(self):
         self._move_group_client.cancel_all_goals()
         self._joint_traj_client.cancel_all_goals()
+
+    def reached_goal(self):
+        while self._move_group_client.get_state() == GoalStatus.ACTIVE:
+            continue
+        return True
