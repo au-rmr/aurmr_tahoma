@@ -136,7 +136,7 @@ def main():
             # encoding the same information in an explosion of named state transitions
             cf.splat_auto("SPLAT_PICK", "request", ["target_bin_id", "target_object_id", "target_object_asin"])
             # StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX_PRE_GRASP", planning_scene.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
-            StateMachine.add("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=.015),
+            StateMachine.add("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=.035),
                             {"succeeded": "REMAP_PRE_GRASP_POSE", "aborted":"NOTE_PASS", "preempted":"NOTE_PASS"})
             cf.inject_userdata("NOTE_PASS", "done", "status", PickRequestResponse.OUTCOME_PERCEPTION_FAILURE)
 
@@ -176,7 +176,7 @@ def main():
 
             with pick_retry_sm:
                 StateMachine.add_auto("BLOW_OFF_GRIPPER", motion.BlowOffGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
-                StateMachine.add_auto("UNBLOCK_VIEW", motion.MoveToJointAngles(robot, "hide"), ["succeeded", "aborted"])
+                StateMachine.add_auto("UNBLOCK_VIEW", motion.MoveToJointAngles(robot, "drop_hide"), ["succeeded", "aborted"])
                 StateMachine.add_auto("PICTURE_WAIT", Wait(2), ["succeeded"])
                 StateMachine.add_auto("UPDATE_BIN_MASKS", perception.UpdateBin(), ["succeeded", "preempted", "aborted"])
                 StateMachine.add('USER_PROMPT_FOR_RETRY', UserPromptForRetry(rospy.get_param("bin_bounds"), robot.tf2_buffer, timeout_connection_secs=1.0), {"retry": "REMAP_GRASP", "continue": "continue"})
