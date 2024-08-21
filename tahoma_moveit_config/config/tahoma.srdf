@@ -60,13 +60,14 @@
         JOINT STATES SHOULD BE SET TO ENABLE MAX MANIPULABILITY -->
     <!-- ROW H PRE BIN -->
     <group_state name="pre_bin_1h" group="manipulator">
-        <joint name="arm_elbow_joint" value="-1.82575"/>
-        <joint name="arm_shoulder_lift_joint" value="-0.14343"/>
-        <joint name="arm_shoulder_pan_joint" value="0.27760"/>
-        <joint name="arm_wrist_1_joint" value="2.00392"/>
-        <joint name="arm_wrist_2_joint" value="0.23414"/>
-        <joint name="arm_wrist_3_joint" value="-1.63854"/>
+        <joint name="arm_elbow_joint" value="1.76497"/>
+        <joint name="arm_shoulder_lift_joint" value="-1.57920"/>
+        <joint name="arm_shoulder_pan_joint" value="0.28546"/>
+        <joint name="arm_wrist_1_joint" value="-0.21801"/>
+        <joint name="arm_wrist_2_joint" value="0.21011"/>
+        <joint name="arm_wrist_3_joint" value="-1.54197"/>
     </group_state>
+
     <group_state name="pre_bin_2h" group="manipulator">
         <joint name="arm_elbow_joint" value="-2.11816"/>
         <joint name="arm_shoulder_lift_joint" value="-0.37549"/>
@@ -101,12 +102,12 @@
         <joint name="arm_wrist_3_joint" value="-1.53975"/>
     </group_state>
     <group_state name="pre_bin_2g" group="manipulator">
-        <joint name="arm_elbow_joint" value="1.69680"/>
-        <joint name="arm_shoulder_lift_joint" value="-2.03584"/>
-        <joint name="arm_shoulder_pan_joint" value="0.22677"/>
-        <joint name="arm_wrist_1_joint" value="0.28952"/>
-        <joint name="arm_wrist_2_joint" value="0.14784"/>
-        <joint name="arm_wrist_3_joint" value="-1.52487"/>
+        <joint name="arm_elbow_joint" value="1.56200"/>
+        <joint name="arm_shoulder_lift_joint" value="-1.78764"/>
+        <joint name="arm_shoulder_pan_joint" value="0.69108"/>
+        <joint name="arm_wrist_1_joint" value="0.21464"/>
+        <joint name="arm_wrist_2_joint" value="0.61267"/>
+        <joint name="arm_wrist_3_joint" value="-1.56259"/>
     </group_state>
     <group_state name="pre_bin_3g" group="manipulator">
         <joint name="arm_elbow_joint" value="1.55520"/>
@@ -126,20 +127,20 @@
     </group_state>
     <!-- ROW F PRE BIN -->
     <group_state name="pre_bin_1f" group="manipulator">
-        <joint name="arm_elbow_joint" value="-1.71002"/>
-        <joint name="arm_shoulder_lift_joint" value="-1.51666"/>
-        <joint name="arm_shoulder_pan_joint" value="-2.00539"/>
-        <joint name="arm_wrist_1_joint" value="3.14155"/>
-        <joint name="arm_wrist_2_joint" value="-2.08760"/>
-        <joint name="arm_wrist_3_joint" value="-1.58684"/>
+        <joint name="arm_elbow_joint" value="-1.72131"/>
+        <joint name="arm_shoulder_lift_joint" value="-0.28949"/>
+        <joint name="arm_shoulder_pan_joint" value="0.22389"/>
+        <joint name="arm_wrist_1_joint" value="-1.10592"/>
+        <joint name="arm_wrist_2_joint" value="-0.23348"/>
+        <joint name="arm_wrist_3_joint" value="1.56648"/>
     </group_state>
     <group_state name="pre_bin_2f" group="manipulator">
-        <joint name="arm_elbow_joint" value="-2.68261"/>
-        <joint name="arm_shoulder_lift_joint" value="-1.64458"/>
-        <joint name="arm_shoulder_pan_joint" value="-1.06120"/>
-        <joint name="arm_wrist_1_joint" value="1.21778"/>
-        <joint name="arm_wrist_2_joint" value="1.06609"/>
-        <joint name="arm_wrist_3_joint" value="-4.72762"/>
+        <joint name="arm_elbow_joint" value="-1.80757"/>
+        <joint name="arm_shoulder_lift_joint" value="-0.36283"/>
+        <joint name="arm_shoulder_pan_joint" value="0.95383"/>
+        <joint name="arm_wrist_1_joint" value="-0.96359"/>
+        <joint name="arm_wrist_2_joint" value="-0.96379"/>
+        <joint name="arm_wrist_3_joint" value="1.58546"/>
     </group_state>
     <group_state name="pre_bin_3f" group="manipulator">
         <joint name="arm_elbow_joint" value="-1.80329"/>
