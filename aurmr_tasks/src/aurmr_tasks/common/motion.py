@@ -85,13 +85,13 @@ class MoveEndEffectorToPose(State):
             pose = userdata["pose"]
         success = self.robot.move_to_pose(
                           pose,
-                          allowed_planning_time=10.0,
+                          allowed_planning_time=20.0,
                           execution_timeout=15.0,
-                          num_planning_attempts=12,
+                          num_planning_attempts=40,
                           orientation_constraint=None,
                           replan=True,
-                          replan_attempts=8,
-                          tolerance=0.01)
+                          replan_attempts=20,
+                          tolerance=0.02)
         if success:
             return "succeeded"
         else:
@@ -368,4 +368,3 @@ class ReleaseGripperIfNoItem(State):
         if not self.robot.check_gripper_item():
             self.robot.open_gripper(return_before_done=True)
         return 'succeeded'
-
