@@ -85,13 +85,13 @@ class MoveEndEffectorToPose(State):
             pose = userdata["pose"]
         success = self.robot.move_to_pose(
                           pose,
-                          allowed_planning_time=10.0,
+                          allowed_planning_time=20.0,
                           execution_timeout=15.0,
-                          num_planning_attempts=12,
+                          num_planning_attempts=40,
                           orientation_constraint=None,
                           replan=True,
-                          replan_attempts=8,
-                          tolerance=0.01)
+                          replan_attempts=20,
+                          tolerance=0.02)
         if success:
             return "succeeded"
         else:
@@ -299,6 +299,24 @@ class MoveEndEffectorInLineInOut(State):
         else:
             return "succeeded"
 
+class MoveToBin(State):
+    def __init__(self, robot):
+        State.__init__(self, input_keys=["target_bin_id"], outcomes=['succeeded', 'aborted'])
+        self.robot = robot
+
+    def execute(self, ud):
+        target = ud["target_bin_id"]
+        if isinstance(target, JointState):
+            to_log = target.position
+        else:
+            target = "pre_bin_" + target.lower()
+        to_log = target
+        rospy.loginfo(f"Moving to {to_log}")
+        success = self.robot.move_to_joint_angles(target, return_before_done=False)
+        if success:
+            return "succeeded"
+        else:
+            return "aborted"
 
 class CloseGripper(State):
     def __init__(self, robot, return_before_done=False):
@@ -350,4 +368,3 @@ class ReleaseGripperIfNoItem(State):
         if not self.robot.check_gripper_item():
             self.robot.open_gripper(return_before_done=True)
         return 'succeeded'
-

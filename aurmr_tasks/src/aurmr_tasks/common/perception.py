@@ -150,18 +150,47 @@ class UpdateBin(State):
         return "aborted"
 
 
+class GetPoints(State):
+    def __init__(self, frame_id='base_link'):
+        State.__init__(
+            self,
+            input_keys=['target_bin_id', 'target_object_id'],
+            output_keys=['points_response'],
+            outcomes=['succeeded', 'aborted']
+        )
+        self.get_points = rospy.ServiceProxy('/aurmr_perception/get_object_points', GetObjectPoints)
+        self.get_points.wait_for_service(timeout=5)
+        self.frame_id = frame_id
+
+    def execute(self, userdata):
+        try:
+            get_points_req = GetObjectPointsRequest(
+                bin_id=userdata['target_bin_id'],
+                object_id=userdata['target_object_id'],
+                frame_id=self.frame_id
+            )
+            print(get_points_req, get_points_req)
+            points_response = self.get_points(get_points_req)
+
+            if not points_response.success:
+                userdata["status"] = "pass"
+                return "aborted"
+
+            userdata['points_response'] = points_response
+            return "succeeded"
+        except:
+            return "aborted"
+
 class GetGraspPose(State):
     def __init__(self, tf_buffer, frame_id='base_link', pre_grasp_offset=.12):
         State.__init__(
             self,
-            input_keys=['target_bin_id', 'target_object_id'],
+            input_keys=['target_bin_id', 'target_object_id', 'points_response'],
             output_keys=['grasp_pose', 'pre_grasp_pose'],
             outcomes=['succeeded', 'preempted', 'aborted']
         )
-        self.get_points = rospy.ServiceProxy('/aurmr_perception/get_object_points', GetObjectPoints)
         self.get_grasp = rospy.ServiceProxy('/grasp_detection/detect_grasps', DetectGraspPoses)
         # Crash during initialization if these aren't running so see the problem early
-        self.get_points.wait_for_service(timeout=5)
         self.get_grasp.wait_for_service(timeout=5)
         self.frame_id = frame_id
         self.pre_grasp_offset = pre_grasp_offset
@@ -180,34 +209,41 @@ class GetGraspPose(State):
             bin_id=userdata['target_bin_id'],
             object_id=userdata['target_object_id'],
             frame_id=self.frame_id
+
         )
-        points_response = self.get_points(get_points_req)
 
-        if not points_response.success:
+        try:
+
+            points_response = userdata["points_response"]
+
+            if not points_response.success:
+                return "aborted"
+
+
+            grasp_response = self.get_grasp(points=points_response.points,
+                                            mask=points_response.mask,
+                                            dist_threshold=self.pre_grasp_offset, bin_id=userdata['target_bin_id'])
+
+            if not grasp_response.success:
+                return "aborted"
+
+            # NOTE: No extra filtering or ranking on our part. Just take the first one
+            # As the arm_tool0 is 26cm in length w.r.t tip of suction cup thus adding 0.26m offset
+            # TODO(henrifung): Pull this number from xacro, perhaps from userdata
+            grasp_pose = grasp_response.poses[0]
+
+            grasp_pose = add_offset(-0.26, grasp_pose)
+
+            userdata['grasp_pose'] = grasp_pose
+
+            # adding 0.12m offset for pre grasp pose to prepare it for grasp pose which is use to pick the object
+            pregrasp_pose = add_offset(-self.pre_grasp_offset, grasp_pose)
+
+            userdata['pre_grasp_pose'] = pregrasp_pose
+
+            self.pose_viz.publish(grasp_pose)
+            self.pre_grasp_viz.publish(pregrasp_pose)
+
+            return "succeeded"
+        except:
             return "aborted"
-
-        grasp_response = self.get_grasp(points=points_response.points,
-                                        mask=points_response.mask,
-                                        dist_threshold=self.pre_grasp_offset, bin_id=userdata['target_bin_id'])
-
-        if not grasp_response.success:
-            return "aborted"
-
-        # NOTE: No extra filtering or ranking on our part. Just take the first one
-        # As the arm_tool0 is 26cm in length w.r.t tip of suction cup thus adding 0.26m offset
-        # TODO(henrifung): Pull this number from xacro, perhaps from userdata
-        grasp_pose = grasp_response.poses[0]
-
-        grasp_pose = add_offset(-0.26, grasp_pose)
-
-        userdata['grasp_pose'] = grasp_pose
-
-        # adding 0.12m offset for pre grasp pose to prepare it for grasp pose which is use to pick the object
-        pregrasp_pose = add_offset(-self.pre_grasp_offset, grasp_pose)
-
-        userdata['pre_grasp_pose'] = pregrasp_pose
-
-        self.pose_viz.publish(grasp_pose)
-        self.pre_grasp_viz.publish(pregrasp_pose)
-
-        return "succeeded"

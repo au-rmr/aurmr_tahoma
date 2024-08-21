@@ -4,11 +4,14 @@ from smach import State
 from geometry_msgs.msg import PoseStamped
 import time
 
+import numpy as np
+from aurmr_tasks.util import pose_dist
+
 
 from aurmr_tasks.common.visualization_utils import EEFVisualization
 class MoveToOffset(State):
-    def __init__(self, robot, offset, frame_id, detect_object,idle_timeout=3):
-        super().__init__(outcomes=['succeeded', 'aborted'],  output_keys=['starting_grasp_pose_out'], input_keys=['target_pose_in'])
+    def __init__(self, robot, offset, frame_id, detect_object, idle_timeout=3):
+        super().__init__(outcomes=['succeeded', 'aborted'],  input_keys=['offset_moved_in'], output_keys=['offset_moved_out'])
         self.robot = robot
         self.offset = offset
         self.frame_id = frame_id
@@ -28,30 +31,36 @@ class MoveToOffset(State):
 
     def execute(self, userdata):
         self.close_robot_gripper()
-        start_pose = self.robot.move_group.get_current_pose()
-        start_pose.header.stamp = rospy.Time(0)
-        start_pose = self.robot.tf2_buffer.transform(start_pose, self.target_frame, rospy.Duration(1))
+        start_pose = self.current_pose_in_target_frame()
 
-        userdata.starting_grasp_pose_out = start_pose
-        rospy.logdebug("setting starting pose to ", start_pose)
-        self.vis_out.visualize_eef(start_pose)
-
-        if userdata.target_pose_in:
-            target_pose = userdata.target_pose_in
+        if self.offset is None:
+            offset = userdata.offset_moved_in
         else:
-            target_pose = self.calculate_target_pose(start_pose)
-            self.robot.force_values_init = True
+            offset = self.offset
+
+        target_pose = self.calculate_target_pose(start_pose, offset)
+        self.robot.force_values_init = True
 
         self.vis.visualize_eef(target_pose)
         self.publish_target_pose(target_pose)
 
-        return self.wait_until_stopped(0.001, self.idle_timeout)
+        result = self.wait_until_stopped(0.001, self.idle_timeout)
+
+        current_pose = self.current_pose_in_target_frame()
+        current_pose = current_pose.pose
+        start_pose = start_pose.pose
+        offset_moved = np.array([start_pose.position.x, start_pose.position.y, start_pose.position.z])
+        offset_moved = offset_moved - np.array([current_pose.position.x, current_pose.position.y, current_pose.position.z])
+
+        userdata.offset_moved_out = offset_moved
+
+        return result
 
     def close_robot_gripper(self):
         self.robot.close_gripper(return_before_done=True)
 
-    def calculate_target_pose(self, start_pose):
-        target_pose = apply_offset_to_pose(start_pose, self.offset, self.frame_id, self.robot.tf2_buffer)
+    def calculate_target_pose(self, start_pose, offset):
+        target_pose = apply_offset_to_pose(start_pose, offset, self.frame_id, self.robot.tf2_buffer)
         return self.robot.tf2_buffer.transform(target_pose, self.target_frame, rospy.Duration(1))
 
     def publish_target_pose(self, target_pose):
@@ -97,7 +106,6 @@ class MoveToOffset(State):
         current_pose = self.robot.tf2_buffer.transform(current_pose, self.target_frame, rospy.Duration(1))
 
         return current_pose
-
 
 
     def check_object_condition(self):
