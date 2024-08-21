@@ -49,3 +49,6 @@
 [submodule "third-party/stomp"]
 	path = third-party/stomp
 	url = https://github.com/ros-industrial/stomp.git
+[submodule "third-party/ros_industrial_cmake_boilerplate"]
+	path = third-party/ros_industrial_cmake_boilerplate
+	url = https://github.com/ros-industrial/ros_industrial_cmake_boilerplate.git
