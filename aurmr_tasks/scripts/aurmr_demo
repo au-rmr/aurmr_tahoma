@@ -189,7 +189,7 @@ def main():
 
             with pick_retry_sm:
                 StateMachine.add_auto("BLOW_OFF_GRIPPER", motion.BlowOffGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
-                StateMachine.add_auto("UNBLOCK_VIEW", motion.MoveToJointAngles(robot, "hide"), ["succeeded", "aborted"])
+                StateMachine.add_auto("UNBLOCK_VIEW", motion.MoveToJointAngles(robot, "drop_hide"), ["succeeded", "aborted"])
                 StateMachine.add_auto("PICTURE_WAIT", Wait(2), ["succeeded"])
                 StateMachine.add_auto("UPDATE_BIN_MASKS", perception.UpdateBin(), ["succeeded", "preempted", "aborted"])
                 StateMachine.add('USER_PROMPT_FOR_RETRY', UserPromptForRetry(rospy.get_param("bin_bounds"), robot.tf2_buffer, timeout_connection_secs=1.0), {"retry": "REMAP_GRASP", "continue": "continue"})
