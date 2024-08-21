@@ -221,11 +221,11 @@ ur_cartesian_compliance_controller:
         rot_x: 5.0
         rot_y: 5.0
         rot_z: 5.0
-        max_translation_error_norm: 25
-        max_rotation_error_norm: 5.14
+        max_translation_error_norm: 0.2
+        max_rotation_error_norm: 0.1
 
     solver:
-        error_scale: 0.35
+        error_scale: 0.5
         iterations: 1
         publish_state_feedback: True
 
