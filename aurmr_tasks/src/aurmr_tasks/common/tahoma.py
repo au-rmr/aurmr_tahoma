@@ -44,6 +44,7 @@ JOINT_ACTION_SERVER = '/pos_joint_traj_controller/follow_joint_trajectory'
 JOINT_GROUP_CONTROLLER = 'joint_group_pos_controller'
 JOINT_TRAJ_CONTROLLER = 'scaled_pos_joint_traj_controller'
 JOINT_TRAJ_CONTROLLER_SIM = 'pos_joint_traj_controller'
+COMPLIANCE_CONTROLLER = 'ur_cartesian_compliance_controller'
 GRIPPER_ACTION_SERVER = '/gripper_controller/gripper_cmd'
 MOVE_GROUP_ACTION_SERVER = 'move_group'
 TIME_FROM_START = 5

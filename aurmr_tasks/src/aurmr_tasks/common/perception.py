@@ -13,7 +13,7 @@ from aurmr_perception.srv import (
 )
 import aurmr_perception.srv
 from std_srvs.srv import Trigger
-from aurmr_tasks.util import add_offset
+from aurmr_tasks.util import add_offset, add_rotation_offset
 from geometry_msgs.msg import PoseStamped
 import tf2_ros
 
@@ -195,6 +195,14 @@ class GetGraspPose(State):
         self.pre_grasp_viz = rospy.Publisher("~selected_pre_grasp_pose", PoseStamped, queue_size=1, latch=True)
         self.tf_buffer = tf_buffer
 
+        # Clear all parameters from the server
+        param_names = ['~offset_rot_x', '~offset_rot_y', '~offset_linear_amount',
+                    '~offset_linear_axis_x', '~offset_linear_axis_y', '~offset_linear_axis_z']
+        for param_name in param_names:
+            if rospy.has_param(param_name):
+                rospy.delete_param(param_name)
+                rospy.loginfo(f"Deleted parameter: {param_name}")
+
         self.grasp_to_arm_tool0 = self.tf_buffer.lookup_transform(
             "arm_tool0", "gripper_equilibrium_grasp", rospy.Time(0), rospy.Duration(1)
         ).transform
@@ -218,6 +226,19 @@ class GetGraspPose(State):
 
         # As the arm_tool0 is 26cm in length w.r.t tip of suction cup thus adding 0.26m offset
         grasp_pose = add_offset(-0.26, grasp_pose)
+        try:
+            # HAX: This is to allow us to simulate grasp detection errors
+            offset_rot_x = rospy.get_param('/offset_rot_x', 0.0)
+            offset_rot_y = rospy.get_param('/offset_rot_y', 0.0)
+            offset_linear_amount = rospy.get_param('/offset_linear_amount', 0.0)
+            offset_linear_axis_x = rospy.get_param('/offset_linear_axis_x', 0.0)
+            offset_linear_axis_y = rospy.get_param('/offset_linear_axis_y', 0.0)
+            offset_linear_axis_z = rospy.get_param('/offset_linear_axis_z', 0.0)
+            grasp_pose = add_rotation_offset(offset_rot_x, offset_rot_y, grasp_pose)
+            grasp_pose = add_offset(offset_linear_amount, grasp_pose, (offset_linear_axis_x,offset_linear_axis_y,offset_linear_axis_z))
+        except KeyError as e:
+            pass
+
 
         userdata['grasp_pose'] = grasp_pose
 

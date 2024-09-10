@@ -24,7 +24,8 @@ from std_srvs.srv import Trigger
 # from aurmr_unseen_object_clustering.tools.match_masks import match_masks
 from aurmr_unseen_object_clustering.tools.segmentation_net import SegNet, NO_OBJ_STORED, UNDERSEGMENTATION, OBJ_NOT_FOUND, MATCH_FAILED, IN_BAD_BINS, def_config
 from copy import deepcopy
-
+import cProfile, pstats, io
+from pstats import SortKey
 
 class PodPerceptionROS:
     def __init__(self, model, camera_name, visualize, camera_type):
@@ -162,7 +163,13 @@ class PodPerceptionROS:
                         print("Can't simplify bin id ", action.item.bin_id)
                         continue
                     print(action.item.bin_id, simple_bin_id)
-                    self.model.add_object(simple_bin_id, action.item.asin_id, rgb_image, depth_image, MockCameraInfo(), points_msg)
+                    with cProfile.Profile() as pr:
+                        self.model.add_object(simple_bin_id, action.item.asin_id, rgb_image, depth_image, MockCameraInfo(), points_msg)
+                    #s = io.StringIO()
+                    #sortby = SortKey.CUMULATIVE
+                    #ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+                    #ps.print_stats()
+                    #print(s.getvalue())
                 else:
                     print("ERROR ACTION NOT SUPPORTED")
 
