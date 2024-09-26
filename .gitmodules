@@ -1,7 +1,4 @@
-[submodule "universal_robot"]
-	path = third-party/universal_robot
-	url = https://github.com/fmauch/universal_robot
-[submodule "Universal_Robots_ROS_Driver"]
+ [submodule "Universal_Robots_ROS_Driver"]
 	path = third-party/Universal_Robots_ROS_Driver
 	url = https://github.com/UniversalRobots/Universal_Robots_ROS_Driver.git
 [submodule "robotiq"]
