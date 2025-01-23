@@ -9,8 +9,10 @@ import numpy as np
 from actionlib import SimpleActionClient
 from actionlib_msgs.msg import GoalStatusArray, GoalStatus
 from control_msgs.msg import FollowJointTrajectoryAction, GripperCommandAction, GripperCommandGoal
+from vacuum_gripper_action_server.msg import GripperCommandInput
 from control_msgs.msg import FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectoryPoint
+from std_msgs.msg import Bool
 import tf2_ros
 
 #import tf2_geometry_msgs
@@ -175,6 +177,7 @@ class Tahoma:
         #self.gripper_status_listener = rospy.Subscriber("/gripper_control/status", vacuum_gripper_input, self.gripper_status_cb)
         self.custom_gripper_status_listener = rospy.Subscriber("/vacuum_gripper_control/status", vacuum_gripper_input, self.custom_gripper_status_cb)
         self.custom_gripper_blowoff_listener = rospy.Subscriber("/vacuum_gripper_control/status", vacuum_gripper_input, self.custom_gripper_blowoff_cb)
+        self.gripper_listener = rospy.Subscriber('/gripper_fingers/active', Bool, self.gripper_fingers_cb)
         self.traj_status_listener = rospy.Subscriber("/scaled_pos_joint_traj_controller/follow_joint_trajectory/status", GoalStatusArray, self.goal_status_cb)
         self.force_mag = 0
         self.torque_mag = 0
@@ -195,13 +198,16 @@ class Tahoma:
         self.torque_mag = math.sqrt(msg.wrench.torque.x**2 + msg.wrench.torque.y**2+ msg.wrench.torque.z**2)
 
     def gripper_status_cb(self, msg: vacuum_gripper_input):
-        self.object_detected = (msg.gPO < 95) 
+        self.object_detected = (msg.gPO < 95)
 
     def custom_gripper_status_cb(self, msg: vacuum_gripper_input):
         self.object_detected = msg.SYSTEM_VACUUM > 450 # because it is in mbar and is returned as an int
 
     def custom_gripper_blowoff_cb(self, msg: vacuum_gripper_input):
         self.object_detected_blowoff = msg.SYSTEM_VACUUM > 10 # because it is in mbar and is returned as an int
+
+    def gripper_fingers_cb(self, msg):
+        self.fingers_active = msg.data
 
     def goal_status_cb(self, msg: GoalStatusArray):
         latest_time = 0
@@ -268,21 +274,36 @@ class Tahoma:
             to_check = JOINT_TRAJ_CONTROLLER_SIM
         return to_check in self.active_controllers
 
-    def open_gripper(self, return_before_done=False):
+    # TODO Change to custom action server
+    def open_gripper(self, return_before_done=False, ejectors:list=[5,0,1,1,0], fingers:int=0):
         goal = GripperCommandGoal()
-        goal.command.position = 0
-        goal.command.max_effort = 1
+        goal.command.position = int(''.join(map(str, ejectors)))
+        goal.command.max_effort = fingers
         self._gripper_client.send_goal(goal)
         if not return_before_done:
             self._gripper_client.wait_for_result()
 
+        rospy.loginfo(f"Fingers active {fingers}")
+
+        while not self.fingers_active and fingers == 1:
+            rospy.sleep(.01)
+            rospy.loginfo(f"self.fingers_active {self.fingers_active}")
+
+        if fingers == 1:
+            timeout = 5
+            steps = 0
+            while self.fingers_active:
+                rospy.sleep(.01)
+                steps = steps + .01
+
     def check_gripper_item(self):
-        return self.object_detected 
-    
-    def blow_off_gripper(self, return_before_done=False):
+        return self.object_detected
+
+    # TODO Change to custom action server
+    def blow_off_gripper(self, return_before_done=False, ejectors:list=[5,2,2,2,2], fingers:int=0):
         goal = GripperCommandGoal()
-        goal.command.position = 2
-        goal.command.max_effort = 1
+        goal.command.position = int(''.join(map(str, ejectors)))
+        goal.command.max_effort = fingers
         self._gripper_client.send_goal(goal)
         if not return_before_done:
             self._gripper_client.wait_for_result()
@@ -291,12 +312,13 @@ class Tahoma:
             pass
 
         self.open_gripper()
-        return 
+        return
 
-    def close_gripper(self, return_before_done=False):
+    # TODO Change to custom action server
+    def close_gripper(self, return_before_done=False, ejectors:list=[5,0,0,0,0], fingers:int=0):
         goal = GripperCommandGoal()
-        goal.command.position = 1
-        goal.command.max_effort = 1
+        goal.command.position = int(''.join(map(str, ejectors)))
+        goal.command.max_effort = fingers
         self._gripper_client.send_goal(goal)
         rospy.loginfo("Waiting for gripper" + str(return_before_done))
         if not return_before_done:
@@ -346,7 +368,7 @@ class Tahoma:
         values = self.move_group.get_joint_value_target()
         return values
 
-    
+
 
     @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_joint_angles(self,
@@ -414,7 +436,7 @@ class Tahoma:
         #     self.move_group.set_trajectory_constraints(old_trajectory_constraints)
         current_joints = self.move_group.get_current_joint_values()
         return all_close(joint_values, current_joints, tolerance)
-    
+
 
     @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_pose(self,
@@ -426,7 +448,7 @@ class Tahoma:
                           replan=True,
                           replan_attempts=5,
                           tolerance=0.01):
-                          
+
         """Moves the end-effector to a pose, using motion planning.
 
         Args:
@@ -487,7 +509,7 @@ class Tahoma:
         current_pose = self.move_group.get_current_pose()
         rospy.loginfo(f"Pose dist: {pose_dist(goal_in_planning_frame, current_pose)}")
         return all_close(goal_in_planning_frame, current_pose, tolerance)
-    
+
     @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_pose_manipulable(self,
                           pose_stamped,
@@ -534,7 +556,7 @@ class Tahoma:
         self.move_group.allow_replanning(replan)
         self.move_group.set_goal_position_tolerance(tolerance)
         max_manipulability = 0
-        
+
         for index in range(5):
             success, plan, planning_time, error_code = self.move_group.plan()
             if not success:
@@ -580,7 +602,7 @@ class Tahoma:
                           replan=True,
                           replan_attempts=5,
                           tolerance=0.01):
-        
+
         """Moves the end-effector to a pose, using motion planning.
 
         Args:
@@ -617,7 +639,7 @@ class Tahoma:
         self.move_group.allow_replanning(replan)
         self.move_group.set_goal_position_tolerance(tolerance)
         max_manipulability = 0
-        
+
         for index in range(5):
             success, plan, planning_time, error_code = self.move_group.plan()
             if success:
@@ -635,19 +657,19 @@ class Tahoma:
                     den = 4 * (joint_limit - joint_angles_target[i])**2 * (joint_angles_target[i] - (-joint_limit))**2
                     gradient = np.abs(num/den)
                     # print("gradient", gradient)
-                    
+
                     if(np.abs(joint_angles_target[i] - (-joint_limit)) > np.abs(joint_limit - joint_angles_target[i])):
                         neg_pen_term_joint = np.append(neg_pen_term_joint, 1)
                         pos_pen_term_joint = np.append(pos_pen_term_joint, 1/np.sqrt(1+gradient))
                     else:
                         neg_pen_term_joint = np.append(neg_pen_term_joint, 1/np.sqrt(1+gradient))
                         pos_pen_term_joint = np.append(pos_pen_term_joint, 1)
-                    
+
                     if((current_joint_angles[i] - joint_angles_target[i]) > 0):
                         hyperoctant_direction = np.append(hyperoctant_direction, -1)
                     else:
                         hyperoctant_direction = np.append(hyperoctant_direction, 1)
-                        
+
 
                 # print("manipuability analysis: ", joint_angles_target, current_joint_angles, hyperoctant_direction)
                 Penalization_Matrix = np.identity(6)
@@ -750,7 +772,7 @@ class Tahoma:
         self.move_group.allow_replanning(replan)
         self.move_group.set_goal_position_tolerance(tolerance)
         max_manipulability = 0
-        
+
         for index in range(10):
             success, plan, planning_time, error_code = self.move_group.plan()
             if success:

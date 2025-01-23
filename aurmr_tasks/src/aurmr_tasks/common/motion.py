@@ -345,7 +345,7 @@ class MoveIntoJointLimits(State):
             return "succeeded"
         else:
             return "aborted"
-        
+
 class MoveEndEffectorToPose(State):
     def __init__(self, robot):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
@@ -362,13 +362,13 @@ class MoveEndEffectorToPose(State):
         self.target_pose_visualizer.publish(pose)
         success = self.robot.move_to_pose(
                           pose,
-                          allowed_planning_time=15.0,
-                          execution_timeout=15.0,
-                          num_planning_attempts=20,
+                          allowed_planning_time=25.0,
+                          execution_timeout=25.0,
+                          num_planning_attempts=40,
                           orientation_constraint=None,
                           replan=True,
-                          replan_attempts=8,
-                          tolerance=0.01)
+                          replan_attempts=10,
+                          tolerance=0.005)
         # input('check planning frame!!!!!!!!!!!!!!')
         if success:
             return "succeeded"
@@ -392,21 +392,17 @@ class MoveEndEffectorToPoseManipulable(State):
         self.target_pose_visualizer.publish(pose)
         success = self.robot.move_to_pose_manipulable(
                           pose,
-                          allowed_planning_time=15.0,
-                          execution_timeout=15.0,
-                          num_planning_attempts=20,
+                          allowed_planning_time=25.0,
+                          execution_timeout=25.0,
+                          num_planning_attempts=40,
                           orientation_constraint=None,
                           replan=True,
-                          replan_attempts=8,
-                          tolerance=0.01)
+                          replan_attempts=10,
+                          tolerance=0.005)
         if success:
             return "succeeded"
         else:
             return "aborted"
-<<<<<<< HEAD
-=======
-
->>>>>>> 1. Added changes for multiple suction outlets for vaccum gripper 2. Added pod models which were created by sanjar. 3. Added pod calibration script for both the pods. 4. Added modified version of reachability code originally implemented by hitesh. 4. Modified collision scene for arm by adding a constraint space instead of only pod model. 5. Modified the 3d point calibration for multiple files
 
 class MoveEndEffectorToPoseLinear(State):
     def __init__(self, robot, to_pose):
@@ -453,7 +449,7 @@ class MoveEndEffectorToOffset(State):
 
 
 class ServoEndEffectorToPose(State):
-    def __init__(self, robot, to_pose, pos_tolerance=.01, angular_tolerance=.1, frame=None):
+    def __init__(self, robot, to_pose, pos_tolerance=.001, angular_tolerance=.01, frame=None):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
         self.to_pose = to_pose
@@ -474,7 +470,7 @@ class ServoEndEffectorToPose(State):
 
 
 class ServoEndEffectorToOffset(State):
-    def __init__(self, robot, offset, pos_tolerance=0.01, angular_tolerance=0.1, frame=None):
+    def __init__(self, robot, offset, pos_tolerance=0.001, angular_tolerance=0.01, frame=None):
         State.__init__(self, input_keys=['offset'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
         self.offset = offset
@@ -529,6 +525,90 @@ class AdjustLeftIfColumn4(State):
             return 'succeeded' if outcome == "succeeded" else 'aborted'
         else:
             return 'pass'
+
+class GraspObject(State):
+    def __init__(self, robot, offset=[0,0,0], use_force = False, use_gripper = False, default_pose=None):
+        State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
+
+        # self.target_pose_pub = rospy.Publisher('/curobo_target', MarkerArray, queue_size=1, latch=True)
+        # self.custom_gripper_status_listener = rospy.Subscriber("/vacuum_gripper_control/status", vacuum_gripper_input, self.custom_gripper_status_cb)
+
+        # self.offset = offset
+        # self.use_force = use_force
+        # self.use_gripper = use_gripper
+
+        # self.force_mag = 0
+        # self.object_detected = False
+
+        # self.end_effector_pose = None
+        # self.end_effector_pose_listener = rospy.Subscriber('/end_effector_pose', PoseStamped, self.end_effector_pose_callback)
+
+        self.robot_move = False
+        self.gripper_move = False
+
+        self.ACTIVATE_CONTROL = '/robot_move'
+        self.ACTIVATE_GRIPPER = '/gripper_move'
+
+        self.robot_move_publisher = rospy.Publisher(self.ACTIVATE_CONTROL, Bool)
+        self.robot_move_listener = rospy.Subscriber(self.ACTIVATE_CONTROL, Bool, self.callback)
+
+        self.gripper_move_publisher = rospy.Publisher(self.ACTIVATE_GRIPPER, Bool)
+        self.gripper_move_listener = rospy.Subscriber(self.ACTIVATE_GRIPPER, Bool, self.callback)
+
+    def callback(self, msg):
+        self.robot_move = msg.data
+
+    # def end_effector_pose_callback(self, msg):
+    #     pose = msg.pose
+    #     list_pose = [pose.position.x, pose.position.y, pose.position.z]
+    #     self.end_effector_pose = list_pose
+
+    # def custom_gripper_status_cb(self, msg: vacuum_gripper_input):
+    #     self.object_detected = msg.SYSTEM_VACUUM > 450 # because it is in mbar and is returned as an int
+
+
+    def execute(self, userdata):
+
+        # self.curobo_move = True
+        rospy.sleep(1)
+        self.curobo_move_publisher.publish(Bool(data=self.robot_move))
+
+        while self.robot_move:
+            # # print("The robot is still moving to: ", pose)
+            # # print("Goal has not reached yet")
+
+            # # rospy.loginfo("Waiting?: " + str(wait) + " " + str(self.goal_finished))
+            # if steps > time_out:
+            #     # self.AC_pub.publish(Bool(data=False))
+            #     rospy.loginfo("Time_out in normal movement")
+            #     # early_stop = True
+            #     self.curobo_move = False
+            #     self.curobo_move_publisher.publish(Bool(data=self.curobo_move))
+            #     success = False
+            #     break
+            # elif self.use_force and abs(self.force_mag-prev_force_limit) > force_limit:
+            #     rospy.loginfo(f" Force values: {abs(self.force_mag-prev_force_limit)}")
+            #     self.curobo_move = False
+            #     self.curobo_move_publisher.publish(Bool(data=self.curobo_move))
+            #     success = True
+            #     rospy.loginfo("Stopping movement due to force feedback")
+            #     break
+            # elif self.use_gripper and self.object_detected:
+            #     self.curobo_move = False
+            #     self.curobo_move_publisher.publish(Bool(data=self.curobo_move))
+            #     success = True
+            #     rospy.loginfo("Stopping movement due to object detection")
+            #     break
+            rospy.sleep(0.1)
+            # steps = steps + 0.1
+
+        # rospy.loginfo("Finish a waypoint", pose)
+        if success:
+            return "succeeded"
+        else:
+            return "aborted"
+
+
 
 def robust_move_to_offset(robot, offset, frame=None):
     sm = StateMachine(["succeeded", "preempted", "aborted"])
@@ -586,7 +666,7 @@ class MoveEndEffectorInLineInOut(State):
 
 
 class CloseGripper(State):
-    def __init__(self, robot, return_before_done=False):
+    def __init__(self, robot, return_before_done=False, fingers:int=0):
         State.__init__(self, input_keys=[], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
         self.return_before_done = return_before_done
@@ -597,17 +677,18 @@ class CloseGripper(State):
 
 
 class OpenGripper(State):
-    def __init__(self, robot, return_before_done=False):
+    def __init__(self, robot, return_before_done=False, fingers:int=0):
         State.__init__(self, input_keys=[], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
         self.return_before_done = return_before_done
+        self.fingers = fingers
 
     def execute(self, ud):
-        self.robot.open_gripper(return_before_done=self.return_before_done)
+        self.robot.open_gripper(return_before_done=self.return_before_done, fingers=self.fingers)
         return "succeeded"
 
 class BlowOffGripper(State):
-    def __init__(self, robot, return_before_done=False):
+    def __init__(self, robot, return_before_done=False, fingers:int=0):
         State.__init__(self, input_keys=[], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
         self.return_before_done = return_before_done
@@ -615,7 +696,17 @@ class BlowOffGripper(State):
     def execute(self, ud):
         self.robot.blow_off_gripper(return_before_done=self.return_before_done)
         return "succeeded"
-    
+
+class ActivateGripperFingers(State):
+    def __init__(self, robot, return_before_done=False):
+        State.__init__(self, input_keys=[], outcomes=['succeeded', 'preempted', 'aborted'])
+        self.robot = robot
+        self.return_before_done = return_before_done
+
+    def execute(self, ud):
+        self.robot.open_gripper(return_before_done=self.return_before_done, fingers=1)
+        return "succeeded"
+
 
 class CheckGripperItem(State):
     def __init__(self, robot):
@@ -880,20 +971,20 @@ class AddFullPodCollisionGeometryDropHide(State):
         HALF_POD_SIZE = POD_SIZE / 2
         WALL_WIDTH = 0.003
         SIDE_WALL_WIDTH = 0.033
-        
+
         self.robot.scene.add_box("front_frame", PoseStamped(header=Header(frame_id="pod_base_link"),
                                                     pose=Pose(position=Point(x=POD_SIZE/2, y=0., z=1.34),
                                                               orientation=I_QUAT)), (1.8, .05, 3.0))
-        
+
         self.robot.scene.add_box("left_side_frame", PoseStamped(header=Header(frame_id="base_link"),
                                                     pose=Pose(position=Point(x=0.25, y=1.00, z=1.34),
                                                               orientation=I_QUAT)), (2.00, .05, 3.0))
-        
+
         self.robot.scene.add_box("right_side_frame", PoseStamped(header=Header(frame_id="base_link"),
                                                     pose=Pose(position=Point(x=0.25, y=-1.00, z=1.34),
                                                               orientation=I_QUAT)), (2.00, .05, 3.0))
 
-        
+
         number_collision_box = 3
 
         start = rospy.get_time()
@@ -925,20 +1016,20 @@ class AddFullPodCollisionGeometry(State):
         HALF_POD_SIZE = POD_SIZE / 2
         WALL_WIDTH = 0.003
         SIDE_WALL_WIDTH = 0.033
-        
+
         self.robot.scene.add_box("front_frame", PoseStamped(header=Header(frame_id="pod_base_link"),
                                                     pose=Pose(position=Point(x=POD_SIZE/2, y=0., z=1.34),
                                                               orientation=I_QUAT)), (1.8, .05, 3.0))
-        
+
         self.robot.scene.add_box("left_side_frame", PoseStamped(header=Header(frame_id="base_link"),
                                                     pose=Pose(position=Point(x=0.25, y=1.00, z=1.34),
                                                               orientation=I_QUAT)), (2.00, .05, 3.0))
-        
+
         self.robot.scene.add_box("right_side_frame", PoseStamped(header=Header(frame_id="base_link"),
                                                     pose=Pose(position=Point(x=0.25, y=-1.00, z=1.34),
                                                               orientation=I_QUAT)), (2.00, .05, 3.0))
 
-        
+
         number_collision_box = 3
         print("target bin id", ud['target_bin_id'])
         try:
@@ -959,11 +1050,11 @@ class AddFullPodCollisionGeometry(State):
                     # self.robot.scene.add_box("horizontal_plane", PoseStamped(header=Header(frame_id="base_link"),
                     #                                             pose=Pose(position=Point(x=0.75, y=0.0, z=z_coordinate),
                     #                                                     orientation=I_QUAT)), (0.5, 1.5, 0.02))
-                    
+
                     # self.robot.scene.add_box("vertical_plane_1", PoseStamped(header=Header(frame_id="base_link"),
                     #                                             pose=Pose(position=Point(x=0.72, y=y_coordinate+0.18, z=1.2),
                     #                                                     orientation=I_QUAT)), (0.5, 0.01, 3.0))
-                    
+
                     # self.robot.scene.add_box("vertical_plane_2", PoseStamped(header=Header(frame_id="base_link"),
                     #                                             pose=Pose(position=Point(x=0.72, y=y_coordinate-0.18, z=1.2),
                     #                                                     orientation=I_QUAT)), (0.5, 0.01, 3.0))

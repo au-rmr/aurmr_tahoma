@@ -89,7 +89,8 @@
     </link>
 
     <joint name="coupling_link_gripper_robotiq_arg2f_base_link_joint" type="fixed">
-      <origin xyz="0 0 0.055" rpy="0 0 0"/>
+    <!-- xyz use to be 0 0 0.055 before new multifingered vacuum gripper-->
+      <origin xyz="0 0 0.0" rpy="0 0 0"/>
       <parent link="coupling"/>
       <child link="gripper_base_link"/>
     </joint>
@@ -184,8 +185,8 @@
     <xacro:arg name="add_plug" default="false" />
     <xacro:arg name="use_mesh" default="true" />
     <xacro:include filename="$(find tahoma_description)/urdf/_l515.urdf.xacro" />
-    
-  
+
+
     <link name="realsense_back_gripper_mount">
       <collision>
         <origin xyz="0.010227 -0.005 0.035" rpy="0 0 0"/>
