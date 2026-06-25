@@ -73,6 +73,15 @@
       <remap from="points" to="/camera/depth/points2"/>
     </node>
 
+    <!-- Physical mount: camera_base → camera_genesis (body frame) 0.368 0.635 -0.389 -1.5708 0.0 -0.1 -->
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_genesis_broadcaster"
+          args="0.69 0.635 0.10 -1.5708 0.0 -0.1 camera_base camera_genesis"/>
+
+    <!-- Anchor RealSense driver TF tree (camera_genesis_link is its root) to our tree.
+         The driver publishes all internal frames (color/depth optical) itself. -->
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_genesis_link_broadcaster"
+          args="0 0 0 0 0 0 camera_genesis camera_genesis_link"/>
+
 
   <!-- Server for webserver communication -->
   <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" >
