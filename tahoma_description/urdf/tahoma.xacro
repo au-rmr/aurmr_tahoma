@@ -44,6 +44,30 @@
       <child link="stand"/>
     </joint>
 
+
+    <link name="table">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="1.0 0.8 0.05"/>
+        </geometry>
+        <material name="table_color">
+          <color rgba="0.8 0.6 0.4 0.5"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="1.0 0.8 0.05"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="base_link_table_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="table"/>
+      <origin xyz="1.0 0.0 0.75" rpy="0 0 0"/>
+    </joint>
+
     <joint name="robot_plate_arm_base_link_joint" type="fixed">
       <parent link="robot_plate"/>
       <child link="arm_base_link"/>
@@ -203,7 +227,7 @@
         <parent link="base_link"/>
         <child link="camera_base"/>
         <!-- Link is centered on the optical frames. Slight offset in Y direction to compensate -->
-        <origin xyz="-0.20750794 -0.01749962  1.40753882" rpy="3.14 3.14 -3.14" />
+        <origin xyz="-0.20750794 -0.03749962  1.40753882" rpy="3.14 3.14 -3.14" />
         <!-- <origin xyz="-0.2426 -0.0277 1.4078" rpy="3.14 3.14 -3.14" /> -->
       </joint>
     </xacro:if>
@@ -212,7 +236,7 @@
     <xacro:arg name="add_plug" default="false" />
     <xacro:arg name="use_mesh" default="true" />
     <xacro:include filename="$(find tahoma_description)/urdf/_l515.urdf.xacro" />
-    
+
     <!-- D435 Realsense Camera -->
     <!-- <xacro:sensor_d435 parent="base_link" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
       <origin xyz="-0.217 0.013 1.354" rpy="0 0 0"/>
@@ -238,7 +262,7 @@
         </geometry>
       </visual>
     </link>
-    
+
     <xacro:sensor_l515 parent="coupling" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
       <origin xyz="0.0 0.046 0.06" rpy="${pi} -${0.5 * pi} ${0.5 * pi}"/>
     </xacro:sensor_l515>
@@ -286,19 +310,19 @@
 
       <xacro:sensor_l515 name="camera_upper_left" parent="camera_upper_left_mount" use_nominal_extrinsics="${use_nominal_camera_extrinsics}">
         <origin xyz="0 0 0" rpy="0 0 0"/>
-      </xacro:sensor_l515> 
+      </xacro:sensor_l515>
     </xacro:if>
+
+
+    <link name="gripper_equilibrium_grasp"/>
+
+    <joint name="gripper_base_link_gripper_equilibrium_grasp" type="fixed">
+      <parent link="epick_end_effector"/>
+        <child link="gripper_equilibrium_grasp"/>
+        <origin xyz="0 0 0"
+                rpy="0 0 0"/>
+    </joint>
+
   </xacro:macro>
 
-  <link name="gripper_equilibrium_grasp"/>
-
-  <joint name="gripper_base_link_gripper_equilibrium_grasp" type="fixed">
-    <parent link="epick_end_effector"/>
-      <child link="gripper_equilibrium_grasp"/>
-      <origin xyz="0 0 0"
-              rpy="0 0 0"/>
-  </joint>
-
 </robot>
-
-
