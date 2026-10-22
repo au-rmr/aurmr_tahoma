@@ -225,8 +225,15 @@ class GraspDetectionROS:
         width = 640
         height = 480
 
-        # picks first mask
-        mask_id = 1
+        unique_values = np.unique(cv_image)
+        unique_values = unique_values[unique_values != 0]  # Exclude 0
+
+        if len(unique_values) == 0:
+            raise ValueError("No non-zero values found in the cv_image.")
+
+        # Pick a mask_id from the unique non-zero values
+        mask_id = np.random.choice(unique_values)
+
         cv_image_obj = np.zeros_like(cv_image)
         cv_image_obj[cv_image == mask_id] = 1
         count = (cv_image == 1).sum()
@@ -244,7 +251,11 @@ class GraspDetectionROS:
         )
         plt.savefig(os.path.join(img_path, f"grasp_point_img_{result.tm_mday}_{result.tm_hour}_{result.tm_min}_{result.tm_sec}.png"))
 
-        pointz = 0.6
+        pointz = 0.4
+        rot180 = True
+        if rot180:
+            cx = width - cx
+            cy = height - cy
         pointx = (grasp_point[0] - cx) * pointz / fx
         pointy = (grasp_point[1] - cy) * pointz / fy
 
@@ -253,18 +264,18 @@ class GraspDetectionROS:
         transform= self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
         transform_camera_to_base_link= self.tf_buffer.lookup_transform('base_link', 'gripper_camera', rospy.Time())
 
-        print("point ", point)
-        CLOSER_TO_TOTE_OFFSET = 0.
-        CLOSER_TO_BASE_OFFSET = -0.06
-        point[0] = point[0] * 1.1
-        point[1] = point[1] * 1
-        point[0] += CLOSER_TO_TOTE_OFFSET
-        point[1] += CLOSER_TO_BASE_OFFSET
+        # print("point ", point)
+        # CLOSER_TO_TOTE_OFFSET = -0.02
+        # CLOSER_TO_BASE_OFFSET = -0.1
+        # point[0] = point[0] * 1.1
+        # point[1] = point[1] * 1
+        # point[0] += CLOSER_TO_TOTE_OFFSET
+        # point[1] += CLOSER_TO_BASE_OFFSET
 
         clamped_euler_angles = [0., 0., 0.]
 
         clamped_euler_angles[0] = 0.0
-        clamped_euler_angles[1] = -1.57
+        clamped_euler_angles[1] = -math.pi/2
 
         print("post euler angles", clamped_euler_angles[0]*180/math.pi, clamped_euler_angles[1]*180/math.pi)
         # transform from the 3d pose to rgb_camera_link

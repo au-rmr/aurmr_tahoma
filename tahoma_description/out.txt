@@ -1,0 +1,20 @@
+[0m[ INFO] [1723839272.327336117]: rviz version 1.14.7[0m
+[0m[ INFO] [1723839272.327363354]: compiled against Qt version 5.12.9[0m
+[0m[ INFO] [1723839272.327367392]: compiled against OGRE version 1.10.12 (Xalafu)[0m
+[0m[ INFO] [1723839272.333242800]: Forcing OpenGl version 0.[0m
+[0m[ INFO] [1723839272.810895810]: Stereo is NOT SUPPORTED[0m
+[0m[ INFO] [1723839272.810932534]: OpenGL device: NVIDIA GeForce RTX 3090/PCIe/SSE2[0m
+[0m[ INFO] [1723839272.810938590]: OpenGl version: 4.6 (GLSL 4.6).[0m
+[0m[ INFO] [1723839291.707260369]: Loading robot model 'tahoma'...[0m
+[0m[ INFO] [1723839291.722771465]: IK Using joint arm_shoulder_link -6.13319 6.13319[0m
+[0m[ INFO] [1723839291.722786688]: IK Using joint arm_upper_arm_link -6.13319 6.13319[0m
+[0m[ INFO] [1723839291.722790948]: IK Using joint arm_forearm_link -2.99159 2.99159[0m
+[0m[ INFO] [1723839291.722794515]: IK Using joint arm_wrist_1_link -6.13319 6.13319[0m
+[0m[ INFO] [1723839291.722798079]: IK Using joint arm_wrist_2_link -6.13319 6.13319[0m
+[0m[ INFO] [1723839291.722801514]: IK Using joint arm_wrist_3_link -6.13319 6.13319[0m
+[0m[ INFO] [1723839291.722806577]: Looking in common namespaces for param name: manipulator/position_only_ik[0m
+[0m[ INFO] [1723839291.723263139]: Looking in common namespaces for param name: manipulator/solve_type[0m
+[0m[ INFO] [1723839291.723722091]: Using solve type Speed[0m
+[0m[ INFO] [1723839291.767709836]: Starting planning scene monitor[0m
+[0m[ INFO] [1723839291.768913877]: Listening to '/move_group/monitored_planning_scene'[0m
+[0m[ INFO] [1723839291.787276924]: Constructing new MoveGroup connection for group 'manipulator' in namespace ''[0m

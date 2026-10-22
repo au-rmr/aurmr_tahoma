@@ -536,16 +536,16 @@ class DiffPodModel:
         if rgb_image is None:
             return False, f"Table RGB image is None"
         full_masks_ret = np.zeros_like(rgb_image[:, :, 0])
-        bin_crop = [100,250,35,500]
-        rgb_image_croppped = rgb_image[bin_crop[0]:bin_crop[1], bin_crop[2]:bin_crop[3], :]
-        masks, full_masks = self.table_net.mask_generator(rgb_image_croppped)
-        if not masks or not full_masks:
+        bin_crop = [151,256,60,540]
+        rgb_image_cropped = rgb_image[bin_crop[0]:bin_crop[1], bin_crop[2]:bin_crop[3], :]
+        plt.imsave('cropped_table.png', rgb_image_cropped)
+        masks, full_masks = self.table_net.mask_generator(rgb_image_cropped)
+        if masks is None or full_masks is None:
             return False, f"No masks were found", None
         full_masks_ret[bin_crop[0]:bin_crop[1], bin_crop[2]:bin_crop[3]] = full_masks
         self.table_mask = full_masks_ret
-        # viz = self.table_net.vis_masks(rgb_image, full_masks_ret)
-        # plt.imsave('viz.png', viz)
-        # plt.show()
+        viz = self.table_net.vis_masks(rgb_image, full_masks_ret)
+        plt.imsave('viz.png', viz)
         return True, f"Table has been segmented successfully.", ros_numpy.msgify(Image, full_masks_ret, encoding="mono8")
 
     def capture_object(self, bin_id, object_id, rgb_image, depth_image, camera_intrinsics):

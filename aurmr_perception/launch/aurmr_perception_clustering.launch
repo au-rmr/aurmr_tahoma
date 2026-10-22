@@ -36,6 +36,6 @@
     <arg name="name" value="gripper_camera"/>
     <arg name="config" value="$(find tahoma_bringup)/config/gripper_camera_calibration.yaml"/>
   </include>
-  <node pkg="tf2_ros" type="static_transform_publisher" name="gripper_camera_link_offset_broadcaster" args="0 0.04 0.01 3.14 0 0 gripper_base_link gripper_camera" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="gripper_camera_link_offset_broadcaster" args="-0.03 0.05 0.01 3.14 0 0 gripper_base_link gripper_camera" />
 
 </launch>
