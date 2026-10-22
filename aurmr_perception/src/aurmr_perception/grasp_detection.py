@@ -202,6 +202,10 @@ class GraspDetectionROS:
         cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
         # cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
         pts = ros_numpy.numpify(request.points)
+
+        print("*************************************************************header!", request.points.header)
+        # request.points.frame_id = 'rgb_camera_link_offset'
+
         self.points_viz_pub.publish(request.points)
         pts = np.stack([pts['x'],
                         pts['y'],
@@ -238,6 +242,8 @@ class GraspDetectionROS:
 
         print("rgb shape in grasp", self.rgb_img.shape)
         pts = ros_numpy.numpify(request.points)
+        # print("*************************************************************header!", request.points.header)
+        # request.points.frame_id = 'rgb_camera_link_offset'
         self.points_viz_pub.publish(request.points)
         pts = np.stack([pts['x'],
                         pts['y'],
@@ -365,10 +371,10 @@ class GraspDetectionROS:
         print(grasp_point, grasp_angle*180/np.pi, crop_bin_bounds)
 
 
-        center3D_depth_value = self.mean_nonzero_around_grasp(self.depth_img, grasp_point)
-        if center3D_depth_value < 0.01:
-            print("Hole in depth image, setting depth to default 0.018")
-            center3D_depth_value = 0.018
+        center3D_depth_value = self.depth_img[int(grasp_point[1]), int(grasp_point[0])]#self.mean_nonzero_around_grasp(self.depth_img, grasp_point)
+        #if center3D_depth_value < 0.01:
+        #    print("Hole in depth image, setting depth to default 0.018")
+        #    center3D_depth_value = 0.018
         pointz = center3D_depth_value/1000.0
         pointx = (grasp_point[0] - cx) * pointz / fx
         pointy = (grasp_point[1] - cy) * pointz / fy
@@ -378,17 +384,22 @@ class GraspDetectionROS:
         transform= self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
         transform_camera_to_base_link= self.tf_buffer.lookup_transform('base_link', 'rgb_camera_link', rospy.Time())
 
-        # fixed depth for grasp point
-        point[2] = transform.transform.translation.x - transform_camera_to_base_link.transform.translation.x
+        if False:
+            # fixed depth for grasp point
+            point[2] = transform.transform.translation.x - transform_camera_to_base_link.transform.translation.x
 
         clamped_euler_angles = [0., 0., 0.]
 
         clamped_euler_angles[0] = grasp_angle[0]
         clamped_euler_angles[1] = -grasp_angle[1]
 
-        # pre_grasp_x_dist = 0.1
-        # point[0] += pre_grasp_x_dist*np.sin(clamped_euler_angles[0])
-        # point[1] += pre_grasp_x_dist*np.sin(clamped_euler_angles[1])
+
+
+        if False:
+            # Add an offset to take the
+            pre_grasp_x_dist = 0.1
+            point[0] += pre_grasp_x_dist*np.sin(clamped_euler_angles[0])
+            point[1] += pre_grasp_x_dist*np.sin(clamped_euler_angles[1])
 
         # clamped_euler_angles[1] = 0.0
         print("post euler angles", clamped_euler_angles[0]*180/math.pi, clamped_euler_angles[1]*180/math.pi)
@@ -480,14 +491,16 @@ class GraspDetectionROS:
         RGB_TO_DEPTH_FRAME_OFFSET = 0.02
         DEPTH_TILT = -transform.transform.translation.z - 0.02
 
-        point[2] = transform.transform.translation.x - POD_OFFSET - transform_camera_to_base_link.transform.translation.x
-        point[1] -= point[2]*np.sin(DEPTH_TILT)
-        point[0] -= RGB_TO_DEPTH_FRAME_OFFSET
+        if False:
+            point[2] = transform.transform.translation.x - POD_OFFSET - transform_camera_to_base_link.transform.translation.x
+            point[1] -= point[2]*np.sin(DEPTH_TILT)
+            point[0] -= RGB_TO_DEPTH_FRAME_OFFSET
 
         clamped_euler_angles = [0., 0., 0.]
 
-        clamped_euler_angles[0] = 0.0
-        clamped_euler_angles[1] = 0.0
+        if False:
+            clamped_euler_angles[0] = 0.0
+            clamped_euler_angles[1] = 0.0
 
         # point[0] += 0.265*np.sin(clamped_euler_angles[0])
         # point[1] += 0.265*np.sin(clamped_euler_angles[1])
