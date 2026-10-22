@@ -1,4 +1,4 @@
-#!/usr/bin/env python  
+#!/usr/bin/env python
 import rospy
 
 import math
@@ -19,7 +19,7 @@ POD_FACE_C = ['pod_bin_1e', 'pod_bin_2e', 'pod_bin_3e',
               'pod_bin_1c', 'pod_bin_2c', 'pod_bin_3c',]
 
 POD_FACE_C_FROM_MARKER_X = [0, 0]
-POD_FACE_C_FROM_MARKER_Y = {'e': 0.22, 'd': 0.195, 'c': 0.22}
+POD_FACE_C_FROM_MARKER_Y = {'e': 0.22, 'd': 0.20, 'c': 0.22}
 
 bin_DM_coords_base_link = {}
 bin_DM_coords = {}
@@ -75,8 +75,8 @@ def distorted_point(pt, mtx, dist):
     r6 = r2*r4
     k1, k2, p1, p2, k3 = dist.flatten()
     # Radial distortion
-    x_d = x_u * (1 + k1*r2 + k2*r4 + k3*r6) 
-    y_d = y_u * (1 + k1*r2 + k2*r4 + k3*r6) 
+    x_d = x_u * (1 + k1*r2 + k2*r4 + k3*r6)
+    y_d = y_u * (1 + k1*r2 + k2*r4 + k3*r6)
     # Tangential distortion
     x_d = x_d + (2*p1*x_u*y_u + p2*(r2 + 2*x_u**2))
     y_d = y_d + (p1*(r2 + 2*y_u**2) + 2*p2*x_u*y_u)
@@ -96,13 +96,13 @@ if __name__ == '__main__':
             try:
                 trans_top_left_base_link = tfBuffer.lookup_transform('base_link', bin, rospy.Time())
                 trans_right_bottom_base_link = tfBuffer.lookup_transform('base_link', bin, rospy.Time())
-                trans_top_left_base_link = np.array([trans_top_left_base_link.transform.translation.x, trans_top_left_base_link.transform.translation.y, trans_top_left_base_link.transform.translation.z]) 
+                trans_top_left_base_link = np.array([trans_top_left_base_link.transform.translation.x, trans_top_left_base_link.transform.translation.y, trans_top_left_base_link.transform.translation.z])
                 trans_right_bottom_base_link = np.array([trans_right_bottom_base_link.transform.translation.x, trans_right_bottom_base_link.transform.translation.y, trans_right_bottom_base_link.transform.translation.z])
                 bin_DM_coords_base_link[bin] = trans_top_left_base_link
 
                 trans_top_left = tfBuffer.lookup_transform('rgb_camera_link', bin, rospy.Time())
                 trans_right_bottom = tfBuffer.lookup_transform('rgb_camera_link', bin, rospy.Time())
-                trans_top_left = np.array([trans_top_left.transform.translation.x, trans_top_left.transform.translation.y, trans_top_left.transform.translation.z]) 
+                trans_top_left = np.array([trans_top_left.transform.translation.x, trans_top_left.transform.translation.y, trans_top_left.transform.translation.z])
                 trans_right_bottom = np.array([trans_right_bottom.transform.translation.x, trans_right_bottom.transform.translation.y, trans_right_bottom.transform.translation.z])
                 bin_DM_coords[bin] = trans_top_left
                 # break
@@ -128,7 +128,7 @@ if __name__ == '__main__':
 
     trans_kinect_base_ink = tfBuffer.lookup_transform('base_link', 'depth_camera_link', rospy.Time())
     # trans_kinect_base_ink = np.array([trans_kinect_base_ink.transform.translation.x, trans_kinect_base_ink.transform.translation.y, trans_kinect_base_ink.transform.translation.z])
-    
+
     rgb_img = cv2.resize(rgb_img_undistort, (int(rgb_img_undistort.shape[1]/4), int(rgb_img_undistort.shape[0]/4)), interpolation = cv2.INTER_AREA)
 
     for bin in POD_FACE_C:
@@ -140,7 +140,7 @@ if __name__ == '__main__':
 
         if(bin[8] == '1'):
             kinect_3F[0] += 0.025
-        
+
         kinect_3F[1] -= 0.025
 
         u1,v1 = convert_xyz_point_to_uv_point(kinect_3F, fx, cx, fy, cy)
@@ -149,13 +149,13 @@ if __name__ == '__main__':
 
         if(bin[8] == '1'):
             kinect_3F[1] -= POD_FACE_C_FROM_MARKER_Y[bin_id]
-            kinect_3F[0] += 0.23
+            kinect_3F[0] += 0.31
             kinect_3F[0] -= 0.025
         else:
             kinect_3F[1] -= POD_FACE_C_FROM_MARKER_Y[bin_id]
-            kinect_3F[0] += 0.23
-        
-        if(bin[8] == '4'):
+            kinect_3F[0] += 0.31
+
+        if(bin[8] == '3'):
             kinect_3F[0] -= 0.025
 
         u2,v2 = convert_xyz_point_to_uv_point(kinect_3F, fx, cx, fy, cy)
@@ -163,13 +163,16 @@ if __name__ == '__main__':
         # rgb_img = cv2.circle(rgb_img, (int(u2/4), int(v2/4)), 2, (255,0,0), 3)
         cv2.rectangle(rgb_img, (int(u2/4), int(v2/4)), (int(u1/4), int(v1/4)), (128, 0, 0), 2)
 
-        bin_DM_pixel_coords[bin[3:]] = np.array([int(v2), int(v1), int(u2), int(u1)])
+        bin_DM_pixel_coords[bin[3:]] = np.array([int(v2), int(v1), int(u1), int(u2)])
 
+
+
+    bin_DM_pixel_coords = {k[5:].upper(): v for k, v in bin_DM_pixel_coords.items()}
     print(bin_DM_pixel_coords)
 
     with open('/tmp/calibration_pixel_coords_pod.pkl', 'wb') as f:
         pickle.dump(bin_DM_pixel_coords, f)
-    
+
     cv2.imshow("rgb", rgb_img)
     cv2.waitKey(0)
 
