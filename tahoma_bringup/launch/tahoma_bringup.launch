@@ -29,7 +29,7 @@
 
     <!-- Use realsense-enumerate-devices to examine physical port layout -->
     <include file="$(find tahoma_bringup)/launch/camera.launch">
-      <arg name="camera" value="camera_lower_right" />
+      <arg name="camera" value="camera" />
       <arg name="usb_port_id" value="4-1" />
     </include>
     <!-- FIXME(nickswalker,6-9-22): Depth interference when both cameras are running -->
@@ -49,9 +49,9 @@
 
     <node pkg="nodelet" type="nodelet" name="nodelet1"
           args="load depth_image_proc/point_cloud_xyz nodelet_manager">
-      <remap from="camera_info" to="/camera_lower_right/aligned_depth_to_color/camera_info"/>
-      <remap from="image_rect" to="/camera_lower_right/aligned_depth_to_color/image_raw"/>
-      <remap from="points" to="/camera/depth/points"/>
+      <remap from="camera_info" to="/camera/aligned_depth_to_color/camera_info"/>
+      <remap from="image_rect" to="/camera/aligned_depth_to_color/image_raw"/>
+      <remap from="points" to="/camera/color/depth/points"/>
     </node>
 
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tahoma_description)/config/view_model.rviz"/>

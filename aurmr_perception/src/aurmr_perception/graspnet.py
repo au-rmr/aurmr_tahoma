@@ -299,7 +299,7 @@ class GraspNetDetector:
 
         self.filter_pointcloud()
 
-        ros_depth_image = rospy.wait_for_message('/camera_lower_left/aligned_depth_to_color/image_raw', Image, timeout=1)
+        ros_depth_image = rospy.wait_for_message('/camera/aligned_depth_to_color/image_raw', Image, timeout=1)
         ros_rgb_image = rospy.wait_for_message('/camera_lower_left/color/image_raw', Image, timeout=1)
         ros_camera_info = rospy.wait_for_message('/camera_lower_left/color/camera_info', CameraInfo, timeout=1)
 

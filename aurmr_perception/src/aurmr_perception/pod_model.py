@@ -43,6 +43,8 @@ class PodPerceptionROS:
             self.camera_rgb_subscriber = message_filters.Subscriber(f'/{self.camera_name}/color/image_raw', Image)
             self.camera_info_subscriber = message_filters.Subscriber(f'/{self.camera_name}/color/camera_info', CameraInfo)
             self.camera_frame = f"{self.camera_name}_color_frame"
+            self.camera_points_frame = "camera_color_optical_frame"
+
         elif camera_type == "azure_kinect":
             self.camera_depth_subscriber = message_filters.Subscriber(f'/{self.camera_name}/depth_to_rgb/image_raw', Image)
             self.camera_rgb_subscriber = message_filters.Subscriber(f'/{self.camera_name}/rgb/image_raw', Image)
@@ -52,7 +54,7 @@ class PodPerceptionROS:
         else:
             raise RuntimeError(f"Unknown camera type requested: {camera_type}")
         
-        self.points_sub = rospy.Subscriber(f'/{self.camera_name}/points2', PointCloud2, self.points_cb)
+        self.points_sub = rospy.Subscriber(f'/{self.camera_name}/depth/color/points', PointCloud2, self.points_cb)
 
         self.camera_synchronizer = message_filters.ApproximateTimeSynchronizer([
             self.camera_depth_subscriber, self.camera_rgb_subscriber, self.camera_info_subscriber], 10, 1)
@@ -294,7 +296,7 @@ class DiffPodModel:
         return points_seg
 
     def backproject(self, depth_image, mask, camera_intrinsics):
-        points = rospy.wait_for_message(f'/camera_lower_right/points2', PointCloud2)
+        points = rospy.wait_for_message('/camera/depth/color/points', PointCloud2)
         points = ros_numpy.numpify(points)
         np.save("/tmp/points1.npy", points)
         points_seg = points[mask.flatten() > 0]
@@ -366,7 +368,7 @@ class DiffPodModel:
             mask[np.where(labels != max_area_idx)] = 0.0    
         else:
             raise RuntimeError(f"Unknown segmentation method requested: {self.segmentation_method}")
-        points = rospy.wait_for_message(f'/camera_lower_right/points2', PointCloud2)
+        points = rospy.wait_for_message('/camera/depth/color/points', PointCloud2)
         points = self.mask_pointcloud(points, mask)
 
         if bin_id not in self.points_table:
@@ -433,6 +435,7 @@ class DiffPodModel:
 
             mask = self.net.get_obj_mask(object_id)
             self.masks_table[bin_id][object_id] = mask
+            print(mask.shape, points_msg.height, points_msg.width)
             self.points_table[bin_id][object_id] = self.mask_pointcloud(points_msg, mask)
             num_points = self.points_table[bin_id][object_id].shape[0]
             mask_ret = ros_numpy.msgify(Image, mask.astype(np.uint8), encoding="mono8")

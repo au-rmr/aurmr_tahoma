@@ -1,11 +1,11 @@
 <launch>
 
-  <arg name="camera" default="camera_lower_right" />
+  <arg name="camera" default="camera" />
   <arg name="viz" default="true" />
   <!-- <arg name="grasp_detector" default="vacuum_heuristic" /> -->
   <arg name="grasp_detector" default="vacuum_heuristic" />
   <arg name="segmentation_method" default="clustering" />
-  <arg name="camera_type" default="azure_kinect" />
+  <arg name="camera_type" default="realsense" />
   <!-- normal or centroid for grasp type -->
   <arg name="grasp_type" default="normal" />
 
@@ -20,7 +20,7 @@
   </node>
   
   <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="rgb_camera_link_offset_broadcaster" args="-0.032 0 0.004 0 0 0 1 rgb_camera_link rgb_camera_link_offset" /> -->
-  <node pkg="tf2_ros" type="static_transform_publisher" name="rgb_camera_link_offset_broadcaster" args="-0.01 0 0 0 0 0 1 rgb_camera_link rgb_camera_link_offset" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="rgb_camera_link_offset_broadcaster" args="0 0 0 0 0 0 1 rgb_camera_link rgb_camera_link_offset" />
 
   <param name="grasp_detector" value="$(arg grasp_detector)" />
   <param name="grasp_detection_method" type="str" value="$(arg grasp_type)" />

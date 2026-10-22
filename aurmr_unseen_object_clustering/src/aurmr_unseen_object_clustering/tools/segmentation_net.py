@@ -20,7 +20,7 @@ import sys
 
 rectangle = None
 
-UOC_PATH = '/home/aurmr/workspaces/thomas_ws/src/aurmr_tahoma/aurmr_unseen_object_clustering/src/aurmr_unseen_object_clustering/'
+UOC_PATH = '/home/aurmr/workspaces/soofiyan_ws_realsense_force_calibration/src/aurmr_tahoma/aurmr_unseen_object_clustering/src/aurmr_unseen_object_clustering/'
 
 NO_OBJ_STORED = 1
 UNDERSEGMENTATION = 2
@@ -56,8 +56,50 @@ warnings.filterwarnings("ignore", category=UserWarning)
 #           '2h':[1050, 1280, 1660, 2130]}
 
 # not reachable: 1d, 
+# bin_bounds = {
+#           '1H':[1090, 1300, 1270, 1630],
+#           '2H':[1090, 1300, 1650, 2060],
+#           '3H':[1090, 1300, 2080, 2500],
+#           '4H':[1090, 1300, 2500, 2860],
+#           '1G':[1370, 1530, 1270, 1630],
+#           '2G':[1370, 1530, 1650, 2060],
+#           '3G':[1370, 1530, 2080, 2500],
+#           '4G':[1370, 1530, 2500, 2860],
+#           '1F':[1600, 1940, 1270, 1630],
+#           '2F':[1600, 1940, 1650, 2060],
+#           '3F':[1600, 1940, 2080, 2500],
+#           '4F':[1600, 1940, 2500, 2860],
+#           '1E':[2010, 2150, 1270, 1630],
+#           '2E':[2010, 2150, 1650, 2060],
+#           '3E':[2010, 2150, 2080, 2500],
+#           '4E':[2010, 2150, 2500, 2860],
+#           '1D':[2300, 2540, 1270, 1630],
+#           '2D':[2300, 2540, 1650, 2060],
+#           '3D':[2300, 2540, 2080, 2500],
+#           '4D':[2300, 2540, 2560, 3030],
+#             }
+# For NFOV_2X2BINNED
+# bin_bounds = {
+#           '1H':[167*2, 219*2, 295*2, 381*2],
+#           '2H':[167*2, 215*2, 381*2, 483*2],
+#           '3H':[167*2, 214*2, 483*2, 585*2],
+#           '4H':[163*2, 210*2, 585*2, 673*2],
+#           '1G':[232*2, 272*2, 296*2, 384*2],
+#           '2G':[232*2, 268*2, 382*2, 485*2],
+#           '3G':[232*2, 268*2, 485*2, 586*2],
+#           '4G':[232*2, 263*2, 586*2, 674*2],
+#           '1F':[286*2, 370*2, 298*2, 387*2],
+#           '2F':[286*2, 365*2, 384*2, 487*2],
+#           '3F':[284*2, 366*2, 485*2, 587*2],
+#           '4F':[283*2, 362*2, 586*2, 677*2],
+#           '1E':[384*2, 422*2, 299*2, 387*2],
+#           '2E':[387*2, 417*2, 387*2, 489*2],
+#           '3E':[383*2, 417*2, 487*2, 589*2],
+#           '4E':[381*2, 414*2, 587*2, 678*2],
+#             }
+# For D455 realsense camera
 bin_bounds = {
-          '1H':[1090, 1300, 1270, 1630],
+          '1H':[204, 377, 1270, 1630],
           '2H':[1090, 1300, 1650, 2060],
           '3H':[1090, 1300, 2080, 2500],
           '4H':[1090, 1300, 2500, 2860],
@@ -67,7 +109,7 @@ bin_bounds = {
           '4G':[1370, 1530, 2500, 2860],
           '1F':[1600, 1940, 1270, 1630],
           '2F':[1600, 1940, 1650, 2060],
-          '3F':[1600, 1940, 2080, 2500],
+          '3F':[374, 491, 647, 792],
           '4F':[1600, 1940, 2500, 2860],
           '1E':[2010, 2150, 1270, 1630],
           '2E':[2010, 2150, 1650, 2060],
@@ -98,7 +140,7 @@ def_config = {
    'bounds':bin_bounds,
    'image_path':None,
    'min_pixel_threshhold':30,
-   'min_match_count':2,
+   'min_match_count': 1,
 
    # Segmentation / 
  
@@ -185,6 +227,8 @@ class Bin:
         # plt.show()
 
         mask = (np.abs(depth_bin - depth_now) > self.config['min_pixel_threshhold'])
+        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws_realsense_force_calibration/src/segnetv2_mask2_former/Mask_Results/rgb_compute_xyz.png", current['rgb'][r1:r2, c1:c2])
+        
         # plt.imshow(np.abs(depth_bin - depth_now))
         # plt.title("Difference")
         # plt.show()
@@ -195,10 +239,10 @@ class Bin:
         kernel = np.ones(shape=(9,9), dtype=np.uint8)
 
         mask_now = spy.binary_erosion(mask, structure=kernel, iterations=2)
-
-        # plt.imshow(mask_now)
-        # plt.title("This is the mask we see")
-        # plt.show()
+        # cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws_realsense_force_calibration/src/segnetv2_mask2_former/Mask_Results/mask_now_compute_xyz.png", mask_now)
+        plt.imshow(mask_now)
+        plt.title("This is the mask we see")
+        plt.show()
 
         if np.sum(mask_now) > 0:
             return True
@@ -276,7 +320,7 @@ class SegNet:
 
         ######################################################################################################
         print("init pre")
-        sys.path.append("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/UIE_main/mask2former_frame")
+        sys.path.append("/home/aurmr/workspaces/soofiyan_ws_realsense_force_calibration/src/segnetv2_mask2_former/UIE_main/mask2former_frame")
         print("post sys")
         from demo.segnetv2_demo import SegnetV2
         print("post import")
@@ -358,8 +402,8 @@ class SegNet:
         out_label_new = out_label.astype(np.uint8)
         # out_label_new = out_label
         try:
-            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/mask.png", out_label_new.astype(np.uint8))
-            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/rgb.png", rgb_segment.astype(np.uint8))
+            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws_realsense_force_calibration/src/segnetv2_mask2_former/Mask_Results/mask.png", out_label_new.astype(np.uint8))
+            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws_realsense_force_calibration/src/segnetv2_mask2_former/Mask_Results/rgb.png", rgb_segment.astype(np.uint8))
         except:
             pass
         if self.config['perform_cv_ops']:
@@ -393,7 +437,7 @@ class SegNet:
         
         mask_crop = cv2.resize(mask_crop, (bin.bounds[3] - bin.bounds[2], bin.bounds[1] - bin.bounds[0]), interpolation=cv2.INTER_AREA)
         try:
-            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/soofiyan_mask.png", mask_crop)
+            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws_realsense_force_calibration/src/segnetv2_mask2_former/Mask_Results/soofiyan_mask.png", mask_crop)
         except:
             pass
         return mask_crop
@@ -405,12 +449,14 @@ class SegNet:
         # Convert the images to greyscale
         im1 = cv2.cvtColor(im1, cv2.COLOR_RGB2GRAY)
         im2 = cv2.cvtColor(im2, cv2.COLOR_RGB2GRAY)
-        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/match_mask1.png", mask1)
-        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/match_mask2.png", mask2)
+        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws_realsense_force_calibration/src/segnetv2_mask2_former/Mask_Results/match_mask1.png", mask1)
+        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws_realsense_force_calibration/src/segnetv2_mask2_former/Mask_Results/match_mask2.png", mask2)
         mask_recs = np.zeros(shape=(np.max(mask1), np.max(mask2)))
   
         # Calculate keypoints for the frame 1 image
-        sift = cv2.SIFT_create()
+        #sift = cv2.SIFT_create()
+        print("Creating SIFT detector")
+        sift = cv2.SIFT_create(nfeatures=150, contrastThreshold=0.04, edgeThreshold=40)
         k2, d2 = sift.detectAndCompute(im2, None)
   
         # For each mask in frame 0
@@ -434,12 +480,16 @@ class SegNet:
 
             # Handle matching failures
             if len(good) < self.config['min_match_count']:
+                print("SIFT matching failed.")
                 sift_failed = True
+
+            print(self.config['min_match_count'])
+            print(f'found {len(good)} sift matches for object {i}. failed={sift_failed}')
             
             # Draws matches for visualization purposes
             matched_img = cv2.drawMatches(im1_now, k1, im2, k2, good, im2, flags=2, matchesThickness=1)
             # cv2.imshow('image', matched_img)
-            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/matched_mask.png", matched_img)
+            cv2.imwrite(f"/tmp/matched_mask_{i}.png", matched_img)
            
             dst_pts = np.float32([k2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
             dst_pts = np.round(dst_pts).astype(int)
@@ -540,7 +590,7 @@ class SegNet:
             print("Unique mask and areas ",np.unique(mask), areas)
             nonzero_idx = np.where(np.sum(mask == idx_max, axis=1) > 0)
             try:
-                cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/mask1.png", mask*30)
+                cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws_realsense_force_calibration/src/segnetv2_mask2_former/Mask_Results/mask1.png", mask*30)
             except:
                 pass
             c1 = nonzero_idx[0][0]
@@ -636,17 +686,22 @@ class SegNet:
     #       1. No object is stored. Covered using depth difference in bin.new_object_detected CODE NO_OBJ_STORED
     #       2. Fewer than n objects are segmented (undersegmentation). Covered in refine_masks CODE UNDERSEGMENTATION
     def stow(self, bin_id, obj_id, rgb_raw, depth_raw=None,info=None, points_raw=None):
+
+
+        print("Stow")
+
         # Grabs the current bin
         bin = self.bins[bin_id]
 
         if self.H is None:
             self.H, self.W, _ = rgb_raw.shape
+        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws_realsense_force_calibration/src/segnetv2_mask2_former/Mask_Results/rgb_raw.png", rgb_raw)
 
         # check whether the stow is valid (there is a meaningful pixel difference)
         if not bin.new_object_detected({'rgb':rgb_raw, 'depth':self.compute_xyz(depth_raw, info)}):
             print(f"No new object detected: Did you store an object in bin {bin_id}?\nPlease try again")
             return NO_OBJ_STORED
-
+        
         # points_raw[:,:][np.isnan(points_raw)] = 0
 
         # if not bin.new_object_detected({'rgb':rgb_raw, 'depth':points_raw}):
@@ -698,7 +753,7 @@ class SegNet:
             self.bad_bins.append(bin_id)
             return UNDERSEGMENTATION
         else:
-            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/refined_mask.png", mask_crop)
+            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws_realsense_force_calibration/src/segnetv2_mask2_former/Mask_Results/refined_mask.png", mask_crop)
 
         mask2vis = self.vis_masks(bin.current['rgb'], mask_crop)
         # plt.imshow(mask2vis)

@@ -10,7 +10,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='AURMR Perception Module')
     parser.add_argument('-v', '--viz', action='store_true', default=False)
     parser.add_argument('--diff_threshold', type=int, default=140)
-    parser.add_argument('--camera_name', default='stand_camera')
+    parser.add_argument('--camera_name', default='camera')
     parser.add_argument('--segmentation_method', default='pixel_difference')
     parser.add_argument('--camera', default='realsense')
     args, unknown = parser.parse_known_args()
