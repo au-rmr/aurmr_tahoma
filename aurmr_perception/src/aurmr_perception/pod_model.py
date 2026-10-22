@@ -83,28 +83,87 @@ class PodPerceptionROS:
     def load_dataset(self, request):
         from aurmr_dataset.io import DatasetReader
 
-        bin_mapping = {
-            "P-9-H051H030": "1H",
-            "P-6-H835J238": "1G",
-            "P-8-H758H650": "1F",
-            "P-8-H588H170": "1E",
-            "P-9-H051H031": "2H",
-            "P-6-H835J239": "2G",
-            "P-8-H758H651": "2F",
-            "P-8-H588H171": "2E",
-            "P-9-H051H032": "3H",
-            "P-6-H835J240": "3G",
-            "P-8-H758H652": "3F",
-            "P-8-H588H172": "3E",
-            "P-9-H051H033": "4H",
-            "P-6-H835J241": "4G",
-            "P-8-H758H653": "4F",
-            "P-8-H588H173": "4E",
 
-            "P-9-M223R307": "1D",
-            "P-9-M223R831": "1E",
-            "P-9-M503R832": "2E",
-            "P-9-M095R784": "2C"
+        # ..todo:: extract bin_mapping
+
+        bin_mapping = {
+            "P-8-H119H546":"1A",
+            "P-8-H119H547":"2A",
+            "P-8-H119H548":"3A",
+            "P-8-H119H549":"4A",
+            "P-8-H208H542":"1B",
+            "P-8-H208H543":"2B",
+            "P-8-H208H544":"3B",
+            "P-8-H208H545":"4B",
+            "P-8-H336H066":"1C",
+            "P-8-H336H067":"2C",
+            "P-8-H336H068":"3C",
+            "P-8-H336H069":"4C",
+            "P-8-H470H838":"1D",
+            "P-8-H470H839":"2D",
+            "P-8-H470H840":"3D",
+            "P-8-H470H841":"4D",
+            "P-9-H099H586":"1I",
+            "P-9-H099H587":"2I",
+            "P-9-H099H588":"3I",
+            "P-9-H099H589":"4I",
+            "P-9-H276H282":"1J",
+            "P-9-H276H283":"2J",
+            "P-9-H276H284":"3J",
+            "P-9-H276H285":"4J",
+            "P-9-H373H538":"1K",
+            "P-9-H373H539":"2K",
+            "P-9-H373H540":"3K",
+            "P-9-H373H541":"4K",
+            "P-7-H866F302":"1L",
+            "P-7-H866F303":"2L",
+            "P-7-H866F304":"3L",
+            "P-7-H866F305":"4L",
+            "P-7-H218F218":"1M",
+            "P-7-H218F219":"2M",
+            "P-7-H218F220":"3M",
+            "P-7-H218F221":"4M",
+            "P-8-H588H170":"1E",
+            "P-8-H588H171":"2E",
+            "P-8-H588H172":"3E",
+            "P-8-H588H173":"4E",
+            "P-8-H758H650":"1F",
+            "P-8-H758H651":"2F",
+            "P-8-H758H652":"3F",
+            "P-8-H758H653":"4F",
+            "P-6-H835J238":"1G",
+            "P-6-H835J239":"2G",
+            "P-6-H835J240":"3G",
+            "P-6-H835J241":"4G",
+            "P-9-H051H030":"1H",
+            "P-9-H051H031":"2H",
+            "P-9-H051H032":"3H",
+            "P-9-H051H033":"4H",
+            "P-8-H588H494":"1E",
+            "P-8-H588H495":"2E",
+            "P-8-H588H496":"3E",
+            "P-8-H588H497":"4E",
+            "P-8-H758H974":"1F",
+            "P-8-H758H975":"2F",
+            "P-8-H758H976":"3F",
+            "P-8-H758H977":"4F",
+            "P-8-H888H454":"1G",
+            "P-8-H888H455":"2G",
+            "P-8-H888H456":"3G",
+            "P-8-H888H457":"4G",
+            "P-9-H051H354":"1H",
+            "P-9-H051H355":"2H",
+            "P-9-H051H356":"3H",
+            "P-9-H051H357":"4H",
+            "P-9-M095R783":"1C",
+            "P-9-M095R784":"2C",
+            "P-9-M095R785":"3C",
+            "P-9-M223R307":"1D",
+            "P-9-M223R308":"2D",
+            "P-9-M223R309":"3D",
+            "P-9-M503R831":"1E",
+            "P-9-M503R832":"2E",
+            "P-9-M503R833":"3E",
 
         }
         dataset = DatasetReader(request.dataset_path).load()
@@ -129,6 +188,13 @@ class PodPerceptionROS:
 
             rgb_image = camera_data.rgb_image[:,:,::-1]
             depth_image = camera_data.depth_image
+            
+            #dtype = np.dtype({'names': ['x', 'y', 'z', 'r', 'g', 'b'], 'formats': [np.dtype('float32'), np.dtype('float32'), np.dtype('float32'), np.dtype('uint8'), np.dtype('uint8'), np.dtype('uint8')]})
+            #point_cloud = camera_data.point_cloud.astype(dtype)
+
+            #dtype = np.dtype({'names': ['x', 'y', 'z'], 'formats': [np.float32, np.float32, np.float32]})
+            #point_cloud = camera_data.np_xyz_points.astype(dtype)
+            #points_msg = ros_numpy.point_cloud2.array_to_pointcloud2(point_cloud)
             points_msg = None
             camera_info = dataset.camera_info
 
@@ -238,6 +304,12 @@ class PodPerceptionROS:
                None,\
                mask_msg
 
+        return True,\
+               f"Points and mask successfully retrieved for object {request.object_id} in bin {bin_id}",\
+               bin_id,\
+               None,\
+               mask_msg
+
         if request.frame_id != self.camera_points_frame:
             # Transform points to requested frame_id
 
@@ -286,6 +358,7 @@ class PodPerceptionROS:
     def pick_object_callback(self, request):
         if not request.bin_id or not request.object_id:
             return False, "bin_id and object_id are required"
+
 
         result, message = self.model.remove_object(request.bin_id, request.object_id, self.rgb_image, self.depth_image, self.camera_info, self.points_msg)
 
@@ -390,6 +463,8 @@ class DiffPodModel:
         return points
 
     def mask_pointcloud(self, points, mask):
+        if points is None:
+            return None
         points = ros_numpy.numpify(points)
         np.save("/tmp/points1.npy", points)
         points_seg = points[mask.flatten() > 0]
@@ -538,7 +613,10 @@ class DiffPodModel:
             mask = self.net.get_obj_mask(object_id)
             self.masks_table[bin_id][object_id] = mask
             self.points_table[bin_id][object_id] = self.mask_pointcloud(points_msg, mask)
-            num_points = self.points_table[bin_id][object_id].shape[0]
+            if points_msg is None:
+                num_points = "unknown"
+            else:
+                num_points = self.points_table[bin_id][object_id].shape[0]
             mask_ret = ros_numpy.msgify(Image, mask.astype(np.uint8), encoding="mono8")
             msg = f"Object {object_id} in bin {bin_id} has been stowed with {num_points} points."
             success = True

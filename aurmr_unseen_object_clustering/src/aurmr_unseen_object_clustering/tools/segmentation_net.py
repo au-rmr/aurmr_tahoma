@@ -664,6 +664,11 @@ class SegNet:
   
     # Retrieves the mask with bin product id obj_id from the full camera reference frame
     def get_obj_mask(self, obj_id):
+
+        if not obj_id in self.items:
+            print("Object not found!")
+            return np.zeros((self.H, self.W), dtype=np.uint8)
+
         bin_id, id = self.items[obj_id]
         bin = self.bins[bin_id]
         print(f"get_object segnet: bin_id: {bin_id}, {id}")
@@ -815,6 +820,8 @@ class SegNet:
             bin_id, obj_n = self.items[obj_id]
         except:
             print(f"Object with ID {obj_id} not found in our database. Please try another item.")
+            # ..todo:: unsure. But we need to get a reference for bin.n
+            bin = self.bins[bin_id]
             bin.n -= 1
             self.n -= 1
             return OBJ_NOT_FOUND
