@@ -95,6 +95,8 @@ class GraspDetectionROS:
             self.detect_grasps_normal = rospy.Service('~detect_grasps', DetectGraspPoses, self.detect_grasps_normal_cb)
         elif(grasp_method == "RGB_grasp"):
             self.detect_grasps_rgb = rospy.Service('~detect_grasps', DetectGraspPoses, self.detect_rgb_grasps_cb)
+        elif(grasp_method == "foundational"):
+            self.detect_grasps_rgb = rospy.Service('~detect_grasps', DetectGraspPoses, self.detect_grasps_foundational_cb)
         elif(grasp_method == "dexnet"):
             self.detect_grasps_dexnet = rospy.Service('~detect_grasps', DetectGraspPoses, self.detect_dexnet_grasps_cb)
         elif(grasp_method == "centroid"):
@@ -168,9 +170,6 @@ class GraspDetectionROS:
         except(tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
 
-    def clamp(self, num, min_value, max_value):
-        clamp_value = num
-        if(num < 0):
             if(num <= min_value):
                 clamp_value = min_value
             elif(num >= max_value):
@@ -291,6 +290,102 @@ class GraspDetectionROS:
         return True, "", [output_pose_stamped]
 
 
+
+    def detect_grasps_foundational_cb(self, request):
+        crop_bin_bounds = self.bin_bounds[request.bin_id]
+        rgb_image_cropped = self.rgb_img[crop_bin_bounds[0]:crop_bin_bounds[1], crop_bin_bounds[2]:crop_bin_bounds[3], ...]
+        depth_cropped = self.depth_img[crop_bin_bounds[0]:crop_bin_bounds[1], crop_bin_bounds[2]:crop_bin_bounds[3], ...]
+
+        from aurmr_perception.florence_model import FlorenceModel
+
+
+        if hasattr(self, "model"):
+            model = self.model
+        else:
+            model = FlorenceModel()
+            model.build()
+            self.model = model
+
+
+        data = model.run([rgb_image_cropped])
+
+        print(data)
+
+        x1, y1, x2, y2 = data['bboxes'][-1]
+
+        grasp_point = [x1 + (x2-x1)/2, y1 + (y2-y1)/2]
+
+        grasp_point[0] += crop_bin_bounds[2]
+        grasp_point[1] += crop_bin_bounds[0]
+
+        center3D_depth_value = self.depth_img[int(grasp_point[1]), int(grasp_point[0])]
+
+        fx, fy = 1940.1367, 1940.1958
+        cx, cy = 2048.7397, 1551.3889
+        width = 4096
+        height = 3072
+
+        pointz = center3D_depth_value/1000.0
+        pointx = (grasp_point[0] - cx) * pointz / fx
+        pointy = (grasp_point[1] - cy) * pointz / fy
+
+        point = [pointx, pointy, pointz]
+
+        transform = self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
+        transform_camera_to_base_link= self.tf_buffer.lookup_transform('base_link', 'rgb_camera_link', rospy.Time())
+        # less RGB_TO_DEPTH..... right
+        # DEPTH_TILT more in - LOWER
+        if(request.bin_id == "1H"):
+            RGB_TO_DEPTH_FRAME_OFFSET = 0.007
+            DEPTH_TILT = -transform.transform.translation.z - 0.025
+        elif(request.bin_id == "2H"):
+            RGB_TO_DEPTH_FRAME_OFFSET = 0.017
+            DEPTH_TILT = -transform.transform.translation.z - 0.025
+        elif(request.bin_id == "3H"):
+            RGB_TO_DEPTH_FRAME_OFFSET = 0.022
+            DEPTH_TILT = -transform.transform.translation.z - 0.025
+        else:
+            RGB_TO_DEPTH_FRAME_OFFSET = 0.0225
+            DEPTH_TILT = -transform.transform.translation.z - 0.0275
+        POD_OFFSET = 0.1
+
+        point[2] = transform.transform.translation.x - POD_OFFSET - transform_camera_to_base_link.transform.translation.x
+        point[1] -= point[2]*np.sin(DEPTH_TILT)
+        point[0] -= RGB_TO_DEPTH_FRAME_OFFSET
+
+        clamped_euler_angles = [0., 0., 0.]
+
+        #clamped_euler_angles[0] = grasp_angle[0]
+        #clamped_euler_angles[1] = -grasp_angle[1]
+
+        #point[0] += 0.245*np.sin(clamped_euler_angles[0])
+        #point[1] += 0.245*np.sin(clamped_euler_angles[1])
+
+        # clamped_euler_angles[1] = 0.0
+        print("post euler angles", clamped_euler_angles[0]*180/math.pi, clamped_euler_angles[1]*180/math.pi)
+        # transform from the 3d pose to rgb_camera_link
+        r_cam = R.from_euler('xyz', [clamped_euler_angles[0], clamped_euler_angles[1], 0.], degrees=False)
+        orientation_viz = r_cam.as_quat()
+
+        as_quat_pose = Quaternion(x=orientation_viz[0], y=orientation_viz[1],
+                                        z=orientation_viz[2], w=orientation_viz[3])
+        as_pose_pose = Pose(position=Point(x=point[0], y=point[1], z=point[2]), orientation=as_quat_pose)
+        t_header= deepcopy(request.points.header)
+        t_header.frame_id = 'rgb_camera_link_offset'
+        vis_pose = PoseStamped(header=t_header, pose=as_pose_pose)
+        self.grasp_viz_perception.publish(vis_pose)
+
+        output_pose_stamped = self.transfor_pose(vis_pose, 'base_link')
+        r_prefix = R.from_euler('xyz', [math.pi/2., -math.pi/2., math.pi/2.], degrees=False)
+        r3 = r_prefix * r_cam
+        orientation = r3.as_quat()
+        output_pose_stamped.pose.orientation = Quaternion(x=orientation[0], y=orientation[1],
+                                        z=orientation[2], w=orientation[3])
+
+        return True, "", [output_pose_stamped]
+
+
+
     def detect_rgb_grasps_cb(self, request):
         cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
         # cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
@@ -322,14 +417,12 @@ class GraspDetectionROS:
         rgb_image_cropped = self.rgb_img[crop_bin_bounds[0]:crop_bin_bounds[1], crop_bin_bounds[2]:crop_bin_bounds[3], ...]
         segmask_cropped = cv_image[crop_bin_bounds[0]:crop_bin_bounds[1], crop_bin_bounds[2]:crop_bin_bounds[3], ...]
         depth_cropped = self.depth_img[crop_bin_bounds[0]:crop_bin_bounds[1], crop_bin_bounds[2]:crop_bin_bounds[3], ...]
-
         object_hardware_comm = TrainRGBModel(rgb_image_cropped, segmask_cropped)
         grasp_point, grasp_angle = object_hardware_comm.train_model()
 
         print(grasp_point, crop_bin_bounds)
         grasp_point[0] = grasp_point[0]*rgb_image_cropped.shape[1]/224
         grasp_point[1] = grasp_point[1]*rgb_image_cropped.shape[0]/224
-
 
         seconds = time.time()
 
