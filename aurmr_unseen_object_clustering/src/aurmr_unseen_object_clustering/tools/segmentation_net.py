@@ -264,6 +264,9 @@ class SegNet:
     
     # Segments the current bin and returns the masks both from the bin reference and from the overall reference
     def segment(self, bin_id, scene=None):
+        workspace_path = get_active_workspace_path()
+        path = f"{workspace_path}/src/uois_service_multi_demo/dataset/{bin_id}"
+        os.makedirs(path, exist_ok=True)
         # Grab the current bin
         bin = self.bins[bin_id]
   
@@ -279,7 +282,19 @@ class SegNet:
             rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
   
         H, W, _ = rgb.shape
-  
+
+        # Save the entire pod images for further reproduction
+        pod_img_path = f"{workspace_path}/src/uois_service_multi_demo/dataset/pod"
+        os.makedirs(pod_img_path, exist_ok=True)
+        pod_img_files = os.listdir(pod_img_path)
+        indices = [int(f.split('_')[-1].split('.')[0]) for f in pod_img_files if f.startswith('pod_img_') and f.endswith('.png')]
+        if indices:
+            next_index = max(indices) + 1
+        else:
+            next_index = 0
+        index_str = str(next_index).zfill(4)
+        cv2.imwrite(os.path.join(pod_img_path, f"pod_img_{index_str}.png"), rgb)
+
         # Crops the image to the current bin
         xyz = xyz[bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], :]
         rgb = rgb[bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3]
@@ -315,8 +330,6 @@ class SegNet:
 
         rgb_segment = rgb.astype(np.uint8)
         
-        path = f"{workspace_path}/src/uois_service_multi_demo/dataset/{bin_id}"
-        os.makedirs(path, exist_ok=True)
         #path = "/home/aurmr/workspaces/uois_multi_frame_ws/src/uois_service_multi_demo/dataset/"+bin_id+"/"
         files = os.listdir(path)
         indices = [int(f.split('_')[-1].split('.')[0]) for f in files if f.startswith('color_') and f.endswith('.npy')]
@@ -327,6 +340,7 @@ class SegNet:
         index_str = str(next_index).zfill(4)
         file_path = os.path.join(path, f"color_{index_str}.npy")
         np.save(file_path, rgb_segment)
+        cv2.imwrite(os.path.join(path, f"color_{index_str}.png"), rgb_segment)
 
         # xyz = xyz.astype(np.uint8)
 
