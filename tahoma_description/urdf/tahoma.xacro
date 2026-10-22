@@ -236,6 +236,7 @@
     <xacro:arg name="add_plug" default="false" />
     <xacro:arg name="use_mesh" default="true" />
     <xacro:include filename="$(find tahoma_description)/urdf/_l515.urdf.xacro" />
+    <xacro:include filename="$(find tahoma_description)/urdf/_arducam.urdf.xacro" />
 
     <!-- D435 Realsense Camera -->
     <!-- <xacro:sensor_d435 parent="base_link" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
@@ -266,6 +267,14 @@
     <xacro:sensor_l515 parent="coupling" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
       <origin xyz="0.0 0.046 0.06" rpy="${pi} -${0.5 * pi} ${0.5 * pi}"/>
     </xacro:sensor_l515>
+
+    <!-- Wrist-mounted arducam (eye-in-hand). NOMINAL placement only, measured
+         by hand — not calibrated. Do not trust for precision until
+         calib_with_april_tag_eye_in_hand.py has been run and this origin is
+         replaced with the solved transform (see the arducam integration plan). -->
+    <xacro:sensor_arducam parent="coupling" name="arducam">
+      <origin xyz="0.03 -0.04 0.05" rpy="0 0 0"/>
+    </xacro:sensor_arducam>
 
 
     <!-- <link name="realsense_lower_mount">

@@ -42,7 +42,7 @@
       <arg name="camera" value="camera_lower_left" />
       <arg name="usb_port_id" value="4-3" />
     </include>-->
-<!--     
+<!--
     <node name="fake_gripper_state" type="fake_gripper_state" pkg="tahoma_bringup" >
       <param name="state" value="1.0" />
     </node> -->
@@ -64,9 +64,13 @@
       <remap from="points" to="/camera/depth/points2"/>
     </node>
 
+    <!-- Real sense rpy -->
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_genesis_broadcaster"
+        args="0.368 0.635 -0.419 0.1 0.0 -0.1705473464 camera_base camera_genesis"/>
+
 
   <!-- Server for webserver communication -->
-  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" > 
+  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" >
      <arg name="port" value="9090"/>
   </include>
 

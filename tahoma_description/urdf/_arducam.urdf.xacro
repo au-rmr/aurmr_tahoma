@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+
+<!--
+This is a minimal URDF model for a generic small USB/UVC "Arducam"-style
+board camera, mounted on the gripper (eye-in-hand) for close-range
+refinement of AprilTag pose estimates. Unlike the RealSense macros in this
+directory (_d435.urdf.xacro, _l515.urdf.xacro), this camera has no built-in
+depth/infra streams and no vendor-provided precision extrinsics — it's a
+single color sensor whose real optical-frame offset from `parent` is only
+known once calib_with_april_tag_eye_in_hand.py has been run (see that
+script and the arducam integration plan). The dimensions/origin below are
+nominal placeholders for visualization and MoveIt collision-awareness only.
+-->
+
+<!-- Note: deliberately does NOT include _materials.urdf.xacro here — tahoma.xacro
+     already includes it (via _l515.urdf.xacro) before this file, and a second
+     independent include here caused a duplicate <material name="aluminum">
+     definition that check_urdf rejected as non-unique. The "plastic" material
+     used below is already globally available by the time this macro runs. -->
+<robot name="sensor_arducam" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:macro name="sensor_arducam" params="parent *origin name:=arducam">
+    <xacro:property name="M_PI" value="3.1415926535897931" />
+
+    <!-- Nominal physical envelope for a small UVC board camera. Not
+         precision-critical: only affects visualization/collision, never
+         the actual extrinsic calibration result. -->
+    <xacro:property name="arducam_depth"  value="0.010"/>
+    <xacro:property name="arducam_width"  value="0.025"/>
+    <xacro:property name="arducam_height" value="0.025"/>
+
+    <joint name="${name}_joint" type="fixed">
+      <xacro:insert_block name="origin" />
+      <parent link="${parent}"/>
+      <child link="${name}_link" />
+    </joint>
+
+    <link name="${name}_link">
+      <visual>
+        <geometry>
+          <box size="${arducam_depth} ${arducam_width} ${arducam_height}"/>
+        </geometry>
+        <material name="plastic"/>
+      </visual>
+      <collision>
+        <geometry>
+          <box size="${arducam_depth} ${arducam_width} ${arducam_height}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <!-- Not reliable values, do not use for dynamics -->
+        <mass value="0.01" />
+        <origin xyz="0 0 0" />
+        <inertia ixx="0.0001" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.0001" />
+      </inertial>
+    </link>
+
+    <!-- Optical frame, standard ROS REP-103 image convention
+         (X-right, Y-down, Z-forward/out-of-lens). -->
+    <joint name="${name}_color_optical_joint" type="fixed">
+      <origin xyz="0 0 0" rpy="${-M_PI/2} 0 ${-M_PI/2}" />
+      <parent link="${name}_link" />
+      <child link="${name}_color_optical_frame" />
+    </joint>
+    <link name="${name}_color_optical_frame"/>
+  </xacro:macro>
+</robot>
