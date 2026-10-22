@@ -391,6 +391,7 @@ class UserPromptForSegmentation(State):
 
         common_header = Header()
         common_header.stamp = rospy.Time.now()
+        common_header.frame_id = "rgb_camera_link"
 
         mask_msg.header = common_header
         labled_img_msg.header = common_header

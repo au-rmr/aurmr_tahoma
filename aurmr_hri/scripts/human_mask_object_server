@@ -49,9 +49,14 @@ class MaskObjectActionServer:
             cv2.imshow('Image', display_image)
             key = cv2.waitKey(1) & 0xFF
             if key == ord(' '):  # Press space to finish
-                break
+                try:
+                    mask_result = self.apply_grabcut()
+                    break
+                except Exception as e:
+                    rospy.logerr(e)
+                    # Something broke, but we'll just loop on
 
-        mask_result = self.apply_grabcut()
+
 
         result = MaskObjectResult()
         result.mask = self.bridge.cv2_to_compressed_imgmsg(mask_result)
@@ -65,7 +70,11 @@ class MaskObjectActionServer:
         elif event == cv2.EVENT_LBUTTONUP:
             self.rect_drawing = False
             # x, y, w, h
-            self.rect = (self.rect[0], self.rect[1], x - self.rect[0], y - self.rect[1])
+            upper_left_corner = (min(self.rect[0], x), min(self.rect[1], y))
+            bottom_right_corner = (max(self.rect[0], x), max(self.rect[1], y))
+            width = bottom_right_corner[0] - upper_left_corner[0]
+            height = bottom_right_corner[1] - upper_left_corner[1]
+            self.rect = (upper_left_corner[0], upper_left_corner[1], width, height)
         elif event == cv2.EVENT_RBUTTONDOWN:
             self.rect = None
             self.working_image = self.input_image.copy()
@@ -98,6 +107,7 @@ class MaskObjectActionServer:
         fgd_model = np.zeros((1, 65), np.float64)
         if self.rect:
             self.mask = np.zeros(self.input_image.shape[:2], dtype=np.uint8)
+            print(self.rect)
             cv2.grabCut(self.input_image, self.mask, self.rect, bgd_model, fgd_model, 5, cv2.GC_INIT_WITH_RECT)
         else:
             cv2.grabCut(self.input_image, self.mask, None, bgd_model, fgd_model, 5, cv2.GC_INIT_WITH_MASK)
