@@ -5,7 +5,11 @@ from fileinput import filename
 from unittest import result
 import cv2
 import matplotlib
-from aurmr_perception.srv import CaptureObject, RemoveObject, GetObjectPoints, ResetBin
+from aurmr_perception.srv import CaptureObject, RemoveObject, GetObjectPoints, ResetBin, LoadDataset
+
+
+from skimage.color import label2rgb
+
 import numpy as np
 import ros_numpy
 import rospy
@@ -41,6 +45,8 @@ class PodPerceptionROS:
         self.trigger_update = rospy.Service('~update_bin', CaptureObject, self.update_object_callback)
         self.trigger_retrieve = rospy.Service('~get_object_points', GetObjectPoints, self.get_object_callback)
         self.trigger_reset = rospy.Service('~reset_bin', ResetBin, self.reset_callback)
+        self.trigger_load = rospy.Service('~load_dataset', LoadDataset, self.load_dataset)
+
 
         rospy.loginfo(camera_type)
         if camera_type == "realsense":
@@ -57,6 +63,9 @@ class PodPerceptionROS:
         else:
             raise RuntimeError(f"Unknown camera type requested: {camera_type}")
         
+        self.masks_pub = rospy.Publisher('~detected_masks', Image, queue_size=1, latch=True)
+        self.labels_pub = rospy.Publisher('~labeled_images', Image, queue_size=1, latch=True)
+        self.color_image_pub = rospy.Publisher('~colored_images', Image, queue_size=1, latch=True)
         self.camera_depth_subscriber = message_filters.Subscriber(f'/camera/aligned_depth_to_color/image_raw', Image)
         self.camera_rgb_subscriber = message_filters.Subscriber(f'/camera/color/image_raw', Image)
         self.camera_info_subscriber = message_filters.Subscriber(f'/camera/color/camera_info', CameraInfo)
@@ -80,6 +89,25 @@ class PodPerceptionROS:
         except:
             pass
 
+    def load_dataset(self, request):
+        from aurmr_dataset.io import DatasetReader
+        dataset = DatasetReader.load()
+
+        K  = np.asarray(dataset.camera_info['depth_to_rgb']['K'] ).reshape((3, 3))
+
+        first_entry = dataset.entries[0]
+
+        self.net = SegNet(init_depth=first_entry.depth_image, init_info=intrinsics_3x3)
+        self.model.net = self.net
+
+        for entry in dataset.entries[1:]:
+            rgb_image = entry.rgb_image 
+            depth_image = entry.depth_image
+            for i in entry.inventory():
+                pass
+
+        return {"success": True, "message": f"load dataset {dataset.path}"}
+    
     def capture_object_callback(self, request):
         if not request.bin_id or not request.object_id:
             return False, "bin_id and object_id are required"
@@ -135,6 +163,28 @@ class PodPerceptionROS:
             return result, message, None, None, None
 
         bin_id, points, mask, mask_all = result
+
+        bgr_to_rgb_image = cv2.cvtColor(self.rgb_image[:,:,:3].astype(np.uint8), cv2.COLOR_BGR2RGB)
+
+        labled_mask = mask.astype(np.uint8)
+        labled_mask[labled_mask>0] = 1
+        labled_img = cv2.bitwise_and(bgr_to_rgb_image, bgr_to_rgb_image, mask=labled_mask)
+        mask_msg = ros_numpy.msgify(Image, mask.astype(np.uint8), encoding="mono8")  
+            
+        labled_img_msg = ros_numpy.msgify(Image, labled_img.astype(np.uint8), encoding="rgb8")
+        
+        colored_img_msg = ros_numpy.msgify(Image, bgr_to_rgb_image, encoding="rgb8")
+
+        common_header = Header()
+        common_header.stamp = rospy.Time.now()
+
+        mask_msg.header = common_header
+        labled_img_msg.header = common_header
+        colored_img_msg.header = common_header
+
+        self.labels_pub.publish(labled_img_msg)
+        self.masks_pub.publish(mask_msg)
+        self.color_image_pub.publish(colored_img_msg)
 
         mask = ros_numpy.msgify(Image, mask.astype(np.uint8), encoding="mono8")
         mask_all = ros_numpy.msgify(Image, mask_all.astype(np.uint8), encoding="mono8")
@@ -532,38 +582,6 @@ class DiffPodModel:
 
             if(self.data_id != None):
                 np.save(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/real_world_data/segmask_{self.data_id}.npy", mask_save)
-            
-            # self.ros_image_pub.publish(self.bridge.cv2_to_imgmsg(mask_save.astype(np.uint8), encoding="mono8"), latch=True)
-            #plt.imshow(mask_save)
-            #plt.show()
-
-            # def onselect(eclick, erelease):
-            #     global rectangle
-            #     rectangle = (eclick.xdata, eclick.ydata, erelease.xdata, erelease.ydata)
-            #     plt.close()
-
-
-            # from matplotlib.widgets import RectangleSelector
-            # import time
-
-            # global rectangle
-            # rectangle = None
-
-            # while rectangle is None:
-
-            #     fig, ax = plt.subplots(figsize=(8, 6))
-            #     __rs = RectangleSelector(ax, onselect)
-
-            #     ax.set_title('Select a mask')
-            #     ax.imshow(mask_save * 50)
-                
-            #     plt.show()
-                
-            # print(rectangle)
-            # print(rectangle[0])
-            # print(rectangle[0].dtype)
-            # label = mask[int(rectangle[1]), int(rectangle[0])]
-            # print("We think the label is ", label)
             cv2.imwrite("/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/mask_from_pod_object_callback.png", mask_save)
             msg = f"Object {object_id} in bin {bin_id} was found"
             self.target_object_id_pub.publish(int(object_id))

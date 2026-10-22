@@ -1,3 +1,4 @@
+import os
 from operator import truediv
 import numpy as np
 import torch
@@ -20,8 +21,12 @@ import time
 from aurmr_unseen_object_clustering.srv import GetSegmentationUOIS
 import rospy
 import imutils
-
+import pickle
 from std_msgs.msg import Int16
+from aurmr_setup.utils.workspace_utils import get_active_workspace_path
+
+import glob
+import os
 
 rectangle = None
 
@@ -48,39 +53,23 @@ PIXEL_MEANS = np.array([[[102.9801, 115.9465, 122.7717]]])
 
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning) 
-
-# bin bounds {'item': min_image_height, max_image_height, min_image_width, max_width}
-
-# bin_bounds = {'3fold':[780, 1010, 1070, 1320],
-#           '3d':[2300, 2600, 2150, 2630],
-#           '3f':[1600, 2000, 2130, 2630],
-#           '3d_small':[1150,1300,1070,1320],
-#           '2f_old':[780, 1010, 830, 1080],
-#           '2f':[1580, 2000, 1650, 2140],
-#           '2d':[2300, 2600, 1650, 2150],
-#           '2h':[1050, 1280, 1660, 2130]}
-
-# not reachable: 1d, 
-#317 296 407 353
-#1268 1184 1628 1412
-
 bin_bounds = {
-          '1H':[297*4, 353*4, 315*4, 406*4],
-          '2H':[300*4, 355*4, 409*4, 514*4],
-          '3H':[303*4, 356*4, 515*4, 620*4],
-          '4H':[302*4, 355*4, 619*4, 711*4],
-          '1G':[365*4, 409*4, 315*4, 405*4],
-          '2G':[367*4, 407*4, 407*4, 512*4],
-          '3G':[370*4, 411*4, 513*4, 619*4],
-          '4G':[371*4, 412*4, 619*4, 711*4],
-          '1F':[420*4, 514*4, 314*4, 405*4],
-          '2F':[424*4, 511*4, 407*4, 512*4],
-          '3F':[233, 549, 504, 862],
-          '4F':[426*4, 514*4, 621*4, 714*4],
-          '1E':[527*4, 572*4, 311*4, 405*4],
-          '2E':[529*4, 571*4, 407*4, 513*4],
-          '3E':[527*4, 574*4, 515*4, 620*4],
-          '4E':[531*4, 574*4, 622*4, 714*4],
+          '1H':[237, 527, 503, 788],
+          '2H':[170, 446, 545, 868],
+          '3H':[244, 550, 359, 715],
+          '4H':[220, 526, 472, 780],
+          '1G':[306, 467, 532, 840],
+          '2G':[381, 518, 551, 914],
+          '3G':[374, 522, 355, 706],
+          '4G':[326, 481, 477, 770],
+          '1F':[239, 433, 515, 803],
+          '2F':[254, 437, 538, 908],
+          '3F':[286, 491, 373, 714],
+          '4F':[211, 404, 452, 756],
+          '1E':[228, 496, 506, 795],
+          '2E':[269, 503, 575, 915],
+          '3E':[240, 516, 413, 738],
+          '4E':[235, 489, 448, 748],
             }
 
 def_config = {
@@ -284,11 +273,11 @@ class SegNet:
         xyz_img = np.stack([x_e, y_e, z_e], axis=-1) # Shape: [H x W x 3]
         return xyz_img
     
-    def uois_segmentation(self, img_msg, width, height):
+    def uois_segmentation(self, bin_id):
         rospy.wait_for_service('segmentation_with_embeddings')
         try:
             uois_client = rospy.ServiceProxy('segmentation_with_embeddings', GetSegmentationUOIS)
-            req = uois_client(img_msg, width, height)
+            req = uois_client(bin_id)
             return req.out_label, req.embeddings
         except rospy.ServiceException as e:
             print("Service call failed: %s"%e)
@@ -311,6 +300,17 @@ class SegNet:
   
         H, W, _ = rgb.shape
   
+        # Save the entire pod images for further reproduction
+        pod_img_path = f"/home/aurmr/workspaces/aurmr_demo_perception/src/uois_service_multi_demo/dataset/pod"
+        os.makedirs(pod_img_path, exist_ok=True)
+        pod_img_files = os.listdir(pod_img_path)
+        indices = [int(f.split('_')[-1].split('.')[0]) for f in pod_img_files if f.startswith('pod_img_') and f.endswith('.png')]
+        if indices:
+            next_index = max(indices) + 1
+        else:
+            next_index = 0
+        index_str = str(next_index).zfill(4)
+        cv2.imwrite(os.path.join(pod_img_path, f"pod_img_{index_str}.png"), rgb)
         # Crops the image to the current bin
         xyz = xyz[bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], :]
         rgb = rgb[bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3]
@@ -343,8 +343,45 @@ class SegNet:
         #     rgb = cv2.resize(rgb, (256, 256), interpolation=cv2.INTER_AREA)
         #     xyz = cv2.resize(xyz, (256, 256), interpolation=cv2.INTER_AREA) 
         #     bg_mask_now = cv2.resize(bin.bg_mask.astype(np.uint8), (256, 256), interpolation=cv2.INTER_AREA)
-       
+
+        
+
+
+        folders = ['1E', '1H', '1F', '1G', '2E', '2H', '2F', '2G', '3E', '3H', '3F', '3G', '4E', '4H', '4F', '4G', '1D', '2D', '3D', '1C', '2C', '3C']
+
+        for folder in folders:
+            path = "/home/aurmr/workspaces/aurmr_demo_perception/src/uois_service_multi_demo/dataset/"
+            folder_path = path+folder
+            files = glob.glob(f'{folder_path}/*.npy')
+            for file in files:
+                os.remove(file)
+            files = glob.glob(f'{folder_path}/*.png')
+            for file in files:
+                os.remove(file)
+        files = glob.glob(f'{path}/pod/*.png')
+        for file in files:
+            os.remove(file)
+
+
+
         rgb_segment = rgb.astype(np.uint8)
+        
+        path = f"/home/aurmr/workspaces/aurmr_demo_perception/src/uois_service_multi_demo/dataset/{bin_id}"
+        os.makedirs(path, exist_ok=True)
+        #path = "/home/aurmr/workspaces/uois_multi_frame_ws/src/uois_service_multi_demo/dataset/"+bin_id+"/"
+        files = os.listdir(path)
+        indices = [int(f.split('_')[-1].split('.')[0]) for f in files if f.startswith('color_') and f.endswith('.npy')]
+        if indices:
+            next_index = max(indices) + 1
+        else:
+            next_index = 0
+        index_str = str(next_index).zfill(4)
+        file_path = os.path.join(path, f"color_{index_str}.npy")
+        np.save(file_path, rgb_segment)
+        # Save the image in png format to compare with predicted masks
+        png_filepath = file_path.split('.')[0] + '.png'
+        cv2.imwrite(png_filepath, rgb_segment)
+
         # xyz = xyz.astype(np.uint8)
 
         '''
@@ -355,9 +392,12 @@ class SegNet:
         '''
         new method
         '''
-        reshaped_img = rgb_segment.reshape(-1)
-        mask, embed = self.uois_segmentation(reshaped_img, rgb_segment.shape[0], rgb_segment.shape[1])
-        mask = np.asarray(mask).astype(np.uint8).reshape(rgb_segment.shape[0], rgb_segment.shape[1])
+        # mask, embed = self.uois_segmentation(reshaped_img, rgb_segment.shape[0], rgb_segment.shape[1])
+        mask, embed = self.uois_segmentation(bin_id)
+        try:
+            mask = np.asarray(mask).astype(np.uint8).reshape(rgb_segment.shape[0], rgb_segment.shape[1])
+        except:
+            mask = np.zeros((rgb_segment.shape[0], rgb_segment.shape[1]), dtype = np.uint8)
         embed = np.asarray(embed).astype(np.float64)
         if(np.max(mask) > 0):
             embed = embed.reshape(np.max(mask), 256)
@@ -797,7 +837,6 @@ class SegNet:
         #     # No matching is necessary because there is only one object in the scene
         #     bin.current['mask'] = mask_crop.copy()
         #     bin.current['embeddings'] = embeddings
-        
 
         bin.current['mask'] = mask_crop.copy()
         bin.current['embeddings'] = embeddings
@@ -858,6 +897,7 @@ class SegNet:
   
         # Make sure that the bin only has segmentations for n objects
         mask_crop, embeddings = self.refine_masks(mask_crop, bin.n, embeddings)
+        print("current unique mask values are: ", np.unique(mask_crop))
 
         current_GMT = time.gmtime()
         time_stamp = calendar.timegm(current_GMT)
@@ -951,13 +991,11 @@ class SegNet:
         
         current_GMT = time.gmtime()
         time_stamp = calendar.timegm(current_GMT)
-        self.frame_count_yi += 1
-        try:
-            cv2.imwrite("/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/Data_Collection/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
-            cv2.imwrite("/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_update_"+str(self.frame_count_yi)+".png", mask_crop.astype(np.uint8)*40)
-            cv2.imwrite("/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
-        except:
-            pass
+        # try:
+        #     cv2.imwrite("/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/VLM_model/"+str(time_stamp)+"_rgb.png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
+        #     cv2.imwrite("/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/VLM_model/"+str(time_stamp)+"_mask.png", mask_crop.astype(np.uint8))
+        # except:
+        #     pass
 
         if mask_crop is None:
             self.current = self.last

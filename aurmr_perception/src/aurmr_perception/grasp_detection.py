@@ -9,8 +9,8 @@ from std_msgs.msg import ColorRGBA
 from aurmr_perception.srv import DetectGraspPoses
 from geometry_msgs.msg import PoseStamped, Quaternion, Pose, Point, Vector3
 from tf_conversions import transformations
-from aurmr_perception.visualization import create_gripper_pose_markers
-from sensor_msgs.msg import PointCloud2 
+# from aurmr_perception.visualization import create_gripper_pose_markers
+from sensor_msgs.msg import PointCloud2
 
 # See moveit_grasps for inspiration on improved grasp ranking and filtering:
 # https://ros-planning.github.io/moveit_tutorials/doc/moveit_grasps/moveit_grasps_tutorial.html
@@ -25,6 +25,7 @@ from scipy.spatial.transform import Rotation as R
 from copy import deepcopy
 import geometry_msgs
 from grasp_training.vit_model.inference_script import inference
+from grasp_training.dexnet_finetune.inference_dexnet_finetune import DexnetFineTune
 
 import matplotlib.pyplot as plt
 from gqcnn.gqcnn_examples.policy_for_training import dexnet3
@@ -34,6 +35,9 @@ from autolab_core import (YamlConfig, Logger, BinaryImage,
 from std_msgs.msg import Int16
 import json
 from datetime import datetime
+
+import calendar
+import time
 
 
 class HeuristicGraspDetector:
@@ -53,7 +57,7 @@ class HeuristicGraspDetector:
         :return:
         """
         # compute the average point of the pointcloud
-        
+
         points_sort_z = np.flip(points[points[:, 2].argsort()], axis=0)
         POINTS_TO_KEEP_FACTOR = .8
         keep_idxs = np.arange(int(points.shape[0]*(1-POINTS_TO_KEEP_FACTOR)), points.shape[0])
@@ -61,7 +65,7 @@ class HeuristicGraspDetector:
         rospy.loginfo(points.shape)
         rospy.loginfo(points_lowered.shape)
         center = np.mean(points_lowered, axis=0)
-    
+
         temp = center
         center[0] = temp[2]
         center[1] = temp[0]
@@ -96,7 +100,7 @@ class GraspDetectionROS:
             self.detect_grasps_normal = rospy.Service('~detect_grasps', DetectGraspPoses, self.detect_grasps__normal_cb)
         elif(grasp_method == "centroid"):
             self.detect_grasps = rospy.Service('~detect_grasps', DetectGraspPoses, self.detect_grasps_cb)
-        
+
         self.dections_viz_pub = rospy.Publisher("~detected_grasps", MarkerArray, latch=True, queue_size=1)
         self.points_viz_pub = rospy.Publisher("~detected_pts", PointCloud2, latch=True, queue_size=5)
         self.camera_depth_subscriber = rospy.Subscriber('/camera/aligned_depth_to_color/image_raw', Image, self.depth_callback)
@@ -107,19 +111,29 @@ class GraspDetectionROS:
         self.rgb_img = []
         self.grasp_offset = 0.125
         self.bin_normal = np.array([-1,0,0])
-        self.tf_buffer = tf2_ros.Buffer()
-        self.listener = tf2_ros.TransformListener(self.tf_buffer)
+
         self.bridge = CvBridge()
         self.grasp_viz_perception = rospy.Publisher("selected_grasp_pose_perception", geometry_msgs.msg.PoseStamped,
                                         queue_size=1, latch=True)
         self.time_series_count = 0
+        self.tf_buffer = tf2_ros.Buffer()
+        self.listener = tf2_ros.TransformListener(self.tf_buffer)
+        while True:
+            try:
+                self.realsense_to_kinect_transform = self.tf_buffer.lookup_transform('depth_camera_link', 'camera_link', rospy.Time())
+                print(self.realsense_to_kinect_transform)
+                break
+            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+                print("error in getting tf between realsense camera and kinect camera")
+                rospy.Rate(10.0).sleep()
+                continue
 
     def data_id_callback(self, data):
         try:
             self.data_id = data.data
         except Exception as e:
             print(e)
-    
+
     def target_object_id_callback(self, data):
         try:
             self.target_id = data.data
@@ -131,7 +145,7 @@ class GraspDetectionROS:
             self.depth_img = self.bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
         except CvBridgeError as e:
             print(e)
-    
+
     def rgb_callback(self, data):
         try:
             self.rgb_img = self.bridge.imgmsg_to_cv2(data, "bgr8")
@@ -149,7 +163,7 @@ class GraspDetectionROS:
     def get_quaternion_from_euler(self, roll, pitch, yaw):
         """
         Convert an Euler angle to a quaternion.
-        
+
         Input
             :param roll: The roll (rotation around x-axis) angle in radians.
             :param pitch: The pitch (rotation around y-axis) angle in radians.
@@ -162,7 +176,7 @@ class GraspDetectionROS:
         qy = np.cos(roll/2) * np.sin(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.cos(pitch/2) * np.sin(yaw/2)
         qz = np.cos(roll/2) * np.cos(pitch/2) * np.sin(yaw/2) - np.sin(roll/2) * np.sin(pitch/2) * np.cos(yaw/2)
         qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
- 
+
         return [qx, qy, qz, qw]
 
     def transfor_pose(self, pose_stamped, to_frame):
@@ -171,7 +185,7 @@ class GraspDetectionROS:
             return output_pose_stemped
         except(tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
-        
+
     def clamp(self, num, min_value, max_value):
         clamp_value = num
         if(num < 0):
@@ -191,7 +205,7 @@ class GraspDetectionROS:
 
     def detect_grasps_cb(self, request):
         cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
-        
+
         # cv2.imwrite("/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
         pts = ros_numpy.numpify(request.points)
         self.points_viz_pub.publish(request.points)
@@ -213,8 +227,27 @@ class GraspDetectionROS:
         cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
         mask_all = self.bridge.imgmsg_to_cv2(request.mask_all, desired_encoding='passthrough')
         print("object id", request.object_id)
+        bin_bounds = {
+          '1H':[237, 527, 503, 788],
+          '2H':[170, 446, 545, 868],
+          '3H':[244, 550, 359, 715],
+          '4H':[220, 526, 472, 780],
+          '1G':[306, 467, 532, 840],
+          '2G':[381, 518, 551, 914],
+          '3G':[374, 522, 355, 706],
+          '4G':[326, 481, 477, 770],
+          '1F':[239, 433, 515, 803],
+          '2F':[254, 437, 538, 908],
+          '3F':[286, 491, 373, 714],
+          '4F':[211, 404, 452, 756],
+          '1E':[228, 496, 506, 795],
+          '2E':[269, 503, 575, 915],
+          '3E':[240, 516, 413, 738],
+          '4E':[235, 489, 448, 748],
+            }
+
         cv2.imwrite("/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/mask_all.png", mask_all)
-        
+
         # np.save(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/real_world_data/depth_image_{self.data_id}.npy", self.depth_img)
         # convert point cloud to mask
         fx, fy = 903.14697265625, 903.5240478515625
@@ -228,7 +261,7 @@ class GraspDetectionROS:
         pts = np.stack([pts['x'],
                         pts['y'],
                         pts['z']], axis=1)
-    
+
 
         print("rgb shape in grasp", self.rgb_img.shape)
         pts = ros_numpy.numpify(request.points)
@@ -239,18 +272,21 @@ class GraspDetectionROS:
 
         # transform from base link to rgb camera link
 
-        method = "dexnet"
+        method = "vlm"
         if(method == "vit"):
             print(self.depth_img.shape, mask_all.shape)
+            bin_dim = bin_bounds[request.bin_id]
 
-            # np.save(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/real_world_data/depth_image_{self.data_id}.npy", self.depth_img)
-            # np.save(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/real_world_data/rgb_image_{self.data_id}.npy", self.rgb_img)
-            # np.save(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/real_world_data/segmask_{self.data_id}.npy", cv_image)
+            cv2.imwrite(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/rgb_image.png", self.rgb_img)
+            cv2.imwrite(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/depth_image.png", self.depth_img)
+            cv2.imwrite(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/segmask.png", mask_all)
 
             depth_image = cv2.resize(self.depth_img, (640, 360),  interpolation = cv2.INTER_NEAREST)
             segmask_image = cv2.resize(mask_all, (640, 360),  interpolation = cv2.INTER_NEAREST)
             depth_image = depth_image/1000.0
             print(np.unique(segmask_image))
+
+            bin_dim = np.array([int(bin_dim[0]/2), int(bin_dim[1]/2), int(bin_dim[2]/2), int(bin_dim[3]/2)])
 
             # cv2.imshow("depth", depth_image)
             # cv2.waitKey(0)
@@ -258,14 +294,14 @@ class GraspDetectionROS:
             # cv2.waitKey(0)
 
             inference_object = inference()
-            grasp_point_model, centroid_model, output = inference_object.run_model(depth_image, segmask_image, int(request.object_id))
+            grasp_point_model, centroid_model, output = inference_object.run_model(depth_image, segmask_image, int(request.object_id), bin_dim)
 
             grasp_point = grasp_point_model + np.array([centroid_model[0],centroid_model[1]])
             print(grasp_point)
             grasp_point[0] = grasp_point[0]*2
             grasp_point[1] = grasp_point[1]*2
             inference_object = run_normal_std()
-            
+
             grasp_3d_point, grasp_euler_angles, center = inference_object.inference(self.rgb_img, self.depth_img, cv_image, grasp_point)
 
             # json_save = {
@@ -281,7 +317,13 @@ class GraspDetectionROS:
             # with open(save_dir_json, 'w') as json_file:
             #     json.dump(json_save, json_file)
 
-            transform_from_kinect_to_realsense = np.array([0.112, 0.165, 0.49])
+            self.realsense_to_kinect_transform = self.tf_buffer.lookup_transform('depth_camera_link', 'camera_link', rospy.Time())
+            print(self.realsense_to_kinect_transform)
+            self.realsense_to_kinect_position = np.array([self.realsense_to_kinect_transform.transform.translation.x, \
+                                                 self.realsense_to_kinect_transform.transform.translation.y, \
+                                                 self.realsense_to_kinect_transform.transform.translation.z])
+            offset = np.array([-0.02, 0.033, 0])
+            transform_from_kinect_to_realsense = self.realsense_to_kinect_position + offset
             point = grasp_3d_point + transform_from_kinect_to_realsense
             euler_angles = grasp_euler_angles
             print("points", point, euler_angles, transform_from_kinect_to_realsense)
@@ -309,7 +351,7 @@ class GraspDetectionROS:
             grasp_point[1] = grasp_point[1]*2
 
             inference_object = run_normal_std()
-            
+
             grasp_3d_point, grasp_euler_angles, center = inference_object.inference(self.rgb_img, self.depth_img, cv_image, grasp_point)
 
             json_save = {
@@ -367,14 +409,79 @@ class GraspDetectionROS:
             grasp_point = np.array([grasps_and_predictions[0][0].center.x*2, grasps_and_predictions[0][0].center.y*2])
             inference_object = run_normal_std()
             point, euler_angles, center = inference_object.inference(self.rgb_img, self.depth_img, cv_image, grasp_point)
-            point += np.array([0.107, 0.17, 0.49])
+            self.realsense_to_kinect_transform = self.tf_buffer.lookup_transform('depth_camera_link', 'camera_link', rospy.Time())
+            print(self.realsense_to_kinect_transform)
+            self.realsense_to_kinect_position = np.array([self.realsense_to_kinect_transform.transform.translation.x, \
+                                                 self.realsense_to_kinect_transform.transform.translation.y, \
+                                                 self.realsense_to_kinect_transform.transform.translation.z])
+            offset = np.array([-0.02, 0.033, 0])
+            transform_from_kinect_to_realsense = self.realsense_to_kinect_position + offset
+            point += transform_from_kinect_to_realsense
             print("points", point)
-        
+
         elif(method == "centroid"):
             inference_object = run_normal_std()
             point, euler_angles, center = inference_object.inference(self.rgb_img, self.depth_img, cv_image, None)
-            point += np.array([0.107, 0.17, 0.49])
+            self.realsense_to_kinect_transform = self.tf_buffer.lookup_transform('depth_camera_link', 'camera_link', rospy.Time())
+            print(self.realsense_to_kinect_transform)
+            self.realsense_to_kinect_position = np.array([self.realsense_to_kinect_transform.transform.translation.x, \
+                                                 self.realsense_to_kinect_transform.transform.translation.y, \
+                                                 self.realsense_to_kinect_transform.transform.translation.z])
+            offset = np.array([-0.02, 0.035, 0])
+            transform_from_kinect_to_realsense = self.realsense_to_kinect_position + offset
+            point += transform_from_kinect_to_realsense
             print("points", point)
+
+        elif(method == "vlm"):
+            current_GMT = time.gmtime()
+            time_stamp = calendar.timegm(current_GMT)
+            cv2.imwrite(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/VLM_model/"+str(time_stamp)+"_rgb_image.png", self.rgb_img)
+            np.save(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/VLM_model/"+str(time_stamp)+"_depth_image.npy", self.depth_img)
+            np.save(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/VLM_model/"+str(time_stamp)+"_rgb_image.npy", self.rgb_img)
+            np.save(f"/home/aurmr/workspaces/uois_dynamo_grasp_rgb/src/segnetv2_mask2_former/Mask_Results/VLM_model/"+str(time_stamp)+"_segmask.npy", mask_all)
+            inference_object = run_normal_std()
+            point, euler_angles, center = inference_object.inference_vlm(self.rgb_img, self.depth_img, cv_image, None)
+            self.realsense_to_kinect_transform = self.tf_buffer.lookup_transform('depth_camera_link', 'camera_link', rospy.Time())
+            print(self.realsense_to_kinect_transform)
+            self.realsense_to_kinect_position = np.array([self.realsense_to_kinect_transform.transform.translation.x, \
+                                                 self.realsense_to_kinect_transform.transform.translation.y, \
+                                                 self.realsense_to_kinect_transform.transform.translation.z])
+            offset = np.array([-0.02, 0.033, 0])
+            transform_from_kinect_to_realsense = self.realsense_to_kinect_position + offset
+            point += transform_from_kinect_to_realsense
+            print("points", point)
+        elif(method == "dexnet_finetune"):
+            print(self.depth_img.shape, mask_all.shape)
+            bin_dim = bin_bounds[request.bin_id]
+
+            depth_image = cv2.resize(
+                self.depth_img, (640, 360), interpolation=cv2.INTER_NEAREST
+            )
+            segmask = cv2.resize(mask_all, (640, 360), interpolation=cv2.INTER_NEAREST)
+            depth_image = depth_image.astype(np.float32)/1000.0
+            bin_dim = np.array([int(bin_dim[0]/2), int(bin_dim[1]/2), int(bin_dim[2]/2), int(bin_dim[3]/2)])
+
+            inference_finetune = DexnetFineTune(depth_image, segmask)
+            grasp_point_model, centroid_model = inference_finetune.gqcnn_inference(int(request.object_id), bin_dim)
+
+            grasp_point = grasp_point_model + np.array([centroid_model[0],centroid_model[1]])
+            print(grasp_point)
+            grasp_point[0] = grasp_point[0]*2
+            grasp_point[1] = grasp_point[1]*2
+            inference_object = run_normal_std()
+
+            point, grasp_euler_angles, center = inference_object.inference(self.rgb_img, self.depth_img, cv_image, grasp_point)
+
+            self.realsense_to_kinect_transform = self.tf_buffer.lookup_transform('depth_camera_link', 'camera_link', rospy.Time())
+            print(self.realsense_to_kinect_transform)
+            self.realsense_to_kinect_position = np.array([self.realsense_to_kinect_transform.transform.translation.x, \
+                                                 self.realsense_to_kinect_transform.transform.translation.y, \
+                                                 self.realsense_to_kinect_transform.transform.translation.z])
+            offset = np.array([-0.02, 0.033, 0])
+            transform_from_kinect_to_realsense = self.realsense_to_kinect_position + offset
+            point += transform_from_kinect_to_realsense
+            euler_angles = grasp_euler_angles
+            print("points", point, euler_angles, transform_from_kinect_to_realsense)
 
 
         # clamp euler englaes within 15 and 45 but if less than 15 it will be 0
@@ -391,7 +498,7 @@ class GraspDetectionROS:
         if(method == "centroid"):
             clamped_euler_angles[0] = 0.0
             clamped_euler_angles[1] = 0.0
-        
+
         # clamped_euler_angles[1] = 0.0
         print("post euler angles", clamped_euler_angles[0]*180/math.pi, clamped_euler_angles[1]*180/math.pi)
         # transform from the 3d pose to rgb_camera_link
@@ -405,7 +512,7 @@ class GraspDetectionROS:
         t_header.frame_id = 'rgb_camera_link_offset'
         vis_pose = PoseStamped(header=t_header, pose=as_pose_pose)
         self.grasp_viz_perception.publish(vis_pose)
-        
+
         # transform from base ink to 3d pose
         # position in base_line
         output_pose_stamped = self.transfor_pose(vis_pose, 'base_link')
