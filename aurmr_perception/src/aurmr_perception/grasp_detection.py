@@ -17,13 +17,13 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import sys
 
-from normal_std.inference_grasp_main import run_normal_std
+#from normal_std.inference_grasp_main import run_normal_std
 
 from scipy.spatial.transform import Rotation as R
 from copy import deepcopy
 import geometry_msgs
 
-from hardware_inference_comms import TrainRGBModel
+#from hardware_inference_comms import TrainRGBModel
 
 from aurmr_perception.gqcnn_hardware_comms import TrainDexNetModel
 from aurmr_perception.gqcnn_hardware_comms import SimpleGQCNN
@@ -364,11 +364,11 @@ class GraspDetectionROS:
 
         print(grasp_point, grasp_angle*180/np.pi, crop_bin_bounds)
 
-
-        center3D_depth_value = self.mean_nonzero_around_grasp(self.depth_img, grasp_point)
+        center3D_depth_value = self.depth_img[int(grasp_point[1]), int(grasp_point[0])]
         if center3D_depth_value < 0.01:
             print("Hole in depth image, setting depth to default 0.018")
             center3D_depth_value = 0.018
+
         pointz = center3D_depth_value/1000.0
         pointx = (grasp_point[0] - cx) * pointz / fx
         pointy = (grasp_point[1] - cy) * pointz / fy
@@ -412,6 +412,67 @@ class GraspDetectionROS:
                                         z=orientation[2], w=orientation[3])
         return True, "", [output_pose_stamped]
 
+
+
+    def estimate_depth(self, image):
+
+        #from aurmr_setup.utils.workspace_utils import get_active_workspace_path
+        #workpace_path = get_active_workspace_path()
+        #model_path = f"{workpace_path}/model_weights/depth_anything_vitl14.pth"
+
+
+        if True or "save  image":
+            cv2.imwrite('/tmp/rgb_input.png', image)
+
+
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB) / 255.0
+
+
+        import torch
+        from depth_anything.dpt import DepthAnything
+        from depth_anything.util.transform import Resize, NormalizeImage, PrepareForNet
+
+        import torch.nn.functional as F
+        from torchvision.transforms import Compose
+
+        DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+        depth_anything = DepthAnything.from_pretrained("LiheYoung/depth_anything_vitl14").to(DEVICE).eval()
+
+        transform = Compose([
+            Resize(
+                width=518,
+                height=518,
+                resize_target=False,
+                keep_aspect_ratio=True,
+                ensure_multiple_of=14,
+                resize_method='lower_bound',
+                image_interpolation_method=cv2.INTER_CUBIC,
+            ),
+            NormalizeImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            PrepareForNet(),
+        ])
+
+        h, w = image.shape[:2]
+
+        image = transform({'image': image})['image']
+        image = torch.from_numpy(image).unsqueeze(0).to(DEVICE)
+
+
+        with torch.no_grad():
+            depth = depth_anything(image)
+
+        depth = F.interpolate(depth[None], (h, w), mode='bilinear', align_corners=False)[0, 0]
+        depth = (depth - depth.min()) / (depth.max() - depth.min()) * 255.0
+
+        depth = depth.cpu().numpy().astype(np.uint8)
+
+        if True or "save depth image":
+            depth_colorized = cv2.applyColorMap(depth, cv2.COLORMAP_INFERNO)
+            cv2.imwrite('/tmp/depth_estimated.png', depth_colorized)
+
+        return depth
+
     def detect_dexnet_grasps_cb(self, request):
         cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
         # cv2.imwrite("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
@@ -444,35 +505,120 @@ class GraspDetectionROS:
         rgb_image_cropped = self.rgb_img[crop_bin_bounds[0]:crop_bin_bounds[1], crop_bin_bounds[2]:crop_bin_bounds[3], ...]
 
         segmask_cropped = cv_image[crop_bin_bounds[0]:crop_bin_bounds[1], crop_bin_bounds[2]:crop_bin_bounds[3], ...]
+
+        if True or "save mask":
+            mask_scaled = segmask_cropped * 128
+            mask_colorized_colorized = cv2.applyColorMap(mask_scaled, cv2.COLORMAP_INFERNO)
+            cv2.imwrite('/tmp/colorized_mask.png', mask_colorized_colorized)
+
+        estimate_depth = True
+        if estimate_depth:
+            #depth = self.estimate_depth(self.rgb_img)
+
+            depth = self.estimate_depth(rgb_image_cropped)
+
+            print(depth.shape)
+            print(depth.dtype)
+            print(self.depth_img.dtype)
+            print(self.depth_img.shape)
+
+            print(depth.min())
+            print(depth.max())
+            print(self.depth_img.min())
+            print(self.depth_img.max())
+
+            depth = depth.astype(np.float32)
+
+            print(depth.min())
+            print(depth.max())
+
+            min_bin_distance = 1100
+            max_bin_distance = 1370
+
+            depth = (1.0 - (depth / 255)) * (max_bin_distance - min_bin_distance) + min_bin_distance
+            depth_cropped = depth
+
+
+            if True or "save depth image":
+                depth_colorized = cv2.applyColorMap(depth.astype(np.uint8), cv2.COLORMAP_INFERNO)
+                cv2.imwrite('/tmp/depth_estimated.png', depth_colorized)
+
+            print(depth_cropped.min())
+            print(depth_cropped.max())
+
+            #depth = depth.astype(np.float32)
+            #depth_cropped = depth[crop_bin_bounds[0]:crop_bin_bounds[1], crop_bin_bounds[2]:crop_bin_bounds[3], ...]
+
         self.depth_img = self.depth_img.astype(np.float32)
         depth_cropped = self.depth_img[crop_bin_bounds[0]:crop_bin_bounds[1], crop_bin_bounds[2]:crop_bin_bounds[3], ...]
 
-        object_hardware_comm = TrainDexNetModel(rgb_image_cropped, depth_cropped, segmask_cropped)
-        grasp_point = object_hardware_comm.run_dexnet_hardware_comm_inference()
+        if True or "save depth image":
+            depth_colorized = cv2.applyColorMap(depth_cropped.astype(np.uint8), cv2.COLORMAP_INFERNO)
+            cv2.imwrite('/tmp/depth_actual.png', depth_colorized)
 
+        print(depth_cropped.min())
+        print(depth_cropped.max())
+
+        object_hardware_comm = TrainDexNetModel(rgb_image_cropped, depth_cropped, segmask_cropped)
+        grasp_points = object_hardware_comm.run_dexnet_hardware_comm_inference()
+
+        grasp_points[:, 1] = grasp_points[:, 1] * rgb_image_cropped.shape[1]
+        grasp_points[:, 0] = grasp_points[:, 0] * rgb_image_cropped.shape[0]
+
+        grasp_point = grasp_points[0]
         print(grasp_point, crop_bin_bounds)
-        grasp_point[1] = grasp_point[1]*rgb_image_cropped.shape[1]/224
-        grasp_point[0] = grasp_point[0]*rgb_image_cropped.shape[0]/224
 
         fig, axs = plt.subplots(1, 1, figsize=(12, 3))
         axs.imshow(rgb_image_cropped)
         axs.add_patch(
-            plt.Circle((grasp_point[0], grasp_point[1]), radius=2, color="red", fill=True)
+            plt.Circle((grasp_point[1], grasp_point[0]), radius=2, color="red", fill=True)
+
         )
         plt.savefig("/tmp/grasp_point_plot_dexnet.png")
+
+        if True:
+
+
+            fig, axs = plt.subplots(1, 2, figsize=(12, 3))
+
+            for ax in axs:
+                ax.axis("off")
+
+            masked_rgb_image = rgb_image_cropped[:, :, ::-1]
+            masked_rgb_image[:, :, 0] = masked_rgb_image[:, :, 0] * 0.7 * segmask_cropped + masked_rgb_image[:, :, 0] * 0.3
+            masked_rgb_image[:, :, 1] = masked_rgb_image[:, :, 1] * 0.7 * segmask_cropped + masked_rgb_image[:, :, 1] * 0.3
+            masked_rgb_image[:, :, 2] = masked_rgb_image[:, :, 2] * 0.7 * segmask_cropped + masked_rgb_image[:, :, 2] * 0.3
+            axs[0].imshow(masked_rgb_image)
+
+            for grasp_point in grasp_points[:1]:
+                axs[0].add_patch(plt.Circle((grasp_point[1], grasp_point[0]), radius=2, color="red", fill=False, alpha=1.0))
+
+
+            for grasp_point in grasp_points:
+                axs[0].add_patch(plt.Circle((grasp_point[1], grasp_point[0]), radius=2, color="orange", fill=False, alpha=0.5))
+
+            axs[1].imshow(segmask_cropped * 128, cmap="gray")
+            plt.tight_layout()
+            fig.savefig(f"/tmp/grasp_point.png")
+            #plt.show()
+
 
         grasp_point[0] += crop_bin_bounds[2]
         grasp_point[1] += crop_bin_bounds[0]
 
         print(grasp_point, crop_bin_bounds)
 
-        center3D_depth_value = self.depth_img[int(grasp_point[1]), int(grasp_point[0])]
+        center3D_depth_value = self.depth_img[int(grasp_point[0]), int(grasp_point[1])]
 
         pointz = center3D_depth_value/1000.0
+
+        # ..FIXME this is with respect to a custom coordinate system.
         pointx = (grasp_point[0] - cx) * pointz / fx
         pointy = (grasp_point[1] - cy) * pointz / fy
 
         point = [pointx, pointy, pointz]
+
+
 
         transform= self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
         transform_camera_to_base_link= self.tf_buffer.lookup_transform('base_link', 'rgb_camera_link', rospy.Time())
@@ -480,9 +626,10 @@ class GraspDetectionROS:
         RGB_TO_DEPTH_FRAME_OFFSET = 0.02
         DEPTH_TILT = -transform.transform.translation.z - 0.02
 
-        point[2] = transform.transform.translation.x - POD_OFFSET - transform_camera_to_base_link.transform.translation.x
-        point[1] -= point[2]*np.sin(DEPTH_TILT)
-        point[0] -= RGB_TO_DEPTH_FRAME_OFFSET
+        if False and "remove magic values":
+            point[2] = transform.transform.translation.x - POD_OFFSET - transform_camera_to_base_link.transform.translation.x
+            point[1] -= point[2]*np.sin(DEPTH_TILT)
+            point[0] -= RGB_TO_DEPTH_FRAME_OFFSET
 
         clamped_euler_angles = [0., 0., 0.]
 

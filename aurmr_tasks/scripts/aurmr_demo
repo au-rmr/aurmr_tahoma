@@ -27,7 +27,6 @@ from aurmr_tasks.common.hri import UserPromptForRetry
 from queue import Empty, Queue
 
 
-
 class PickStowQueue:
     def __init__(self, pick_sm) -> None:
         self.stow_service = rospy.Service('~stow', StowRequest, self.stow_cb)
@@ -185,7 +184,6 @@ def main():
 
             StateMachine.add("POST_PICK_SUCCESS_CLEANUP", pick_success_cleanup_sm, {"succeeded": "done"})
             StateMachine.add("RETRY", pick_retry_sm, {'retry': 'CLEAR_SCENE_PREMOVE', 'continue': 'done'})
-
 
         with stow_sm:
             cf.splat_auto("SPLAT_STOW", "request", ["target_bin_id", "target_object_id", "target_object_asin"])

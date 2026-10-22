@@ -19,6 +19,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from functools import lru_cache
+
 class CropTransform:
     def __init__(self, crop_dim):
         self.crop_dim = crop_dim
@@ -39,9 +41,15 @@ class CustomSingleDataset(Dataset):
         cv2.imwrite("/tmp/rgb_grasp.png", image)
         cv2.imwrite("/tmp/segmask_grasp.png", segmask)
 
+
+        self.resize_transform_mask = transforms.Resize(
+            (INPUT_IMAGE_SIZE, INPUT_IMAGE_SIZE), interpolation=transforms.InterpolationMode.NEAREST
+        )
+
         self.resize_transform = transforms.Resize(
             (INPUT_IMAGE_SIZE, INPUT_IMAGE_SIZE), interpolation=transforms.InterpolationMode.BICUBIC
         )
+
         self.normalize_transform = transforms.Normalize(
             mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
         )
@@ -50,7 +58,10 @@ class CustomSingleDataset(Dataset):
 
     def _get_patch_indices(self, segmask):
         numpy_mask = segmask
+
+        assert(len(np.unique(numpy_mask)) == 2)
         mask_id = np.unique(numpy_mask)[1]
+        assert(mask_id == 1)
         padding_size = [
             self.patch_size,
             self.patch_size,
@@ -59,9 +70,12 @@ class CustomSingleDataset(Dataset):
         ]
         mask = numpy_mask == int(mask_id)
         mask = torch.from_numpy(mask).unsqueeze(0)
-        mask = self.resize_transform(mask)
+        mask = self.resize_transform_mask(mask)
         mask = F.pad(mask, padding_size, "constant", 0).squeeze(0)
 
+        # The mask gets resized to 244x244. With the padding the mask is now 288x288
+
+        # coordinates now have a range from 0 to 288
         non_zero_coords = torch.nonzero(mask, as_tuple=False)
 
         indices = torch.randint(0, non_zero_coords.shape[0], (self.batch_size, ))
@@ -91,6 +105,8 @@ class CustomSingleDataset(Dataset):
         for patch_idx in patch_indices:
             depth_image = self.depth_image
             depth_image = torch.from_numpy(depth_image).unsqueeze(0).div(1000).to(torch.float32)
+            # get the range between .5 .8
+            depth_image = depth_image - 0.7
             depth_image = self.resize_transform(depth_image)
             depth_image = F.pad(depth_image, padding_size, "constant", 0).squeeze(0)
 
@@ -196,7 +212,9 @@ class TrainDexNetModel:
                 flat_state_dict[key] = value
         return flat_state_dict
 
-    def init_model(self):
+    @classmethod
+    @lru_cache()
+    def init_model(cls):
 
         from aurmr_setup.utils.workspace_utils import get_active_workspace_path
         model = SimpleGQCNN()
@@ -223,15 +241,22 @@ class TrainDexNetModel:
         model = self.init_model()
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+        assert(len(dataset) == 1)
+
         with torch.no_grad():  # Disable gradient computation
             for images, patch_indices, depth_image in inference_dataloader:
+
                 images = images.to(device)
 
                 images = images.squeeze(0).unsqueeze(1)
                 score = model(images)
+                score = score.cpu().squeeze(1)
+                _sorted_scores, indices = torch.sort(score, dim=0, descending=True)
+                patch_indices = patch_indices.squeeze(0)
 
-                indices_ = torch.argmax(score.squeeze(1))
-                max_indices = patch_indices[indices_]
+                # ..todo:: check magic values
 
-                indices_ = torch.max(score.squeeze(1))
-        return max_indices
+                scaled_grasp_points = (patch_indices[indices] - 25) / 232
+
+                return scaled_grasp_points.numpy()
+

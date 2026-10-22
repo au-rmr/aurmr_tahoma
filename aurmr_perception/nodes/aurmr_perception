@@ -6,6 +6,9 @@ import os
 import glob
 
 from aurmr_perception.pod_model import PodPerceptionROS, DiffPodModel
+from aurmr_setup.utils.workspace_utils import get_active_workspace_path
+
+
 
 if __name__ == '__main__':
     rospy.init_node('aurmr_perception')
