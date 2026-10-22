@@ -6,14 +6,18 @@ import os
 import glob
 
 from aurmr_perception.pod_model import PodPerceptionROS, DiffPodModel
+from aurmr_setup.utils.workspace_utils import get_active_workspace_path
+
+
 
 if __name__ == '__main__':
     rospy.init_node('aurmr_perception')
-    
+
     folders = ['1E', '1H', '1F', '1G', '2E', '2H', '2F', '2G', '3E', '3H', '3F', '3G', '4E', '4H', '4F', '4G', '1D', '2D', '3D', '1C', '2C', '3C']
 
+    workspace_path = get_active_workspace_path()
     for folder in folders:
-        path = "/home/aurmr/workspaces/aurmr_demo_perception/src/uois_service_multi_demo/dataset/"
+        path = f"{workspace_path}/src/uois_service_multi_demo/dataset/"
         folder_path = path+folder
         files = glob.glob(f'{folder_path}/*.npy')
         for file in files:
@@ -44,4 +48,3 @@ if __name__ == '__main__':
         rospy.sleep(1)
     rospy.loginfo("Perception initialized")
     rospy.spin()
-
