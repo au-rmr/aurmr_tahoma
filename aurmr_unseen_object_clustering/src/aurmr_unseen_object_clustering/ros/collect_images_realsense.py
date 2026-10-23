@@ -4,7 +4,7 @@
 # This work is licensed under the NVIDIA Source Code License - Non-commercial. Full
 # text can be found in LICENSE.md
 
-"""collect images from Intel RealSense D435"""
+"""collect images from Azure Kinect v2"""
 
 import rospy
 import message_filters
@@ -23,68 +23,36 @@ class ImageListener:
 
     def __init__(self):
 
-        self.cv_bridge = CvBridge()
+        self.bridge = CvBridge()
         self.count = 0
-
-        # output dir
-        this_dir = osp.dirname(__file__)
-        self.outdir = osp.join(this_dir, '..', 'data', 'images')
-        if not os.path.exists(self.outdir):
-            os.mkdir(self.outdir)
 
         # initialize a node
         rospy.init_node("image_listener")
-        rgb_sub = message_filters.Subscriber('/camera/color/image_raw', Image, queue_size=2)
-        depth_sub = message_filters.Subscriber('/camera/aligned_depth_to_color/image_raw', Image, queue_size=2)
-        msg = rospy.wait_for_message('/camera/color/camera_info', CameraInfo)
+        self.camera_depth_subscriber = rospy.Subscriber('/camera_lower_right/depth_to_rgb/image_raw', Image, self.depth_callback)
+        self.camera_rgb_subscriber = rospy.Subscriber('/camera_lower_right/rgb/image_raw', Image, self.rgb_callback)
+        # msg = rospy.wait_for_message('/camera_lower_right/depth_to_rgb/camera_info', CameraInfo)
 
-        # save camera intrinsics
-        intrinsic_matrix = np.array(msg.K).reshape(3, 3)
-        print(intrinsic_matrix)
+    def depth_callback(self, data):
+        try:
+            self.depth_img = self.bridge.imgmsg_to_cv2(data, desired_encoding='passthrough')
+            # self.depth_img = np.array(self.depth_img, dtype=np.float32)
+            self.depth_img = self.depth_img.astype(np.float32)
+            print(self.depth_img.shape)
+        except CvBridgeError as e:
+            print(e)
+    
+    def rgb_callback(self, data):
+        try:
+            self.rgb_img = self.bridge.imgmsg_to_cv2(data, "bgr8")
+            rgb = self.rgb_img.copy()
+            rgb = cv2.resize(rgb, (960, 540), interpolation = cv2.INTER_AREA)
+            print("rgb image shape", self.rgb_img.shape)
+            rgb = rgb[bounds[0]:bounds[1], bounds[2]:bounds[3]]
+            cv2.imshow("rgb frame", rgb)
+            cv2.waitKey(0)
+        except CvBridgeError as e:
+            print(e)
 
-        dict_file = {'INTRINSICS' : intrinsic_matrix.flatten().tolist()}
-        filename = os.path.join(self.outdir, 'meta.yml')
-        with open(filename, 'w') as file:
-            yaml.dump(dict_file, file)
-
-        # json format
-        fx = intrinsic_matrix[0, 0]
-        fy = intrinsic_matrix[0, 0]
-        px = intrinsic_matrix[0, 2]
-        py = intrinsic_matrix[1, 2]
-        camera_params = {'fx': fx, 'fy': fy, 'x_offset': px, 'y_offset': py}
-        filename = os.path.join(self.outdir, 'camera_params.json')
-        with open(filename, 'w') as outfile:
-            json.dump(camera_params, outfile)
-
-        queue_size = 1
-        slop_seconds = 0.025
-        ts = message_filters.ApproximateTimeSynchronizer([rgb_sub, depth_sub], queue_size, slop_seconds)
-        ts.registerCallback(self.callback)
-
-    def callback(self, rgb, depth):
-        if depth.encoding == '32FC1':
-            depth_32 = self.cv_bridge.imgmsg_to_cv2(depth) * 1000
-            depth_cv = np.array(depth_32, dtype=np.uint16)
-        elif depth.encoding == '16UC1':
-            depth_cv = self.cv_bridge.imgmsg_to_cv2(depth)
-        else:
-            rospy.logerr_throttle(
-                1, 'Unsupported depth type. Expected 16UC1 or 32FC1, got {}'.format(
-                    depth.encoding))
-            return
-
-        # write images
-        im = self.cv_bridge.imgmsg_to_cv2(rgb, 'bgr8')
-        filename = self.outdir + '/%06d-color.png' % self.count
-        cv2.imwrite(filename, im)
-        print filename
-
-        filename = self.outdir + '/%06d-depth.png' % self.count
-        cv2.imwrite(filename, depth_cv)
-        print(filename)
-
-        self.count += 1
 
 
 if __name__ == '__main__':
@@ -94,4 +62,4 @@ if __name__ == '__main__':
     try:  
         rospy.spin()
     except KeyboardInterrupt:
-        print "Shutting down"
+        print("Shutting down")
