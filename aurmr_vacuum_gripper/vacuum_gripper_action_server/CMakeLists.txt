@@ -6,10 +6,11 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib_msgs
   control_msgs
   roscpp
+  rospy
 )
 
+
 catkin_package(
-  # INCLUDE_DIRS include
   CATKIN_DEPENDS actionlib actionlib_msgs control_msgs vacuum_gripper_control roscpp
 )
 

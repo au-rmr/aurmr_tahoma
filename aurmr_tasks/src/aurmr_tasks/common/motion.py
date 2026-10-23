@@ -279,6 +279,16 @@ def grasp_move_to_offset(robot, offset, frame=None):
         #     f"Please move the end effector by {offset} in the {frame} frame"), ["succeeded", "aborted"])
     return sm
 
+def move_to_offset_or_cap_contact(robot, offset, frame=None):
+    """State machine which tries to move until contact is made"""
+    sm = StateMachine(["succeeded", "preempted", "aborted"])
+    if frame is None:
+        frame = "arm_tool0"
+    with sm:
+        StateMachine.add_auto("TRY_CARTESIAN_MOVE", MoveEndEffectorToOffset(robot, offset, frame, use_force=True, use_gripper=False), ["aborted"],
+                              transitions={"succeeded": "succeeded"})
+    return sm
+
 class MoveEndEffectorInLineInOut(State):
     def __init__(self, robot):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
@@ -349,6 +359,27 @@ class BlowOffGripper(State):
         self.robot.blow_off_gripper(return_before_done=self.return_before_done)
         return "succeeded"
 
+class ExtendFinger(State):
+    def __init__(self, robot, return_before_done=False, fingers:int=0):
+        State.__init__(self, input_keys=[], outcomes=['succeeded', 'preempted', 'aborted'])
+        self.robot = robot
+        self.return_before_done = return_before_done
+        self.fingers = fingers
+
+    def execute(self, ud):
+        self.robot.extend_finger(return_before_done=self.return_before_done, fingers=self.fingers)
+        return "succeeded"
+
+class RetractFinger(State):
+    def __init__(self, robot, return_before_done=False, fingers:int=0):
+        State.__init__(self, input_keys=[], outcomes=['succeeded', 'preempted', 'aborted'])
+        self.robot = robot
+        self.return_before_done = return_before_done
+        self.fingers = fingers
+
+    def execute(self, ud):
+        self.robot.retract_finger(return_before_done=self.return_before_done, fingers=self.fingers)
+        return "succeeded"
 
 class CheckGripperItem(State):
     def __init__(self, robot):
