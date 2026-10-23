@@ -69,7 +69,7 @@ class HeuristicGraspDetector:
         align_to_bin_orientation = transformations.quaternion_from_euler(math.pi / 2., -math.pi / 2., math.pi / 2.)
 
         poses_stamped = [(position, align_to_bin_orientation)]
-        # print(poses_stamped)
+        print(poses_stamped)
         return poses_stamped
 
 
