@@ -1,0 +1,6 @@
+from VacuumGripperSocketNode import VacuumGripper
+from pycomm3 import CIPDriver, Services, configure_default_logger, LOG_VERBOSE, exceptions, SINT, UINT, USINT
+gripper = VacuumGripper()
+gripper.open_connection()
+gripper.set_SetPointH1(1)
+gripper.get_SetPointH1()
