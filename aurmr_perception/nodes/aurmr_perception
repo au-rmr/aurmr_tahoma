@@ -20,7 +20,7 @@ if __name__ == '__main__':
     parser.add_argument('--camera_name', default='stand_camera')
     parser.add_argument('--segmentation_method', default='pixel_difference')
     parser.add_argument('--camera', default='realsense')
-    parser.add_argument('--dataset', default='/tmp/datasets/')
+    parser.add_argument('--dataset', default='/home/aurmr/workspaces/aurmr_demo/2024-03-24_215805_v0.8.3')
     args, unknown = parser.parse_known_args()
     args.viz = rospy.get_param("~viz", args.viz)
     args.camera_name = rospy.get_param("~camera_name", args.camera_name)
