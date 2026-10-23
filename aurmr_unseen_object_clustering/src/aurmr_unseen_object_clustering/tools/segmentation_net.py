@@ -56,27 +56,48 @@ warnings.filterwarnings("ignore", category=UserWarning)
 #           '2h':[1050, 1280, 1660, 2130]}
 
 # not reachable: 1d, 
+# For Kinect Camera
+# bin_bounds = {
+#           '1H':[1090, 1300, 1270, 1630],
+#           '2H':[1090, 1300, 1650, 2060],
+#           '3H':[1090, 1300, 2080, 2500],
+#           '4H':[1090, 1300, 2500, 2860],
+#           '1G':[1370, 1530, 1270, 1630],
+#           '2G':[1370, 1530, 1650, 2060],
+#           '3G':[1370, 1530, 2080, 2500],
+#           '4G':[1370, 1530, 2500, 2860],
+#           '1F':[1600, 1940, 1270, 1630],
+#           '2F':[1600, 1940, 1650, 2060],
+#           '3F':[1600, 1940, 2080, 2500],
+#           '4F':[1600, 1940, 2500, 2860],
+#           '1E':[2010, 2150, 1270, 1630],
+#           '2E':[2010, 2150, 1650, 2060],
+#           '3E':[2010, 2150, 2080, 2500],
+#           '4E':[2010, 2150, 2500, 2860],
+#           '1D':[2300, 2540, 1270, 1630],
+#           '2D':[2300, 2540, 1650, 2060],
+#           '3D':[2300, 2540, 2080, 2500],
+#           '4D':[2300, 2540, 2560, 3030],
+#             }
+
+# For Realsense
 bin_bounds = {
-          '1H':[1090, 1300, 1270, 1630],
-          '2H':[1090, 1300, 1650, 2060],
-          '3H':[1090, 1300, 2080, 2500],
-          '4H':[1090, 1300, 2500, 2860],
-          '1G':[1370, 1530, 1270, 1630],
-          '2G':[1370, 1530, 1650, 2060],
-          '3G':[1370, 1530, 2080, 2500],
-          '4G':[1370, 1530, 2500, 2860],
-          '1F':[1600, 1940, 1270, 1630],
-          '2F':[1600, 1940, 1650, 2060],
-          '3F':[1600, 1940, 2080, 2500],
-          '4F':[1600, 1940, 2500, 2860],
-          '1E':[2010, 2150, 1270, 1630],
-          '2E':[2010, 2150, 1650, 2060],
-          '3E':[2010, 2150, 2080, 2500],
-          '4E':[2010, 2150, 2500, 2860],
-          '1D':[2300, 2540, 1270, 1630],
-          '2D':[2300, 2540, 1650, 2060],
-          '3D':[2300, 2540, 2080, 2500],
-          '4D':[2300, 2540, 2560, 3030],
+          '1H':[97, 65, 221, 159],
+          '2H':[224, 65, 364, 159],
+          '3H':[365, 65, 505, 159],
+          '4H':[507, 65, 631, 159],
+          '1G':[98, 155, 221, 233],
+          '2G':[221, 158, 362, 233],
+          '3G':[363, 158, 504, 233],
+          '4G':[506, 158, 630, 233],
+          '1F':[100, 228, 222, 370],
+          '2F':[221, 234, 360, 370],
+          '3F':[362, 234, 505, 370],
+          '4F':[506, 234, 628, 370],
+          '1E':[96, 367, 221, 443],
+          '2E':[222, 371, 363, 443],
+          '3E':[362, 371, 505, 443],
+          '4E':[505, 371, 626, 443],
             }
 
 def_config = {
@@ -98,7 +119,7 @@ def_config = {
    'bounds':bin_bounds,
    'image_path':None,
    'min_pixel_threshhold':30,
-   'min_match_count':2,
+   'min_match_count': 1,
 
    # Segmentation / 
  
@@ -276,7 +297,7 @@ class SegNet:
 
         ######################################################################################################
         print("init pre")
-        sys.path.append("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/UIE_main/mask2former_frame")
+        sys.path.append("/home/aurmr/workspaces/soofiyan_ws_realsense/src/segnetv2_mask2_former/UIE_main/mask2former_frame")
         print("post sys")
         from demo.segnetv2_demo import SegnetV2
         print("post import")
@@ -358,8 +379,8 @@ class SegNet:
         out_label_new = out_label.astype(np.uint8)
         # out_label_new = out_label
         try:
-            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/mask.png", out_label_new.astype(np.uint8))
-            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/rgb.png", rgb_segment.astype(np.uint8))
+            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws_realsense/src/segnetv2_mask2_former/Mask_Results/mask.png", out_label_new.astype(np.uint8))
+            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws_realsense/src/segnetv2_mask2_former/Mask_Results/rgb.png", rgb_segment.astype(np.uint8))
         except:
             pass
         if self.config['perform_cv_ops']:
@@ -393,7 +414,7 @@ class SegNet:
         
         mask_crop = cv2.resize(mask_crop, (bin.bounds[3] - bin.bounds[2], bin.bounds[1] - bin.bounds[0]), interpolation=cv2.INTER_AREA)
         try:
-            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/soofiyan_mask.png", mask_crop)
+            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws_realsense/src/segnetv2_mask2_former/Mask_Results/soofiyan_mask.png", mask_crop)
         except:
             pass
         return mask_crop
@@ -405,12 +426,14 @@ class SegNet:
         # Convert the images to greyscale
         im1 = cv2.cvtColor(im1, cv2.COLOR_RGB2GRAY)
         im2 = cv2.cvtColor(im2, cv2.COLOR_RGB2GRAY)
-        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/match_mask1.png", mask1)
-        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/match_mask2.png", mask2)
+        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws_realsense/src/segnetv2_mask2_former/Mask_Results/match_mask1.png", mask1)
+        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws_realsense/src/segnetv2_mask2_former/Mask_Results/match_mask2.png", mask2)
         mask_recs = np.zeros(shape=(np.max(mask1), np.max(mask2)))
   
         # Calculate keypoints for the frame 1 image
-        sift = cv2.SIFT_create()
+        #sift = cv2.SIFT_create()
+        print("Creating SIFT detector")
+        sift = cv2.SIFT_create(nfeatures=150, contrastThreshold=0.04, edgeThreshold=40)
         k2, d2 = sift.detectAndCompute(im2, None)
   
         # For each mask in frame 0
@@ -434,12 +457,16 @@ class SegNet:
 
             # Handle matching failures
             if len(good) < self.config['min_match_count']:
+                print("SIFT matching failed.")
                 sift_failed = True
+
+            print(self.config['min_match_count'])
+            print(f'found {len(good)} sift matches for object {i}. failed={sift_failed}')
             
             # Draws matches for visualization purposes
             matched_img = cv2.drawMatches(im1_now, k1, im2, k2, good, im2, flags=2, matchesThickness=1)
             # cv2.imshow('image', matched_img)
-            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/matched_mask.png", matched_img)
+            cv2.imwrite(f"/tmp/matched_mask_{i}.png", matched_img)
            
             dst_pts = np.float32([k2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
             dst_pts = np.round(dst_pts).astype(int)
@@ -540,7 +567,7 @@ class SegNet:
             print("Unique mask and areas ",np.unique(mask), areas)
             nonzero_idx = np.where(np.sum(mask == idx_max, axis=1) > 0)
             try:
-                cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/mask1.png", mask*30)
+                cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws_realsense/src/segnetv2_mask2_former/Mask_Results/mask1.png", mask*30)
             except:
                 pass
             c1 = nonzero_idx[0][0]
@@ -636,6 +663,10 @@ class SegNet:
     #       1. No object is stored. Covered using depth difference in bin.new_object_detected CODE NO_OBJ_STORED
     #       2. Fewer than n objects are segmented (undersegmentation). Covered in refine_masks CODE UNDERSEGMENTATION
     def stow(self, bin_id, obj_id, rgb_raw, depth_raw=None,info=None, points_raw=None):
+
+
+        print("Stow")
+
         # Grabs the current bin
         bin = self.bins[bin_id]
 
@@ -646,7 +677,7 @@ class SegNet:
         if not bin.new_object_detected({'rgb':rgb_raw, 'depth':self.compute_xyz(depth_raw, info)}):
             print(f"No new object detected: Did you store an object in bin {bin_id}?\nPlease try again")
             return NO_OBJ_STORED
-
+        
         # points_raw[:,:][np.isnan(points_raw)] = 0
 
         # if not bin.new_object_detected({'rgb':rgb_raw, 'depth':points_raw}):
@@ -698,7 +729,7 @@ class SegNet:
             self.bad_bins.append(bin_id)
             return UNDERSEGMENTATION
         else:
-            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/refined_mask.png", mask_crop)
+            cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws_realsense/src/segnetv2_mask2_former/Mask_Results/refined_mask.png", mask_crop)
 
         mask2vis = self.vis_masks(bin.current['rgb'], mask_crop)
         # plt.imshow(mask2vis)

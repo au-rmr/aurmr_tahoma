@@ -77,12 +77,14 @@ class ImageListener:
         # write images
         im = self.cv_bridge.imgmsg_to_cv2(rgb, 'bgr8')
         filename = self.outdir + '/%06d-color.png' % self.count
-        cv2.imwrite(filename, im)
-        print filename
+        cv2.imshow("Realsense color", im )
+        cv2.waitKey(0)
+        # cv2.imwrite(filename, im)
+        # print(filename)
 
         filename = self.outdir + '/%06d-depth.png' % self.count
-        cv2.imwrite(filename, depth_cv)
-        print(filename)
+        # cv2.imwrite(filename, depth_cv)
+        # print(filename)
 
         self.count += 1
 
@@ -94,4 +96,4 @@ if __name__ == '__main__':
     try:  
         rospy.spin()
     except KeyboardInterrupt:
-        print "Shutting down"
+        print("Shutting down")
