@@ -1,0 +1,22 @@
+name: uois3d
+channels:
+  - pytorch
+  - defaults
+  - conda-forge
+  - robostack
+  - robostack-experimental
+dependencies:
+  - python=3.8
+  - cudatoolkit#=11.3
+  - pytorch#=1.11.0
+  - torchvision
+  - pip
+  - pillow
+  # - ros-noetic-desktop
+  # - catkin_tools
+  - pip:
+    - pypng
+    - matplotlib
+    - numpy
+    - opencv-python
+    - scikit-image
