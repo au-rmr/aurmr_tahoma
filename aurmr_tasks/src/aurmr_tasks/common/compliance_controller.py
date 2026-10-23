@@ -4,8 +4,11 @@ from smach import State
 from geometry_msgs.msg import PoseStamped
 import time
 
+from aurmr_tasks.util import pose_dist
+
 
 from aurmr_tasks.common.visualization_utils import EEFVisualization
+
 class MoveToOffset(State):
     def __init__(self, robot, offset, frame_id, detect_object,idle_timeout=3):
         super().__init__(outcomes=['succeeded', 'aborted'],  output_keys=['starting_grasp_pose_out'], input_keys=['target_pose_in'])
@@ -57,7 +60,6 @@ class MoveToOffset(State):
     def publish_target_pose(self, target_pose):
         self.pub.publish(target_pose)
 
-
     def wait_until_stopped(self, min_delta, idle_timeout, timeout=20):
         """
         Return if the end-effector is moving only marginally for a certain amount of time or if an object has been detected
@@ -74,8 +76,11 @@ class MoveToOffset(State):
 
             if translation_delta > min_delta:
                 last_moved = time.time()
+            else:
+                 print("Not moving", translation_delta, (time.time() - last_moved))
 
             if ((time.time() - last_moved) >= idle_timeout):
+                print("Done.")
                 self.stop()
                 return 'succeeded'
 
@@ -99,9 +104,15 @@ class MoveToOffset(State):
         return current_pose
 
 
-
     def check_object_condition(self):
         return (self.detect_object and self.robot.check_gripper_item())
+
+
+    def has_reached_target_pose(self, target_pose):
+        current_pose = self.robot.move_group.get_current_pose()
+        current_pose.header.stamp = rospy.Time(0)
+        current_pose = self.robot.tf2_buffer.transform(current_pose, self.target_frame, rospy.Duration(1))
+        return (self.detect_object and self.robot.check_gripper_item()) or all_close(target_pose, current_pose, 0.03)
 
 
 
@@ -119,6 +130,7 @@ class ZeroFT(State):
         try:
             zero_ftsensor_service = rospy.ServiceProxy(service_name, Trigger)
             response = zero_ftsensor_service()
+            print(f"Service call response: {response}")
             if response.success:
                 return 'succeeded'
             else:
