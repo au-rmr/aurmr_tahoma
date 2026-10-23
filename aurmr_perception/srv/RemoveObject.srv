@@ -1,5 +1,0 @@
-string bin_id
-string object_id
----
-bool success
-string message

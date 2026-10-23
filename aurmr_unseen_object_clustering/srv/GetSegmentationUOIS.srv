@@ -1,4 +1,0 @@
-string bin_id
----
-int16[] out_label
-float64[] embeddings
