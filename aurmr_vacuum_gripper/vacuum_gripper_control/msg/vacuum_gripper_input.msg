@@ -5,4 +5,3 @@ uint16 LEAKAGE_RATE # UINT16 Length 16 x 2 ro
 uint16 FREE_FLOW_VACUUM # UINT16 Length 16 x 2 ro
 uint16 MAX_VACUUM_REACHED # UINT16 Length 16 x 2 ro
 uint16 SYSTEM_VACUUM # UINT16 Length 16 x 2 ro
-
