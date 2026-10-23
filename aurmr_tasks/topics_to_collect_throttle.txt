@@ -1,0 +1,15 @@
+/camera_lower_right/rgb/image_raw_throttle
+/camera_lower_right/rgb/camera_info
+/camera_lower_right/depth_to_rgb/image_raw_throttle
+/camera_lower_right/depth_to_rgb/camera_info
+/camera/color/camera_info
+/camera/color/image_raw_throttle
+/grasp_detection/detected_grasps
+/grasp_detection/detected_pts
+/joint_states
+/robot_description
+/robot_status
+/rosout
+/tf
+/tf_static
+/wrench

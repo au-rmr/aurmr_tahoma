@@ -29,6 +29,8 @@ import threading
 BAG_STORAGE_PATH = "/data/datasets/2024-03-nick-logging"
 BACKUP_RECORDING_PATH = "/home/aurmr/bag_recording_failover"
 
+ANNOTATION_SCRIPT = "/home/aurmr/workspaces/nick_logging/src/aurmr-failure-recovery/annotate_bag.py"
+
 TOPICS_TO_RECORD = [
     "/audio/audio",
     "/audio/audio_info",
@@ -45,6 +47,7 @@ TOPICS_TO_RECORD = [
     "/grasp_detection/detected_grasps",
     "/grasp_detection/detected_pts",
     "/joint_states",
+    "/pick_request",
     "/robot_description",
     "/robot_status",
     "/rosout_agg",
@@ -66,6 +69,31 @@ def convert_to_mcap_handler(bag_path):
     subprocess.Popen(
         cmd, stdin=subprocess.PIPE, shell=True, cwd=os.path.dirname(bag_path)
     )
+
+def convert_to_mcap_and_annotate(bag_path):
+    bag_name = os.path.basename(bag_path)
+    mcap_name = bag_name.split(".")[0] + ".mcap"
+    mcap_path = os.path.dirname(bag_path) + "/" + mcap_name
+    cmd = f"mcap convert {bag_name} {mcap_name}"
+    rospy.loginfo("Converting bag to mcap " + cmd)
+    pipe = subprocess.Popen(
+        cmd, stdin=subprocess.PIPE, shell=True, cwd=os.path.dirname(bag_path)
+    )
+    time.sleep(1)
+    pipe.wait()
+    mcap_anno_path = os.path.dirname(bag_path) + "/" + bag_name.split(".")[0] + "_anno.mcap"
+    cmd = f"{ANNOTATION_SCRIPT} {bag_path} -o {mcap_anno_path}"
+    rospy.loginfo("Annotating mcap " + cmd)
+    pipe = subprocess.Popen(
+        cmd, stdin=subprocess.PIPE, shell=True, cwd=os.path.dirname(ANNOTATION_SCRIPT)
+    ) 
+    pipe.wait()
+    final_mcap_path = os.path.dirname(bag_path) + "/" + bag_name.split(".")[0] + "_full.mcap"
+    cmd = f"mcap {mcap_path} {mcap_anno_path} -o {final_mcap_path}"
+    rospy.loginfo("Merging mcap " + cmd)
+    pipe = subprocess.Popen(
+        cmd, stdin=subprocess.PIPE, shell=True, cwd=os.path.dirname(bag_path)
+    )    
 
 
 class ROSBagRecorder:
