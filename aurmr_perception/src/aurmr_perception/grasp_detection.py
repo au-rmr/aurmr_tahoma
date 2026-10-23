@@ -15,6 +15,9 @@ from sensor_msgs.msg import PointCloud2
 # See moveit_grasps for inspiration on improved grasp ranking and filtering:
 # https://ros-planning.github.io/moveit_tutorials/doc/moveit_grasps/moveit_grasps_tutorial.html
 from visualization_msgs.msg import MarkerArray, Marker
+import cv2
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError
 
 
 class HeuristicGraspDetector:
@@ -70,6 +73,7 @@ class GraspDetectionROS:
         self.detect_grasps = rospy.Service('~detect_grasps', DetectGraspPoses, self.detect_grasps_cb)
         self.dections_viz_pub = rospy.Publisher("~detected_grasps", MarkerArray, latch=True, queue_size=1)
         self.points_viz_pub = rospy.Publisher("~detected_pts", PointCloud2, latch=True, queue_size=5)
+        self.bridge = CvBridge()
 
     def visualize_grasps(self, poses_stamped):
         color = ColorRGBA(r = 1, g = 0, b = 0, a = 1)
@@ -79,6 +83,8 @@ class GraspDetectionROS:
         self.dections_viz_pub.publish(MarkerArray(markers=[markers]))
 
     def detect_grasps_cb(self, request):
+        cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
+        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
         pts = ros_numpy.numpify(request.points)
         self.points_viz_pub.publish(request.points)
         pts = np.stack([pts['x'],
@@ -94,3 +100,4 @@ class GraspDetectionROS:
         print(request.points.header)
         self.visualize_grasps(stamped_detections)
         return True, "", stamped_detections
+        

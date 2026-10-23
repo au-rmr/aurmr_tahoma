@@ -343,7 +343,7 @@ class SegNet:
        
         if self.config['resize']:
             rgb = cv2.resize(rgb, (256, 256), interpolation=cv2.INTER_AREA)
-            xyz = cv2.resize(xyz, (256, 256), interpolation=cv2.INTER_AREA)
+            xyz = cv2.resize(xyz, (256, 256), interpolation=cv2.INTER_AREA) 
             bg_mask_now = cv2.resize(bin.bg_mask.astype(np.uint8), (256, 256), interpolation=cv2.INTER_AREA)
   
         # Turn everything into tensors and reshape as needed
@@ -410,10 +410,11 @@ class SegNet:
         out_label, _ = clustering_features(features, num_seeds=100)
 
         out_label_new = out_label.clone()[0].numpy()
-        # print(np.unique(out_label_new))
+        print("unique out_label new", np.unique(out_label_new))
         # plt.imshow(out_label_new.astype(np.uint8))
         # plt.title("Segmentation")
         # plt.show()
+        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/thomas_out_label_new.png", out_label_new.astype(np.uint8))
   
         # Mask refinement step
         if self.config['perform_cv_ops']:
@@ -425,6 +426,8 @@ class SegNet:
                 mask_now = spy.binary_dilation(mask_now, structure=kernel, iterations=self.config['dilation_num'])
   
                 labels = lab(mask_now)
+
+                print("labels in perform cv ops", labels)
                 if len(np.bincount(labels.flat)[1:]) > 0:
                     mask_now = (labels == (np.argmax(np.bincount(labels.flat)[1:]) + 1))
                
@@ -445,6 +448,9 @@ class SegNet:
                 if rgb_crop.shape[0] > 0:
                     features_crop = self.network_crop(rgb_crop, out_label_crop, depth_crop)
                     labels_crop, selected_pixels_crop = clustering_features(features_crop)
+                    for i in range(labels_crop.shape[0]):
+                        label_temp = labels_crop.clone()[i].numpy()
+                        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/thomas_labels_crop"+str(i)+".png", label_temp.astype(np.uint8))
                     out_label_refined, labels_crop = match_label_crop(out_label, labels_crop.cuda(), out_label_crop, rois, depth_crop)
                     # for rgb_crop_i in range(len(rgb_crop)):
                     #     image_n[0, :, int(rois[rgb_crop_i, 1].item()):int(rois[rgb_crop_i, 3].item()), int(rois[rgb_crop_i, 0].item()):int(rois[rgb_crop_i, 2].item())] = 0
@@ -465,6 +471,7 @@ class SegNet:
                         mask_now = spy.binary_dilation(mask_now, structure=kernel, iterations=4)
 
                         labels = lab(mask_now)
+                        print("labels in perform cv ops ref", labels)
                         if len(np.bincount(labels.flat)[1:]) > 0:
                             mask_now = (labels == (np.argmax(np.bincount(labels.flat)[1:]) + 1))
                         
@@ -494,7 +501,9 @@ class SegNet:
 
         
         mask_crop = cv2.resize(mask_crop, (bin.bounds[3] - bin.bounds[2], bin.bounds[1] - bin.bounds[0]), interpolation=cv2.INTER_AREA)
-  
+        
+        cv2.imwrite("/home/aurmr/workspaces/soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/thomas_mask.png", mask_crop)
+
         return mask_crop
   
     # Returns a best-guess matching between masks in frame 0 and masks in frame 1
