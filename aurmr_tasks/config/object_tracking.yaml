@@ -1,0 +1,57 @@
+# Object tracking configuration for the MPPI bridge node.
+# Load with: rosparam load <path>/object_tracking.yaml /mppi_bridge_node
+# Or include in your launch file:
+#   <rosparam file="$(find aurmr_tasks)/config/object_tracking.yaml"
+#             command="load" ns="mppi_bridge_node" />
+
+object_tracking:
+  # 'foundationpose' (default) or 'apriltag'
+  tracker_type: apriltag
+
+  # Frame that the camera publishes detections in (same for both tracker types).
+  camera_frame: camera_color_optical_frame
+
+  # Frame used as the world frame for object poses (must match Isaac world frame).
+  world_frame: base_link
+
+  # --- FoundationPose settings -------------------------------------------
+  # Address of the ZMQ PUSH socket in the Docker container.
+  # Use tcp://localhost:<port> when the container runs with --network host.
+  zmq_address: tcp://192.168.10.102:5555
+
+  # One entry per tracked object.
+  #   id:            must match the 'id' field in run_realsense.py objects config.
+  #   Isaac_index: position in sim.objects[] (determines order in planner state).
+  # objects: #[]
+  #   - id: 0
+  #     genesis_index: 0
+  #   - id: 1
+  #     genesis_index: 1
+    # - id: 2
+    #   genesis_index: 2
+    # - id: 3
+    #   genesis_index: 3
+  # add more objects as needed:
+  #   - id: 1
+  #     genesis_index: 1
+
+  # --- AprilTag settings (only used when tracker_type: apriltag) ----------
+  cube_size: 0.05
+  # cubes: []
+  cubes:
+    - genesis_index: 0
+      tags:
+        - {id: 29, face: "+x"}
+        - {id: 9, face: "-x"}
+        - {id: 10, face: "+y"}
+        - {id: 27, face: "-y"}
+        - {id: 28, face: "+z"}
+        - {id: 26, face: "-z"}
+    - genesis_index: 1
+      tags:
+        - {id: 30, face: "+x"}
+        - {id: 8, face: "-x"}
+        - {id: 7, face: "+y"}
+        - {id: 2, face: "-y"}
+        - {id: 5, face: "+z"}
+        - {id: 1, face: "-z"}

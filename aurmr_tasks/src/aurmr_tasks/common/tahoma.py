@@ -125,6 +125,7 @@ class Tahoma:
         self._joint_traj_client = actionlib.SimpleActionClient(
             JOINT_ACTION_SERVER, control_msgs.msg.FollowJointTrajectoryAction)
         self._gripper_client = actionlib.SimpleActionClient(GRIPPER_ACTION_SERVER, GripperCommandAction)
+        self._gripper_linear_actuators_client = actionlib.SimpleActionClient('gripper_controller/linear_actuator_cmd', GripperCommandAction)
         server_reached = self._joint_traj_client.wait_for_server(rospy.Duration(10))
         if not server_reached:
             raise RuntimeError('Unable to connect to arm action server. Timeout exceeded.')
@@ -136,8 +137,8 @@ class Tahoma:
         self.commander = moveit_commander.RobotCommander()
         self.scene = moveit_commander.PlanningSceneInterface(synchronous=True)
         self.move_group = moveit_commander.MoveGroupCommander(ARM_GROUP_NAME)
-        self.MAX_VEL_FACTOR = .3
-        self.MAX_ACC_FACTOR = .5
+        self.MAX_VEL_FACTOR = 1.0
+        self.MAX_ACC_FACTOR = 1.0
         self.move_group.set_max_velocity_scaling_factor(self.MAX_VEL_FACTOR)
         self.move_group.set_max_acceleration_scaling_factor(self.MAX_ACC_FACTOR)
         self.display_trajectory_publisher = rospy.Publisher(
@@ -272,40 +273,60 @@ class Tahoma:
             to_check = JOINT_TRAJ_CONTROLLER_SIM
         return to_check in self.active_controllers
 
-    def open_gripper(self, return_before_done=False):
+    def extend_finger(self, return_before_done=False, ejectors:list=[3,0,0,0,0], fingers:int=0):
+
         goal = GripperCommandGoal()
-        goal.command.position = 0
-        goal.command.max_effort = 1
-        self._gripper_client.send_goal(goal)
+        goal.command.position = int(''.join(map(str, ejectors)))
+
+        self._gripper_linear_actuators_client.send_goal(goal)
         if not return_before_done:
-            self._gripper_client.wait_for_result()
+            rospy.loginfo(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++Linear actuators")
+            self._gripper_linear_actuators_client.wait_for_result()
+
+    def retract_finger(self, return_before_done=False, ejectors:list=[2,0,0,0,0], fingers:int=0):
+
+        goal = GripperCommandGoal()
+        goal.command.position = int(''.join(map(str, ejectors)))
+
+        self._gripper_linear_actuators_client.send_goal(goal)
+        if not return_before_done:
+            rospy.loginfo(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++Linear actuators")
+            self._gripper_linear_actuators_client.wait_for_result()
+
+    # TODO Change to custom action server
+    def open_gripper(self, return_before_done=False, ejectors:list=[5,0,0,0,0], fingers:int=0):
+        # print(f'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^{ejectors}')
+
+        goal = GripperCommandGoal()
+        goal.command.position = int(''.join(map(str, ejectors)))
+        # goal.command.max_effort = fingers
+
+        self._gripper_linear_actuators_client.send_goal(goal)
+        if not return_before_done:
+            rospy.loginfo(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++Linear actuators")
+            self._gripper_linear_actuators_client.wait_for_result()
 
     def check_gripper_item(self):
-        return self.system_vacuum > 450 # because it is in mbar and is returned as an int
+        return self.system_vacuum[0] > 450 # because it is in mbar and is returned as an int
 
-    def blow_off_gripper(self, return_before_done=False):
+    # TODO Change to custom action server
+    def blow_off_gripper(self, return_before_done=False, ejectors:list=[4,2,2,2,2], fingers:int=0):
         goal = GripperCommandGoal()
-        goal.command.position = 2
-        goal.command.max_effort = 1
-        self._gripper_client.send_goal(goal)
-        if not return_before_done:
-            self._gripper_client.wait_for_result()
-        rospy.sleep(1.)
-        while self.system_vacuum > 10:
-            rospy.sleep(.05)
+        goal.command.position = int(''.join(map(str, ejectors)))
+        goal.command.max_effort = fingers
 
-        self.open_gripper()
-        return
+        self._gripper_linear_actuators_client.send_goal(goal)
 
-    def close_gripper(self, return_before_done=False):
+    # TODO Change to custom action server
+    def close_gripper(self, return_before_done=False, ejectors:list=[5,0,0,0,0], fingers:int=0):
         goal = GripperCommandGoal()
-        goal.command.position = 1
-        goal.command.max_effort = 1
-        self._gripper_client.send_goal(goal)
+        goal.command.position = int(''.join(map(str, ejectors)))
+        goal.command.max_effort = fingers
+        # self._gripper_client.send_goal(goal)
         rospy.loginfo("Waiting for gripper" + str(return_before_done))
         if not return_before_done:
             rospy.loginfo("Waiting for gripper. \n")
-            self._gripper_client.wait_for_result()
+            # self._gripper_client.wait_for_result()
 
 
     @requires_controller(JOINT_TRAJ_CONTROLLER)
