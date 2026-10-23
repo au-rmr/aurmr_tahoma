@@ -2,6 +2,7 @@ from copy import deepcopy
 
 import aurmr_perception
 import geometry_msgs
+import std_msgs
 import rospy
 
 from smach import State
@@ -155,7 +156,7 @@ class GetPoints(State):
         State.__init__(
             self,
             input_keys=['target_bin_id', 'target_object_id'],
-            output_keys=['points_response'],
+            output_keys=['points_response', 'status'],
             outcomes=['succeeded', 'aborted']
         )
         self.get_points = rospy.ServiceProxy('/aurmr_perception/get_object_points', GetObjectPoints)
@@ -209,16 +210,13 @@ class GetGraspPose(State):
             bin_id=userdata['target_bin_id'],
             object_id=userdata['target_object_id'],
             frame_id=self.frame_id
-
         )
 
         try:
-
             points_response = userdata["points_response"]
 
             if not points_response.success:
                 return "aborted"
-
 
             grasp_response = self.get_grasp(points=points_response.points,
                                             mask=points_response.mask,
@@ -232,7 +230,8 @@ class GetGraspPose(State):
             # TODO(henrifung): Pull this number from xacro, perhaps from userdata
             grasp_pose = grasp_response.poses[0]
 
-            grasp_pose = add_offset(-0.26, grasp_pose)
+            # grasp_pose = add_offset(-0.26, grasp_pose)
+            grasp_pose = add_offset(-0.19, grasp_pose)
 
             userdata['grasp_pose'] = grasp_pose
 
@@ -247,3 +246,71 @@ class GetGraspPose(State):
             return "succeeded"
         except:
             return "aborted"
+
+class GetHapticSearchPose(State):
+    """Using capacitive haptic search, get and the next pose to userdata"""
+    def __init__(self, timeout: float = 5):
+        State.__init__(
+            self,
+            input_keys=[],
+            output_keys=['pose_delta'],
+            outcomes=['succeeded', 'preempted', 'aborted']
+        )
+        self._desired_pose = geometry_msgs.msg.PoseStamped()
+        self._get_grasp = rospy.Subscriber("/haptic_search/proposed_pose", geometry_msgs.msg.PoseStamped, self._pose_cb)
+        self._timeout = timeout
+        self._last_pose = None
+        self._clearance = 0.005
+
+    def _pose_cb(self, msg: geometry_msgs.msg.PoseStamped):
+        self._desired_pose.header.stamp = rospy.Time.now()
+        self._desired_pose.header.frame_id = msg.header.frame_id
+        self._desired_pose.pose.position.x = msg.pose.position.x
+        self._desired_pose.pose.position.y = msg.pose.position.y
+        self._desired_pose.pose.position.z = msg.pose.position.z + self._clearance
+        self._desired_pose.pose.orientation.x = msg.pose.orientation.x
+        self._desired_pose.pose.orientation.y = msg.pose.orientation.y
+        self._desired_pose.pose.orientation.z = msg.pose.orientation.z
+        self._desired_pose.pose.orientation.w = msg.pose.orientation.w
+
+
+    def execute(self, userdata):
+        start_time = rospy.Time.now()
+        rate = rospy.Rate(50)
+        try:
+            while not rospy.is_shutdown():
+                if self._desired_pose is not None:
+                    userdata["pose_delta"] = self._desired_pose
+                    rospy.loginfo(f"the pose\n{self._desired_pose}")
+
+                    return "succeeded"
+
+                if self._timeout is not None:
+                    if (rospy.Time.now() - start_time).to_sec() > self._timeout:
+                        rospy.logwarn("No pose received from haptic search")
+                        return "aborted"
+            rate.sleep()
+        except:
+            return "aborted"
+
+class CheckCapAlignment(State):
+    def __init__(self, timeout=20):
+        State.__init__(self,
+            outcomes = ["aligned", "misaligned", "aborted", "preempted"],
+            input_keys = ["search_start"]
+        )
+        self._alignment_sub = rospy.Subscriber("/haptic_search/alignment", std_msgs.msg.Bool, self._alignment_cb)
+        self._aligned = False
+        self._timeout = timeout
+
+    def _alignment_cb(self, msg):
+        self._aligned = msg.data
+
+    def execute(self, userdata):
+        if rospy.get_time() - userdata["search_start"] > self._timeout:
+            return "aborted"
+
+        if self._aligned:
+            return "aligned"
+        else:
+            return "misaligned"

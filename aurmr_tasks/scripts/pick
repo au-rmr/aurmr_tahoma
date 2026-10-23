@@ -8,8 +8,8 @@ from smach import State, StateMachine
 import rospy
 
 from aurmr_tasks.common.tahoma import Tahoma
-from aurmr_tasks.common import motion, perception
-from aurmr_tasks import interaction
+from aurmr_tasks.common import motion, perception, planning_scene
+# from aurmr_tasks import interaction
 from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from tf_conversions import transformations
 import aurmr_tasks.common.control_flow as cf
@@ -59,15 +59,15 @@ def main():
         StateMachine.add_auto("LIFT_OBJ", robust_move_to_offset(robot, (0, 0, 0.04), 'base_link'), ["succeeded", "aborted"])
 
         StateMachine.add_auto("RETRACT_ARM", robust_move_to_offset(robot, (0, 0, -0.25)), ["succeeded", "aborted"])
-        StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX", motion.AddInHandCollisionGeometry(robot), ["succeeded"])
+        # StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX", motion.AddInHandCollisionGeometry(robot), ["succeeded"])
         StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveEndEffectorToPose(robot, TOTE_APPROACH_POSE), ["succeeded"])
         StateMachine.add_auto("ASK_FOR_GRIPPER_OPEN_TOTE_RELEASE", motion.OpenGripper(robot), ["succeeded"])
-    
+
     stow_and_pick_sm = StateMachine(["succeeded", "preempted", "aborted"])
 
     with stow_and_pick_sm:
-        StateMachine.add_auto("CLEAR_SCENE", motion.ClearCollisionGeometry(robot), ["succeeded"])
-        StateMachine.add_auto("SETUP_COLLISION_SCENE", motion.AddPodCollisionGeometry(robot), ["succeeded"])
+        StateMachine.add_auto("CLEAR_SCENE", planning_scene.ClearCollisionGeometry(robot), ["succeeded"])
+        StateMachine.add_auto("SETUP_COLLISION_SCENE", planning_scene.AddPodCollisionGeometry(robot), ["succeeded"])
         StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "hide"), ["succeeded"])
         StateMachine.add_auto("LOAD_POD", load_sm(stows), ["succeeded"])
         StateMachine.add_auto("PICK", pick_sm, ["succeeded"])

@@ -1,0 +1,542 @@
+#!/usr/bin/env python
+"""
+AURMR Capacitive Cup Task Demo Module
+
+This module implements a robotic task demonstration for the AURMR (Autonomous Unloading
+and Restocking Mobile Robot) system using the Tahoma robot platform. It provides SMACH
+state machines for pick and stow operations, along with trajectory interpolation utilities
+for smooth robot motion.
+
+Key components:
+- GetClickedPoint: Listens for manual point selection via RViz
+- PublishStatus: Reports task status and execution times
+- RecordTime: Timestamps task execution
+- WaitForPickStow: Handles service requests for pick/stow operations
+- Trajectory interpolation functions (slerp, lerp) for smooth motion planning
+- main(): Demonstrates capacitive cup manipulation with trajectory interpolation
+
+Dependencies:
+- ROS (rospy, smach_ros)
+- MoveIt for motion planning
+- AURMR custom packages (aurmr_tasks, aurmr_perception)
+"""
+import math
+from std_msgs.msg import Header
+import smach_ros
+
+from smach import State, StateMachine
+
+import rospy
+
+from aurmr_tasks.common.tahoma import Tahoma
+from aurmr_tasks.common import motion, perception, planning_scene
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, PointStamped
+from tf_conversions import transformations
+import aurmr_tasks.common.control_flow as cf
+
+from aurmr_tasks.srv import StowRequest, PickRequest
+from aurmr_tasks.srv import MultiplePickRequest
+from aurmr_tasks.msg import PickStatus
+from aurmr_perception.util import vec_to_quat_msg
+
+import numpy as np
+
+TARGET_BIN_ID = "001"
+TARGET_OBJECT_ID = "XYZ"
+
+align_to_tote_orientation = transformations.quaternion_from_euler(math.pi, 0, 0)
+align_to_bin_quat = vec_to_quat_msg(align_to_tote_orientation)
+
+quat_obj = Quaternion(x=0, y=0.707, z=0, w=0.707)
+TOTE_APPROACH_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=-0.05, y=-0.45,z=1.05), orientation=align_to_bin_quat ))
+
+# TOTE_APPROACH_POSE = PoseStamped(header=Header(frame_id="base_link"), pose=Pose(position=Point(x=.108, y=-.514,z=0.884), orientation=align_to_bin_quat))
+
+class GetClickedPoint(State):
+    """
+    State that waits for a point selection via RViz click.
+
+    Blocks execution until a PointStamped message is received on the /clicked_point topic.
+    This is typically used to allow manual input during autonomous task execution.
+
+    Outcomes:
+        - succeeded: Point message was received
+    """
+
+    def execute(self, userdata):
+        """
+        Execute the state by waiting for a clicked point message.
+
+        Args:
+            userdata: SMACH userdata object (unused)
+
+        Returns:
+            str: 'succeeded' when a point message is received
+        """
+        rospy.wait_for_message(PointStamped, "/clicked_point")
+
+        return "succeeded"
+
+
+class PublishStatus(State):
+    """
+    State that publishes task execution status with timing information.
+
+    Publishes a PickStatus message containing the current task status, object ID, and
+    elapsed time since task start. Can optionally introduce a delay before completing.
+
+    Outcomes:
+        - succeeded: Status message was published
+
+    Input keys:
+        - status: The task status value to publish
+        - start_time: Timestamp when task started (for calculating elapsed time)
+        - target_object_id: ID of the object being manipulated
+    """
+
+    def __init__(self, publisher, wait_time=0):
+        """
+        Initialize the PublishStatus state.
+
+        Args:
+            publisher: ROS publisher for PickStatus messages
+            wait_time (float): Optional delay in seconds before completing (default: 0)
+        """
+        State.__init__(self, outcomes=['succeeded'], input_keys=["status", "start_time", "target_object_id"])
+        self.publisher = publisher
+        self.wait_time = wait_time
+
+    def execute(self, userdata):
+        """
+        Execute the state by publishing the current status.
+
+        Calculates elapsed time, creates a PickStatus message, and publishes it.
+
+        Args:
+            userdata: SMACH userdata containing status, start_time, and target_object_id
+
+        Returns:
+            str: 'succeeded' after publishing
+        """
+        now = rospy.get_rostime()
+        now = now.secs + now.nsecs * 10**(-9)
+        time_delta = now - userdata["start_time"]
+
+        msg = PickStatus()
+        msg.status = userdata["status"]
+        msg.object_id = userdata["target_object_id"]
+        msg.time = time_delta
+        # self.publisher.publish("test")
+        self.publisher.publish(msg)
+        rospy.sleep(self.wait_time)
+        return "succeeded"
+
+class RecordTime(State):
+    """
+    State that records the current time as a task start timestamp.
+
+    Captures the current ROS time and stores it in userdata for later use in
+    calculating task execution duration.
+
+    Outcomes:
+        - succeeded: Time was recorded
+
+    Output keys:
+        - start_time: Timestamp in seconds (secs + nsecs*10^-9 format)
+    """
+
+    def __init__(self):
+        """Initialize the RecordTime state."""
+        State.__init__(self, outcomes=['succeeded'], output_keys=["start_time"])
+
+    def execute(self, userdata):
+        """
+        Execute the state by recording the current time.
+
+        Args:
+            userdata: SMACH userdata object where start_time will be stored
+
+        Returns:
+            str: 'succeeded' after recording time
+        """
+        now = rospy.get_rostime()
+        userdata["start_time"] = now.secs + now.nsecs * 10**(-9)
+        return "succeeded"
+
+class WaitForPickStow(State):
+    """
+    State that manages service-based pick and stow requests.
+
+    Exposes three ROS services (~pick, ~stow, ~multiple_pick) to receive task requests
+    from external clients. Blocks execution until a service is called and completes
+    processing of the request.
+
+    Outcomes:
+        - pick: A pick request was received
+        - stow: A stow request was received
+        - done: Execution is complete
+
+    Output keys:
+        - request: List containing [bin_id, object_id, object_asin]
+
+    Services:
+        - ~pick: Accepts a single PickRequest
+        - ~stow: Accepts a StowRequest
+        - ~multiple_pick: Accepts a MultiplePickRequest with multiple pick operations
+    """
+
+    def __init__(self):
+        """
+        Initialize the WaitForPickStow state and register ROS service callbacks.
+        """
+        State.__init__(self, outcomes=['pick', 'stow', 'done'], output_keys=["request"])
+        self.stow_service = rospy.Service('~stow', StowRequest, self.stow_cb)
+        self.pick_service = rospy.Service('~pick', PickRequest, self.pick_cb)
+        self.multi_pick_service = rospy.Service('~multiple_pick', MultiplePickRequest, self.multiple_pick_cb)
+        self.do_stow = False
+        self.do_pick = False
+        self.execution_done = False
+        self.first = True
+        self.request = None
+        self.success = False
+
+    def stow_cb(self, request: StowRequest):
+        """
+        Service callback for stow requests.
+
+        Args:
+            request (StowRequest): The stow request from the client
+
+        Returns:
+            dict: Dictionary with 'success' key indicating completion status
+        """
+        rospy.loginfo("STOW REQUEST: " + str(request))
+        self.request = request
+        self.do_stow = True
+        self.execution_done = False
+        while not self.execution_done and not rospy.is_shutdown():
+            rospy.sleep(.1)
+        return {"success": self.success}
+
+    def multiple_pick_cb(self, requests: MultiplePickRequest):
+        """
+        Service callback for multiple pick requests.
+
+        Processes multiple pick requests by converting them into individual PickRequest
+        objects and calling the pick callback for each one.
+
+        Args:
+            requests (MultiplePickRequest): The multiple pick request containing arrays of
+                                           bin_ids, object_ids, and object_asins
+
+        Returns:
+            bool: True after all requests are processed
+        """
+        for i in range(len(requests.bin_ids)):
+            r = PickRequest()
+            r.object_id = requests.object_ids[i]
+            r.bin_id = requests.bin_ids[i]
+            r.object_asin = requests.object_asins[i]
+            if self.pick_cb(r).get('success', None):
+                # ..todo report success
+                pass
+        return True
+
+    def pick_cb(self, request: PickRequest):
+        """
+        Service callback for pick requests.
+
+        Args:
+            request (PickRequest): The pick request from the client
+
+        Returns:
+            dict: Dictionary with 'success' key indicating completion status
+        """
+        rospy.loginfo("PICK REQUEST: " + str(request))
+        self.request = request
+        self.do_pick = True
+        self.execution_done = False
+        while not self.execution_done and not rospy.is_shutdown():
+            rospy.sleep(.1)
+        return {"success": self.success}
+
+    def execute(self, userdata):
+        """
+        Execute the state by waiting for and processing service requests.
+
+        On the first call, waits for either a pick or stow service request. On subsequent
+        calls, signals completion and returns 'done'.
+
+        Args:
+            userdata: SMACH userdata object where request will be stored
+
+        Returns:
+            str: 'pick' if pick service was called, 'stow' if stow service was called,
+                 'done' if this is a subsequent execution
+        """
+        print(self.first)
+        print("WAITFORPICKANDSTOW")
+        # TODO: Check if the self.first variable is necessary
+        if not self.first:
+            self.execution_done = True
+            self.do_stow = False
+            self.do_pick = False
+        else:
+            self.first = False
+
+        while not self.do_stow and not self.do_pick and not rospy.is_shutdown():
+            rospy.sleep(.1)
+
+        # userdata["request"] = ["3f", "can"]
+        userdata["request"] = [self.request.bin_id, self.request.object_id, self.request.object_asin]
+        if self.do_stow:
+            print("STOWING")
+            return "stow"
+        elif self.do_pick:
+            return "pick"
+        else:
+            return "done"
+
+def normalize_quat(q):
+    """
+    Normalize a quaternion to unit length.
+
+    Args:
+        q: Quaternion as array-like [x, y, z, w]
+
+    Returns:
+        np.ndarray: Normalized quaternion with magnitude 1.0
+    """
+    q = np.array(q, dtype=float)
+    return q / np.linalg.norm(q)
+
+def slerp(q0, q1, t):
+    """
+    Spherical linear interpolation (slerp) between two quaternions.
+
+    Performs smooth interpolation between quaternions along the shortest arc on
+    the unit hypersphere. Falls back to linear interpolation (lerp) for very
+    close quaternions.
+
+    Args:
+        q0: Start quaternion [x, y, z, w]
+        q1: End quaternion [x, y, z, w]
+        t (float): Interpolation parameter in [0, 1], where 0 returns q0 and 1 returns q1
+
+    Returns:
+        np.ndarray: Interpolated quaternion
+    """
+    q0 = normalize_quat(q0)
+    q1 = normalize_quat(q1)
+    dot = np.dot(q0, q1)
+    # take shortest path
+    if dot < 0.0:
+        q1 = -q1
+        dot = -dot
+    # if very close, fall back to lerp
+    if dot > 0.9995:
+        q = q0 + t * (q1 - q0)
+        return normalize_quat(q)
+    theta0 = np.arccos(np.clip(dot, -1.0, 1.0))
+    sin_theta0 = np.sin(theta0)
+    s0 = np.sin((1.0 - t) * theta0) / sin_theta0
+    s1 = np.sin(t * theta0) / sin_theta0
+    return s0 * q0 + s1 * q1
+
+def lerp(p0, p1, t):
+    """
+    Linear interpolation between two positions.
+
+    Args:
+        p0: Start position as array-like [x, y, z]
+        p1: End position as array-like [x, y, z]
+        t (float): Interpolation parameter in [0, 1], where 0 returns p0 and 1 returns p1
+
+    Returns:
+        np.ndarray: Interpolated position
+    """
+    return (1.0 - t) * p0 + t * p1
+
+def main():
+    """
+    Main function that demonstrates capacitive cup manipulation task.
+
+    This function:
+    1. Sets up robot motion parameters and approach poses
+    2. Generates a series of interpolated poses using slerp (quaternion) and
+       lerp (position) for smooth trajectories
+    3. Initializes the Tahoma robot and ROS node
+    4. Constructs a SMACH state machine with motion states for:
+       - Scene setup (collision geometry)
+       - Gripper positioning and activation
+       - Pre-grasp motions
+       - Finger activation and blow-off sequences
+       - Final retraction to hide position
+    5. Starts the state machine introspection server for debugging
+    6. Executes the state machine and spins until shutdown
+
+    The demo generates 10 random interpolated poses between a start and end position/orientation,
+    then executes the first 3 of these poses through the state machine.
+    """
+
+
+    default_pose = PoseStamped()
+
+    default_pose.header.frame_id = "base_link"
+
+    # # bin2H
+    default_pose.pose.position.x =  0.730
+    default_pose.pose.position.y =  0.035
+    default_pose.pose.position.z =  1.580
+
+    default_pose.pose.orientation.x = 0.7071067811865475
+    default_pose.pose.orientation.y = -5.551115123125783e-17
+    default_pose.pose.orientation.z = 0.7071067811865475
+    default_pose.pose.orientation.w = 1.6653345369377348e-16
+
+    # bin4H
+    # default_pose.pose.position.x =  0.733
+    # default_pose.pose.position.y =  -0.363
+    # default_pose.pose.position.z =  1.583
+
+    # default_pose.pose.orientation.x = -0.402
+    # default_pose.pose.orientation.y = 0.605
+    # default_pose.pose.orientation.z = -0.597
+    # default_pose.pose.orientation.w = 0.340
+
+    # ---- inputs (x,y,z,w) ----
+    # To find current pose
+    # rosrun tf tf_echo base_link arm_tool0
+    # Start pose
+    # p0 = np.array([0.7545261299271153, -0.13440912820195217, 1.648122741686027])
+    # q0 = np.array([-0.6595336984412554, -0.2867550231730385, -0.6668635516863034, 0.19514061785737616])
+    # p0 = np.array([0.716, -0.106, 1.609])
+    # q0 = np.array([0.708, 0.108, 0.684, -0.142])
+    p0 = np.array([default_pose.pose.position.x,
+                   default_pose.pose.position.y,
+                   default_pose.pose.position.z,
+                   ])
+    q0 = np.array([default_pose.pose.orientation.x,
+                   default_pose.pose.orientation.y,
+                   default_pose.pose.orientation.z,
+                   default_pose.pose.orientation.w,
+                   ])
+
+
+
+
+    # End pose
+    # p1 = np.array([0.8120119371704997,  0.2778027420090131,  1.6481276266459657])
+    # q1 = np.array([ 0.6560724417144967, -0.24972460344214054,  0.6575598053157342, 0.2735355115731376])
+    p1 = np.array([0.724, 0.106, 1.629])
+    q1 = np.array([0.696, -0.028, 0.715, 0.051])
+
+    # sample 10 random ts in [0,1]
+    rng = np.random.default_rng()
+    ts = np.sort(rng.random(10))  # sorted optional; remove sort for arbitrary order
+
+    poses = []
+    for t in ts:
+        pos = lerp(p0, p1, t)
+        quat = slerp(q0, q1, t)
+        pose = PoseStamped()
+        pose.header.frame_id = "base_link"
+        pose.pose.position.x =  pos[0]
+        pose.pose.position.y =  pos[1]
+        pose.pose.position.z =  pos[2]
+        pose.pose.orientation.x = quat[0]
+        pose.pose.orientation.y = quat[1]
+        pose.pose.orientation.z = quat[2]
+        pose.pose.orientation.w = quat[3]
+        poses.append(pose)
+
+    # Example: print or build geometry_msgs/Pose messages
+    for i, pos in enumerate(poses, 1):
+        print(f"{i:02d}  {pos}")
+
+    rospy.init_node("aurmr_demo")
+    pose_pub_test = rospy.Publisher("/tote_drop", PoseStamped, queue_size=5, latch=True)
+    status_pub = rospy.Publisher("/demo_status", PickStatus, queue_size=5, latch=True)
+    TOTE_APPROACH_POSE.header.stamp = rospy.Time.now()
+    pose_pub_test.publish(TOTE_APPROACH_POSE)
+    simulation = rospy.get_param("/use_sim_time", False)
+    State.simulation = simulation
+    robot = Tahoma(simulation)
+    print("here")
+    demo_sm = StateMachine(["done"], input_keys=[], output_keys=[])
+
+    # stows = [["4f", "mouthwash"], ["4f", "soda"], ["4f", "syrup"]]
+    # stows = [["3f", "mouthwash"], ['3f', 'lysol'], ['2f', 'box']]
+    # picks = [["3f", "lysol"], ['2f', 'box'], ['3f', 'mouthwash']]
+
+    with demo_sm:
+
+        cf.inject_userdata_auto("DEFAULT_BIN", "target_bin_id", "2H")
+
+
+        cf.inject_userdata_auto("INITIALIZE_HUMAN_GRASP_POSE", "human_grasp_pose", None)
+        StateMachine.add_auto("CLEAR_SCENE", planning_scene.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
+        StateMachine.add_auto("SETUP_COLLISION_SCENE", planning_scene.AddFullPodCollisionGeometryDropHide(robot), ["succeeded", "aborted"])
+        StateMachine.add_auto("MOVE_TO_HIDE", motion.MoveToJointAngles(robot, "drop_hide"),  ["succeeded", "aborted"])
+        # StateMachine.add_auto("CHECK_GRIPPER_OPEN", motion.OpenGripper(robot, return_before_done=True, fingers=0), ["succeeded", "aborted", "preempted"])
+        # StateMachine.add_auto("CHECK_GRIPPER_CLOSE", motion.CloseGripper(robot, return_before_done=True), ["succeeded", "aborted", "preempted"])
+
+
+        StateMachine.add_auto("CLEAR_SCENE_PREMOVE", planning_scene.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
+        StateMachine.add_auto("SETUP_COLLISION_SCENE_PREMOVE", planning_scene.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
+        StateMachine.add_auto("MOVE_TO_DEFAULT", motion.MoveEndEffectorToPoseManipulable(robot, default_pose), ["succeeded", "aborted", "preempted"])
+
+        # StateMachine.add_auto(f"MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPoseManipulable(robot, poses[0]), ["succeeded", "aborted", "preempted"])
+        StateMachine.add_auto(f"MOVE_FORWARD", motion.MoveEndEffectorToOffset(robot, (0, 0, .05), use_gripper="capacitive"), ["succeeded", "aborted", "preempted"])
+        # StateMachine.add_auto(f"MOVE_FORWARD", motion.MoveEndEffectorToOffset(robot, (0, 0, .15), use_gripper="capacitive"), ["succeeded", "aborted", "preempted"])
+
+        # Touching ->
+        # check if grabbed
+        # -grabbed> pick
+        # -not grabbed> calculate new grasp pose
+        # retract a little
+        # (maybe don't need?) Move to pregrasp
+        # move to grasp
+        # check if grabbed
+
+        StateMachine.add_auto("START_SEARCH_TIMER", cf.StartSearchTimer(),["succeeded"])
+        StateMachine.add("CHECK_ALIGNMENT", perception.CheckCapAlignment(),
+                         {"aligned": "LIFT_OBJ",
+                          "misaligned": "GET_CAP_POSE",
+                          "aborted": "CLEAR_WALL",
+                          "preempted": "CLEAR_WALL"})
+
+        StateMachine.add_auto("GET_CAP_POSE", perception.GetHapticSearchPose(), ["succeeded", "aborted", "preempted"])
+        StateMachine.add_auto("REMAP_PRE_GRASP_POSE", cf.input_to_output("pose_delta", "transformation"), ["succeeded"])
+
+        StateMachine.add_auto("RETRACT_FOR_CLEARANCE", motion.MoveEndEffectorToOffset(robot, (0, 0, -0.005)), ["succeeded", "aborted", "preempted"])
+        StateMachine.add("MOVE_TO_CAP_POSE", motion.MoveEndEffectorToTransform(robot),
+                         {"succeeded": "CHECK_ALIGNMENT",
+                          "aborted": "LIFT_OBJ",
+                          "preempted": "LIFT_OBJ"})
+        StateMachine.add_auto("LIFT_OBJ", motion.robust_move_to_offset(robot, (0, 0, 0.03), 'base_link'), ["succeeded", "aborted", "preempted"])
+
+        StateMachine.add_auto("CLEAR_WALL", motion.MoveEndEffectorToOffset(robot, (0, 0, -0.2)), ["succeeded", "aborted", "preempted"])
+
+        StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "drop_hide"), ["succeeded", "aborted"])
+
+        StateMachine.add("BLOW_OFF_GRIPPER", motion.BlowOffGripper(robot, return_before_done=True), {"succeeded": "done", "aborted": "done", "preempted": "done"})
+
+
+
+    rospy.loginfo('Beginning demo SM')
+    rospy.loginfo(f'{demo_sm.userdata}')
+
+    sis = smach_ros.IntrospectionServer('demo_sm', demo_sm, '/pick')
+    sis.start()
+
+    print("State machine introspection server started...")
+
+    outcome = demo_sm.execute()
+
+    rospy.spin()
+    sis.stop()
+
+
+if __name__ == '__main__':
+    main()

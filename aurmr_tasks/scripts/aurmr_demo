@@ -96,7 +96,6 @@ class PickStowQueue:
             result = PickRequestResponse.OUTCOME_UNKNOWN_FAILURE
         return {"outcome": result}
 
-
 class WaitForPickStow(State):
     def __init__(self, task_queue):
         State.__init__(self, outcomes=['pick', 'stow', 'done'], output_keys=["request"])
@@ -144,54 +143,83 @@ def main():
     pick_success_cleanup_sm = StateMachine(["succeeded"], input_keys=['target_bin_id', 'target_object_id', 'target_object_asin'], output_keys=[])
     pick_retry_sm = StateMachine(["retry", "continue"], input_keys=['target_bin_id', 'target_object_id', 'target_object_asin', 'grasp_pose'], output_keys=['grasp_pose'])
 
+    pick_sm.userdata.offset_moved = None
+    pick_sm.userdata.empty_offset = None
+
     stow_sm = StateMachine(["done"], input_keys=["request"], output_keys=["status"])
     task_queue = PickStowQueue(pick_sm)
 
     with demo_sm:
 
         with pick_sm:
+            StateMachine.add_auto("SET_START_TIME", cf.RecordStartTime(), ["succeeded"])
             # These are pre-terminating states that note what went wrong in the userdata. This avoids
             # encoding the same information in an explosion of named state transitions
             cf.splat_auto("SPLAT_PICK", "request", ["target_bin_id", "target_object_id", "target_object_asin"])
-            # StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX_PRE_GRASP", motion.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
-
 
             StateMachine.add_auto("CAPTURE_POINTS", perception.GetPoints(), ["succeeded", "aborted"])
 
-            StateMachine.add("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=.065),
-                            {"succeeded": "MOVE_TO_BIN", "aborted":"NOTE_PASS", "preempted":"NOTE_PASS"})
+            # StateMachine.add("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=0.15),
+            #                 {"succeeded": "MOVE_TO_BIN", "aborted":"NOTE_PASS", "preempted":"NOTE_PASS"})
+            StateMachine.add("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=0.1),
+                            {"succeeded": "REMAP_PRE_GRASP_POSE", "aborted":"NOTE_PASS", "preempted":"NOTE_PASS"})
 
-            #StateMachine.add("PASS", PublishStatus(status_pub, wait_time=3), {"succeeded": "done"})
-
-            #StateMachine.add("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=.035),
-            #                {"succeeded": "REMAP_PRE_GRASP_POSE", "aborted":"NOTE_PASS", "preempted":"NOTE_PASS"})
             cf.inject_userdata("NOTE_PASS", "done", "status", PickRequestResponse.OUTCOME_PERCEPTION_FAILURE)
 
-            StateMachine.add_auto("MOVE_TO_BIN", motion.MoveToBin(robot), ["succeeded", "aborted"])
-
-            #StateMachine.add_auto("PUBLISH_CURRENTLY_PICKING", PublishStatus(status_pub), ["succeeded"])
-            # StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX_PRE_GRASP", planning_scene.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
+            # StateMachine.add_auto("MOVE_TO_BIN", motion.MoveToBin(robot), ["succeeded", "aborted"])
 
             StateMachine.add_auto("REMAP_PRE_GRASP_POSE", cf.input_to_output("pre_grasp_pose", "pose"), ["succeeded"])
             StateMachine.add_auto("CLEAR_SCENE_PREMOVE", planning_scene.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_PREMOVE", planning_scene.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
+            # StateMachine.add_auto("SETUP_COLLISION_SCENE_PREMOVE", planning_scene.AddPartialPodCollisionGeometry(robot), ["succeeded", "aborted"])
 
-            # FIXME: if `MOVE_TO_PREBIN`` returns early, IMPLEMENT a method to check that move group has reached goal
-            StateMachine.add_auto("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPose(robot), ["succeeded", "aborted", "preempted"])
-            StateMachine.add_auto("CLEAR_SCENE_PREGRASP", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
-            StateMachine.add_auto("SETUP_COLLISION_SCENE_PREGRASP", motion.AddPartialPodCollisionGeometry(robot), ["succeeded", "aborted"])
-            StateMachine.add_auto("MOVE_TO_GRASP", motion.grasp_move_to_offset(robot, (0, 0, 0.5)), ["succeeded", "aborted", "preempted"])
-            StateMachine.add_auto("LIFT_OBJ", motion.robust_move_to_offset(robot, (0, 0, 0.035), 'base_link'), ["succeeded", "aborted", "preempted"])
-            StateMachine.add_auto("ADJUST_RIGHT_IF_COLUMN_1", motion.AdjustRightIfColumn1(robot, (0, 0.05, 0)), ["succeeded", "aborted", "pass"])
-            StateMachine.add_auto("ADJUST_LEFT_IF_COLUMN_4", motion.AdjustLeftIfColumn4(robot, (0, -0.05, 0)), ["succeeded", "aborted", "pass"])
-            StateMachine.add_auto("RETRACT_ARM", motion.robust_move_to_offset(robot, (0, 0, -0.3)), ["succeeded", "aborted", "preempted"])
+            ### ORIGINAL GRASP LOGIC ###
+            #..todo:: add a constraint to the pre grasp pose so the gripper does not rotate
+            # pre_grasp is defined as 0.12m offset from grasp (for some reason). This step just axis-aligns for grasp
+            # StateMachine.add("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPose(robot),
+            #                  {"succeeded": "SWAP_TO_COMPLIANCE", "aborted":"MOVE_FORWARD", "preempted":"MOVE_FORWARD"}
+            #                  )
+            # StateMachine.add("MOVE_TO_PRE_GRASP_ROUGH", motion.MoveEndEffectorToPose(robot, orient_tol=0.2),
+            #                  {"succeeded": "MOVE_TO_PRE_GRASP", "aborted":"CLEAR_SCENE_POSTGRASP", "preempted":"CLEAR_SCENE_POSTGRASP"}
+            #                  )
+            # StateMachine.add("MOVE_TO_PRE_GRASP_ROUGH", motion.MoveEndEffectorToPoseManipulable(robot, pos_tol=0.02, orient_tol=0.2),
+            #                  {"succeeded": "MOVE_TO_PRE_GRASP", "aborted":"CLEAR_SCENE_POSTGRASP", "preempted":"CLEAR_SCENE_POSTGRASP"}
+            #                  )
+            StateMachine.add("MOVE_TO_PRE_GRASP", motion.MoveEndEffectorToPoseManipulable(robot),
+                             {"succeeded": "CLEAR_SCENE_POSTMOVE", "aborted":"CLEAR_SCENE_POSTGRASP", "preempted":"CLEAR_SCENE_POSTGRASP"}
+                             )
+
+            # StateMachine.add_auto("MOVE_FORWARD", motion.robust_move_to_offset(robot, (0, 0, 0.03)), ["succeeded", "aborted", "preempted"])
+
+            # # Compliance Controller
+            # StateMachine.add_auto('SWAP_TO_COMPLIANCE', util.SwitchControllers(['ur_cartesian_compliance_controller'], ['scaled_pos_joint_traj_controller']), ["succeeded", "aborted"])
+            # StateMachine.add_auto("ZERO_FT", compliance_controller.ZeroFT(), ["succeeded", "aborted"])
+            # StateMachine.add_auto("DO_NOTHING_INIT_CONTROLLER", compliance_controller.MoveToOffset(robot, (0, 0, 0), 'arm_tool0', False, 0), ["succeeded", "aborted"],
+            #                         remapping={'offset_moved_in': 'empty_offset'})
+            # StateMachine.add_auto("MOVE_TO_GRASP", compliance_controller.MoveToOffset(robot, (0, 0, 0.25), 'arm_tool0', True), ["succeeded", "aborted"],
+            #         remapping={'offset_moved_out': 'offset_moved', 'offset_moved_in': 'empty_offset'})
+            # StateMachine.add_auto("LIFT_OBJ", compliance_controller.MoveToOffset(robot, (0, 0, 0.05), 'base_link', False), ["succeeded", "aborted"], remapping={'offset_moved_in': 'empty_offset'})
+            # StateMachine.add_auto("RETRACT_TO_PREGRASP", compliance_controller.MoveToOffset(robot,  None, 'arm_base_link', False, 1.5), ["succeeded", "aborted"],
+            #                         remapping={'offset_moved_in': 'offset_moved'})
+            # StateMachine.add_auto('SWAP_TO_POS_CONTROLLER', util.SwitchControllers(['scaled_pos_joint_traj_controller'], ['ur_cartesian_compliance_controller']), ["succeeded", "aborted"])
+
+
+            StateMachine.add_auto("CLEAR_SCENE_POSTMOVE", planning_scene.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
+            StateMachine.add_auto("SETUP_COLLISION_SCENE_POSTMOVE", planning_scene.AddPartialPodCollisionGeometry(robot), ["succeeded", "aborted"])
+
+            # Position Controller
+            StateMachine.add_auto("MOVE_TO_GRASP", motion.grasp_move_to_offset(robot, (0, 0, 0.2), "arm_tool0"), ["succeeded", "aborted", "preempted"])
+            StateMachine.add_auto("LIFT_OBJ", motion.robust_move_to_offset(robot, (0, 0, 0.05), "base_link"), ["succeeded", "aborted", "preempted"])
+            StateMachine.add_auto("RETRACT_TO_PREGRASP", motion.robust_move_to_offset(robot, (0, 0, -0.2), "arm_tool0"), ["succeeded", "aborted", "preempted"])
+
+
+            # StateMachine.add_auto("MOVE_TO_BIN_POSE_AGAIN", motion.MoveToBin(robot), ["succeeded", "aborted"])
+
             StateMachine.add_auto("CLEAR_SCENE_POSTGRASP", planning_scene.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("SETUP_COLLISION_SCENE_POSTGRASP", planning_scene.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
-            # StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX", planning_scene.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
-            # StateMachine.add("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "drop_hide"),
-            #                     {"succeeded": "PICTURE_WAIT", "aborted": "MOVE_INTO_JOINT_LIMITS"})
 
             StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "drop_hide"), ["succeeded", "aborted"])
+            StateMachine.add_auto("RECORD_TOTAL_TIME", cf.RecordTotalTime("cycle_time_vo.txt"), ["succeeded"])
             StateMachine.add("CHECK_FOR_GRIPPER_ITEM", motion.CheckGripperItem(robot),
                             {"item_detected": "NOTE_SUCCESS", "no_item_detected": "NOTE_MANIPULATION_FAILURE_AND_RETRY"})
             cf.inject_userdata("NOTE_SUCCESS", "POST_PICK_SUCCESS_CLEANUP", "status", PickRequestResponse.OUTCOME_SUCCESS)
@@ -250,6 +278,7 @@ def main():
     print("State machine introspection server started...")
 
     outcome = demo_sm.execute()
+    rospy.spin()
     sis.stop()
 
 

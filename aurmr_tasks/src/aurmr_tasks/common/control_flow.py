@@ -6,6 +6,38 @@ from smach import State, StateMachine
 
 from aurmr_tasks.common import states
 
+class RecordStartTime(State):
+    def __init__(self):
+        State.__init__(self,
+                       outcomes=["succeeded"],
+                       output_keys=["start_time"])
+
+    def execute(self, userdata):
+        userdata["start_time"] = rospy.get_time()
+        return "succeeded"
+
+class RecordTotalTime(State):
+    def __init__(self, filename):
+        State.__init__(self,
+                       outcomes=["succeeded"],
+                       input_keys=["start_time"],
+                       )
+        self.filename = filename
+
+    def execute(self, userdata):
+        start_time = userdata["start_time"]
+        total_time = rospy.get_time() - start_time
+        with open(self.filename, "a") as file:
+            file.write(f"{total_time}\n")
+        return "succeeded"
+
+class StartSearchTimer(State):
+    def __init__(self):
+        State.__init__(self, outcomes=["succeeded"], output_keys=["search_start"])
+
+    def execute(self, userdata):
+        userdata["search_start"] = rospy.get_time()
+        return "succeeded"
 
 def break_dict_out(name, to, input_key, output_keys):
     class BreakDataOut(State):
