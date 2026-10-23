@@ -62,12 +62,12 @@ class HeuristicGraspDetector:
 
         transform= self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
         POD_OFFSET = 0.1
-        RGB_TO_DEPTH_FRAME_OFFSET = -0.015
-        DEPTH_TILT = -transform.transform.translation.z-0.03
+        RGB_TO_DEPTH_FRAME_OFFSET = transform.transform.translation.y-0.48
+        DEPTH_TILT = -transform.transform.translation.z
         # center[2] += center[0]*np.sin(DEPTH_TILT)
         center[2] += DEPTH_TILT
         center[1] -= RGB_TO_DEPTH_FRAME_OFFSET
-        center[0] = transform.transform.translation.x - POD_OFFSET
+        center[0] = transform.transform.translation.x-0.04
 
         # NOTE(nickswalker,4-29-22): Hack to compensate for the chunk of points that don't get observed
         # due to the lip of the bin

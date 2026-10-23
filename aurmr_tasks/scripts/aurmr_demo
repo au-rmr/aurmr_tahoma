@@ -181,6 +181,7 @@ def main():
             StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX", motion.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
             StateMachine.add_auto("MOVE_TO_PRE_TOTE_POSE", motion.MoveToJointAngles(robot, "drop_hide"), ["succeeded", "aborted"])
             StateMachine.add_auto("PICTURE_WAIT", Wait(2), ["succeeded"])
+            StateMachine.add_auto("PICTURE_WAIT_LAG_DATA_TRANSFER", Wait(1000), ["succeeded"])
             StateMachine.add("CHECK_FOR_GRIPPER_ITEM", motion.CheckGripperItem(robot), 
                             {"item_detected": "POST_PICK_UPDATE_MASKS", "no_item_detected": "UPDATE_BIN_MASKS"})
             StateMachine.add("POST_PICK_UPDATE_MASKS", perception.PickObject(),
