@@ -20,8 +20,7 @@ import rospy
 
 from tf2_geometry_msgs import from_msg_msg
 from geometry_msgs.msg import PoseStamped, WrenchStamped
-from robotiq_2f_gripper_control.msg import vacuum_gripper_input as VacuumGripperStatus # does this need to be changed to the vacuum_gripper_contol.msg, do we need "as"
-from vacuum_gripper_control.msg import vacuum_gripper_input, vacuum_gripper_output
+from robotiq_2f_gripper_control.msg import vacuum_gripper_input as VacuumGripperStatus
 from aurmr_tasks.util import all_close, pose_dist
 from moveit_msgs.msg import MoveItErrorCodes, MoveGroupAction, DisplayTrajectory
 from moveit_msgs.srv import GetPositionIK, GetPositionIKRequest
@@ -113,7 +112,7 @@ class Tahoma:
         self.in_sim = in_sim
         self.joint_state = None
         self.point_cloud = None
-
+        self.bin_id = "3F"
         self.tf2_buffer = tf2_ros.Buffer()
         self.tf2_listener = tf2_ros.TransformListener(self.tf2_buffer)
         self.wrist_position = None
@@ -157,14 +156,11 @@ class Tahoma:
         group_names = self.commander.get_group_names()
 
         self.wrench_listener = rospy.Subscriber("/wrench", WrenchStamped, self.wrench_cb)
-        #self.gripper_status_listener = rospy.Subscriber("/gripper_control/status", vacuum_gripper_input, self.gripper_status_cb)
-        self.custom_gripper_status_listener = rospy.Subscriber("/vacuum_gripper_control/status", vacuum_gripper_input, self.custom_gripper_status_cb)
-        self.custom_gripper_blowoff_listener = rospy.Subscriber("/vacuum_gripper_control/status", vacuum_gripper_input, self.custom_gripper_blowoff_cb)
+        self.gripper_status_listener = rospy.Subscriber("/gripper_control/status", VacuumGripperStatus, self.gripper_status_cb)
         self.traj_status_listener = rospy.Subscriber("/scaled_pos_joint_traj_controller/follow_joint_trajectory/status", GoalStatusArray, self.goal_status_cb)
         self.force_mag = 0
         self.torque_mag = 0
         self.object_detected = False
-        self.object_detected_blowoff = False
         self.goal_finished = True
         self.goal_stamp = 0
         # Misc variables
@@ -179,14 +175,8 @@ class Tahoma:
         self.force_mag = math.sqrt(msg.wrench.force.x**2 + msg.wrench.force.y**2+ msg.wrench.force.z**2)
         self.torque_mag = math.sqrt(msg.wrench.torque.x**2 + msg.wrench.torque.y**2+ msg.wrench.torque.z**2)
 
-    def gripper_status_cb(self, msg: vacuum_gripper_input):
-        self.object_detected = (msg.gPO < 95) 
-
-    def custom_gripper_status_cb(self, msg: vacuum_gripper_input):
-        self.object_detected = msg.SYSTEM_VACUUM > 450 # because it is in mbar and is returned as an int
-
-    def custom_gripper_blowoff_cb(self, msg: vacuum_gripper_input):
-        self.object_detected_blowoff = msg.SYSTEM_VACUUM > 10 # because it is in mbar and is returned as an int
+    def gripper_status_cb(self, msg: VacuumGripperStatus):
+        self.object_detected = (msg.gPO < 95)
 
     def goal_status_cb(self, msg: GoalStatusArray):
         latest_time = 0
@@ -263,24 +253,10 @@ class Tahoma:
 
     def check_gripper_item(self):
         return self.object_detected 
-    
-    def blow_off_gripper(self, return_before_done=False):
-        goal = GripperCommandGoal()
-        goal.command.position = 2
-        goal.command.max_effort = 1
-        self._gripper_client.send_goal(goal)
-        if not return_before_done:
-            self._gripper_client.wait_for_result()
-        rospy.sleep(3)
-        while self.object_detected_blowoff:
-            pass
-
-        self.open_gripper()
-        return 
 
     def close_gripper(self, return_before_done=False):
         goal = GripperCommandGoal()
-        goal.command.position = 1
+        goal.command.position = 0.83
         goal.command.max_effort = 1
         self._gripper_client.send_goal(goal)
         rospy.loginfo("Waiting for gripper" + str(return_before_done))
@@ -375,10 +351,8 @@ class Tahoma:
 
         joint_values = joints
 
-        print("######################################",joint_values)
         if isinstance(joints, str):
             joint_values = self.get_joint_values_for_name(joints)
-            print(joint_values)
             self.move_group.set_named_target(joints)
         else:
             self.move_group.set_joint_value_target(joints)
@@ -509,7 +483,7 @@ class Tahoma:
         self.move_group.set_goal_position_tolerance(tolerance)
         max_manipulability = 0
         
-        for index in range(5):
+        for index in range(1):
             success, plan, planning_time, error_code = self.move_group.plan()
             if success:
                 jacobian = self.move_group.get_jacobian_matrix(list(getattr(getattr(getattr(plan,"joint_trajectory"),"points")[-1],"positions")))

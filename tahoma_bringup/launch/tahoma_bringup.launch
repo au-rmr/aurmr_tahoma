@@ -1,8 +1,8 @@
 <?xml version="1.0" ?>
 <launch>
     <arg name="gui" default="True" />
-    <arg name="pod_id" default="2" />
-    <arg name="pod_face" default="2A" />
+    <arg name="pod_id" default="1" />
+    <arg name="pod_face" default="1C" />
     
     <!-- <include file="$(find tahoma_bringup)/launch/calibration.launch"/> -->
 
@@ -41,34 +41,11 @@
       <include file="$(find tahoma_description)/launch/pod_transform.launch"/>
     </group>
 
-    <!-- Use realsense-enumerate-devices to examine physical port layout -->
-    <!-- <include file="$(find tahoma_bringup)/launch/camera.launch">
-      <arg name="camera" value="camera_lower_right" />
-      <arg name="usb_port_id" value="4-1" />
-    </include> -->
-    <!-- FIXME(nickswalker,6-9-22): Depth interference when both cameras are running -->
-    <!--include file="$(find tahoma_bringup)/launch/camera.launch">
-      <arg name="camera" value="camera_lower_left" />
-      <arg name="usb_port_id" value="4-3" />
-    </include>-->
-<!--     
-    <node name="fake_gripper_state" type="fake_gripper_state" pkg="tahoma_bringup" >
-      <param name="state" value="1.0" />
-    </node> -->
-
-    <!-- <arg name="gripper_type" default="vacuum" />
+    <!-- <arg name="gripper_type" default="vacuum" /> -->
     <include file="$(find robotiq_2f_gripper_control)/launch/robotiq_2f_gripper_socket.launch">
       <arg name="gripper_type" default="$(arg gripper_type)" />
     </include>
     <include file="$(find robotiq_2f_gripper_action_server)/launch/robotiq_2f_gripper_socket_action_server.launch">
-      <arg name="gripper_type" default="$(arg gripper_type)" />
-    </include> -->
-    
-    <arg name="gripper_type" default="vacuum" />
-    <include file="$(find vacuum_gripper_control)/launch/vacuum_gripper_socket.launch">
-      <arg name="gripper_type" default="$(arg gripper_type)" />
-    </include>
-    <include file="$(find vacuum_gripper_action_server)/launch/vacuum_gripper_socket_action_server.launch">
       <arg name="gripper_type" default="$(arg gripper_type)" />
     </include>
 
@@ -87,5 +64,5 @@
      <arg name="port" value="9090"/>
   </include>
 
-    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tahoma_description)/config/view_model.rviz"/>
+    <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tahoma_description)/config/view_model.rviz"/> -->
 </launch>

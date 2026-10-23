@@ -8,3 +8,5 @@ string message
 string bin_id
 sensor_msgs/PointCloud2 points
 sensor_msgs/Image mask
+sensor_msgs/Image mask_all
+string object_id

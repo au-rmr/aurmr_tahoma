@@ -1,7 +1,9 @@
 sensor_msgs/PointCloud2 points
 sensor_msgs/Image mask
+sensor_msgs/Image mask_all
 float32 dist_threshold
 string bin_id
+string object_id
 ---
 bool success
 string message
