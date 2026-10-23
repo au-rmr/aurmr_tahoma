@@ -1,0 +1,116 @@
+# # Object tracking configuration for the MPPI bridge node.
+# # Load with: rosparam load <path>/object_tracking.yaml /mppi_bridge_node
+# # Or include in your launch file:
+# #   <rosparam file="$(find aurmr_tasks)/config/object_tracking.yaml"
+# #             command="load" ns="mppi_bridge_node" />
+
+# object_tracking:
+#   # Frame that the camera publishes its detections in.
+#   # This is the frame_id in the /tag_detections header.
+#   camera_frame: camera_color_optical_frame
+
+#   # Frame used as the world frame for object poses (must match Genesis world frame).
+#   world_frame: base_link
+
+#   # Edge length of the cubes in meters.
+#   cube_size: 0.05
+
+#   # One entry per object that appears in sim.objects[].
+#   # genesis_index must match the order objects were added in your Genesis config.
+#   # tags: list the AprilTag ID on each face.
+#   #   face: one of "+x", "-x", "+y", "-y", "+z", "-z" in the cube body frame.
+#   #   rotation_deg: (optional, default 0) rotate the tag around the face normal
+#   #                 if the tag is not upright on that face.
+#   cubes: #[]
+#     - genesis_index: 0 # Blue
+#       tags:
+#         - {id: 8, face: "+x"}
+#         - {id: 30, face: "-x"}
+#         - {id: 1, face: "+y"}
+#         - {id: 5, face: "-y"}
+#         - {id: 2, face: "+z"}
+#         - {id: 7, face: "-z"}
+#     - genesis_index: 1 # Red
+#       tags:
+#         - {id: 29, face: "+x"}
+#         - {id: 9, face: "-x"}
+#         - {id: 28, face: "+y"}
+#         - {id: 26, face: "-y"}
+#         - {id: 27, face: "+z"}
+#         - {id: 10, face: "-z"}
+#     - genesis_index: 2 # green
+#       tags:
+#         - {id: 15, face: "+x"}
+#         - {id: 17, face: "-x"}
+#         - {id: 16, face: "+y"}
+#         - {id: 14, face: "-y"}
+#         - {id: 18, face: "+z"}
+#         - {id: 19, face: "-z"}
+#     - genesis_index: 3 # yellow
+#       tags:
+#         - {id: 20, face: "+x"}
+#         - {id: 22, face: "-x"}
+#         - {id: 21, face: "+y"}
+#         - {id: 23, face: "-y"}
+#         - {id: 24, face: "+z"}
+#         - {id: 25, face: "-z"}
+
+#     # Add more cubes as needed:
+#     # - genesis_index: 1
+#     #   tags:
+#     #     - {id: 6,  face: "+x"}
+#     #     - {id: 7,  face: "-x"}
+#     #     - {id: 8,  face: "+y"}
+#     #     - {id: 9,  face: "-y"}
+#     #     - {id: 10, face: "+z"}
+#     #     - {id: 11, face: "-z"}
+
+# Object tracking configuration for the MPPI bridge node.
+# Load with: rosparam load <path>/object_tracking.yaml /mppi_bridge_node
+# Or include in your launch file:
+#   <rosparam file="$(find aurmr_tasks)/config/object_tracking.yaml"
+#             command="load" ns="mppi_bridge_node" />
+
+object_tracking:
+  # 'foundationpose' (default) or 'apriltag'
+  tracker_type: foundationpose
+
+  # Frame that the camera publishes detections in (same for both tracker types).
+  camera_frame: camera_color_optical_frame
+
+  # Frame used as the world frame for object poses (must match Isaac world frame).
+  world_frame: base_link
+
+  # --- FoundationPose settings -------------------------------------------
+  # Address of the ZMQ PUSH socket in the Docker container.
+  # Use tcp://localhost:<port> when the container runs with --network host.
+  zmq_address: tcp://192.168.10.102:5555
+
+  # One entry per tracked object.
+  #   id:            must match the 'id' field in run_realsense.py objects config.
+  #   Isaac_index: position in sim.objects[] (determines order in planner state).
+  objects: #[]
+    - id: 0
+      genesis_index: 0
+    - id: 1
+      genesis_index: 1
+    - id: 2
+      genesis_index: 2
+    # - id: 3
+    #   genesis_index: 3
+  # add more objects as needed:
+  #   - id: 1
+  #     genesis_index: 1
+
+  # --- AprilTag settings (only used when tracker_type: apriltag) ----------
+  # cube_size: 0.05
+  # cubes: []
+  # cubes:
+  #   - genesis_index: 0
+  #     tags:
+  #       - {id: 0, face: "+x"}
+  #       - {id: 1, face: "-x"}
+  #       - {id: 2, face: "+y"}
+  #       - {id: 3, face: "-y"}
+  #       - {id: 4, face: "+z"}
+  #       - {id: 5, face: "-z"}

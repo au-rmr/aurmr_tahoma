@@ -8,10 +8,17 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
 )
 
+generate_messages(
+  DEPENDENCIES
+  control_msgs
+)
+
 catkin_package(
   # INCLUDE_DIRS include
   CATKIN_DEPENDS actionlib actionlib_msgs control_msgs vacuum_gripper_control roscpp
 )
+
+
 
 # include_directories(include)
 # include_directories(
