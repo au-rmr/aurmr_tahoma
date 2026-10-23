@@ -23,7 +23,7 @@ import imutils
 
 rectangle = None
 
-UOC_PATH = '/home/aurmr/workspaces/uois_soofiyan_ws/src/aurmr_tahoma/aurmr_unseen_object_clustering/src/aurmr_unseen_object_clustering/'
+UOC_PATH = '/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/aurmr_tahoma/aurmr_unseen_object_clustering/src/aurmr_unseen_object_clustering/'
 
 NO_OBJ_STORED = 1
 UNDERSEGMENTATION = 2
@@ -61,6 +61,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 # not reachable: 1d, 
 #317 296 407 353
 #1268 1184 1628 1412
+
 bin_bounds = {
           '1H':[297*4, 353*4, 315*4, 406*4],
           '2H':[300*4, 355*4, 409*4, 514*4],
@@ -72,36 +73,13 @@ bin_bounds = {
           '4G':[371*4, 412*4, 619*4, 711*4],
           '1F':[420*4, 514*4, 314*4, 405*4],
           '2F':[424*4, 511*4, 407*4, 512*4],
-          '3F':[425*4, 515*4, 515*4, 620*4],    
+          '3F':[137, 477, 431, 836],    
           '4F':[426*4, 514*4, 621*4, 714*4],
           '1E':[527*4, 572*4, 311*4, 405*4],
           '2E':[529*4, 571*4, 407*4, 513*4],
           '3E':[527*4, 574*4, 515*4, 620*4],
           '4E':[531*4, 574*4, 622*4, 714*4],
             }
-
-# bin_bounds = {
-#           '1H':[1187, 1409, 1292, 1649],
-#           '2H':[1203, 1403, 1659, 2075],
-#           '3H':[1203, 1405, 2081, 2498],
-#           '4H':[1203, 1403, 2504, 2872],
-#           '1G':[1469, 1632, 1291, 1641],
-#           '2G':[1477, 1619, 1657, 2068],
-#           '3G':[1475, 1628, 2077, 2502],
-#           '4G':[1482, 1625, 2502, 2874],
-#           '1F':[1700, 2046, 1280, 1638],
-#           '2F':[1712, 2028, 1652, 2070],
-#           '3F':[1704, 2043, 2072, 2496],    
-#           '4F':[1702, 2040, 2506, 2880],
-#           '1E':[2119, 2278, 1275, 1639],
-#           '2E':[2122, 2259, 1647, 2079],
-#           '3E':[2107, 2270, 2078, 2503],
-#           '4E':[2116, 2271, 2510, 2886],
-#           '1D':[412*4, 451*4, 295*4, 380*4],
-#           '2D':[412*4, 451*4, 395*4, 480*4],
-#           '3D':[412*4, 451*4, 495*4, 580*4],
-#           '4D':[412*4, 451*4, 595*4, 680*4],
-#             }
 
 def_config = {
     # Model Parameters
@@ -144,10 +122,10 @@ def_config = {
 
 
 class Bin:
-    def __init__(self, bin_id, bounds=None, init_depth=None, config=def_config, visualize=False):
+    def __init__(self, bin_id, bounds=None, init_depth=None, config=def_config):
         # String ID of the bin
         self.bin = bin_id
-        self.visualize = visualize
+        self.visualize = True
   
         # The crop bounds of the bin
         if bounds is None:
@@ -210,6 +188,7 @@ class SegNet:
         if len(cfg.TEST.CLASSES) == 0:
             cfg.TEST.CLASSES = cfg.TRAIN.CLASSES
        
+        self.visualize = False
         # Locates the device
         cfg.gpu_id = 0
         cfg.device = torch.device('cuda:{:d}'.format(cfg['gpu_id']))
@@ -271,7 +250,7 @@ class SegNet:
 
         ######################################################################################################
         # print("init pre")
-        # sys.path.append("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/UIE_main/mask2former_frame")
+        # sys.path.append("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/UIE_main/mask2former_frame")
         # print("post sys")
         # from demo.segnetv2_demo import SegnetV2
         # print("post import")
@@ -374,12 +353,11 @@ class SegNet:
         out_label = mask
         out_label_new = out_label.astype(np.uint8)
         # out_label_new = out_label
-        if self.visualize:
-            try:
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/mask.png", out_label_new.astype(np.uint8))
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/rgb.png", rgb_segment.astype(np.uint8))
-            except:
-                pass
+        try:
+            cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/mask.png", out_label_new.astype(np.uint8))
+            cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/rgb.png", rgb_segment.astype(np.uint8))
+        except:
+            pass
         if self.config['perform_cv_ops']:
             kernel = np.ones(shape=(self.config['kernel_size'], self.config['kernel_size']), dtype=np.uint8)
             for i in range(np.max(out_label_new.astype(np.uint8))):
@@ -411,11 +389,10 @@ class SegNet:
         
         mask_crop = cv2.resize(mask_crop, (bin.bounds[3] - bin.bounds[2], bin.bounds[1] - bin.bounds[0]), interpolation=cv2.INTER_AREA)
 
-        if self.visualize:
-            try:
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/soofiyan_mask.png", mask_crop)
-            except:
-                pass
+        try:
+            cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/soofiyan_mask.png", mask_crop)
+        except:
+            pass
         return mask_crop, embed
   
     # Returns a best-guess matching between masks in frame 0 and masks in frame 1
@@ -428,11 +405,10 @@ class SegNet:
         #     pass
         # Convert the images to greyscale
 
-        if self.visualize:
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/match_rgb1.png", im1)
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/match_rgb2.png", im2)
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/match_mask1.png", mask1)
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/match_mask2.png", mask2)
+        cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/match_rgb1.png", im1)
+        cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/match_rgb2.png", im2)
+        cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/match_mask1.png", mask1)
+        cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/match_mask2.png", mask2)
         mask_recs = np.zeros(shape=(np.max(mask1), np.max(mask2)))
 
         for i in range(np.max(mask1)):
@@ -460,9 +436,8 @@ class SegNet:
         im1 = cv2.cvtColor(im1, cv2.COLOR_RGB2GRAY)
         im2 = cv2.cvtColor(im2, cv2.COLOR_RGB2GRAY)
 
-        if self.visualize:
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/match_mask1.png", mask1)
-            cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/match_mask2.png", mask2)
+        cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/match_mask1.png", mask1)
+        cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/match_mask2.png", mask2)
         mask_recs = np.zeros(shape=(np.max(mask1), np.max(mask2)))
   
         # Calculate keypoints for the frame 1 image
@@ -506,8 +481,7 @@ class SegNet:
 
             time_stamp = calendar.timegm(current_GMT)
 
-            if self.visualize:
-                cv2.imwrite(f"/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/matched_mask_{i}.png", matched_img)
+            cv2.imwrite(f"/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/matched_mask_{i}.png", matched_img)
            
             dst_pts = np.float32([k2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
             dst_pts = np.round(dst_pts).astype(int)
@@ -558,14 +532,13 @@ class SegNet:
         except:
             pass
 
-        if self.visualize:
-            try:
-                current_GMT = time.gmtime()
-                time_stamp = calendar.timegm(current_GMT)
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/before_refine_mask.png", mask*30)
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"before_refine_mask"+str(self.frame_count_yi)+".png", mask*30)
-            except:
-                pass
+        try:
+            current_GMT = time.gmtime()
+            time_stamp = calendar.timegm(current_GMT)
+            cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/before_refine_mask.png", mask*30)
+            cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"before_refine_mask"+str(self.frame_count_yi)+".png", mask*30)
+        except:
+            pass
         embeddings = np.copy(embed)
         if(n == 0):
             return np.zeros(mask.shape, dtype=np.uint8), np.array([])
@@ -659,11 +632,10 @@ class SegNet:
         except:
             pass
 
-        if self.visualize:
-            try:
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/after_refine_mask.png", mask*30)
-            except:
-                pass
+        try:
+            cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/after_refine_mask.png", mask*30)
+        except:
+            pass
         return mask, embeddings
   
     # Retrieves the mask with bin product id obj_id from the full camera reference frame
@@ -744,16 +716,15 @@ class SegNet:
         # Make sure that the bin only has segmentations for n objects
         mask_crop, embeddings = self.refine_masks(mask_crop, bin.n, embeddings)
         
-        if self.visualize:
-            current_GMT = time.gmtime()
-            time_stamp = calendar.timegm(current_GMT)
-            self.frame_count_yi += 1
-            try:
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Data_Collection/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_stow_"+str(self.frame_count_yi)+".png", mask_crop.astype(np.uint8)*40)
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"rgb_stow_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
-            except:
-                pass
+        current_GMT = time.gmtime()
+        time_stamp = calendar.timegm(current_GMT)
+        self.frame_count_yi += 1
+        try:
+            cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/Data_Collection/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
+            cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_stow_"+str(self.frame_count_yi)+".png", mask_crop.astype(np.uint8)*40)
+            cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"rgb_stow_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
+        except:
+            pass
         # mask2vis = self.vis_masks(bin.current['rgb'], mask_crop)
         # plt.imshow(mask2vis)
         # plt.title(f"Masks in the scene. There should be {bin.n}")
@@ -765,8 +736,7 @@ class SegNet:
             self.bad_bins.append(bin_id)
             return UNDERSEGMENTATION
         else:
-            if self.visualize:
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/refined_mask.png", mask_crop)
+            cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/refined_mask.png", mask_crop)
 
         mask2vis = self.vis_masks(bin.current['rgb'], mask_crop)
         # plt.imshow(mask2vis)
@@ -798,8 +768,7 @@ class SegNet:
             
             # Update the new frame's masks
             bin.current['mask'], bin.current['embeddings'] = self.update_masks(mask_crop, recs, embeddings)
-            if self.visualize:
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_stow_update_"+str(self.frame_count_yi)+".png", bin.current['mask'].astype(np.uint8)*40)
+            cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_stow_update_"+str(self.frame_count_yi)+".png", bin.current['mask'].astype(np.uint8)*40)
         else:
             # This should only happen at the first insertion
             assert(bin.n == 1)
@@ -863,16 +832,15 @@ class SegNet:
         # Make sure that the bin only has segmentations for n objects
         mask_crop, embeddings = self.refine_masks(mask_crop, bin.n, embeddings)
 
-        if self.visualize:
-            current_GMT = time.gmtime()
-            time_stamp = calendar.timegm(current_GMT)
-            self.frame_count_yi += 1
-            try:
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Data_Collection/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_pick_"+str(self.frame_count_yi)+".png", mask_crop.astype(np.uint8)*40)
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"rgb_pick_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
-            except:
-                pass
+        current_GMT = time.gmtime()
+        time_stamp = calendar.timegm(current_GMT)
+        self.frame_count_yi += 1
+        try:
+            cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/Data_Collection/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
+            cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_pick_"+str(self.frame_count_yi)+".png", mask_crop.astype(np.uint8)*40)
+            cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"rgb_pick_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
+        except:
+            pass
 
         if mask_crop is None:
             print(f"Adding {bin_id} to bad bins. Reason: Undersegmentation")
@@ -954,16 +922,15 @@ class SegNet:
         # Make sure that the bin only has segmentations for n objects
         mask_crop, embeddings = self.refine_masks(mask_crop, bin.n, embeddings)
         
-        if self.visualize:
-            current_GMT = time.gmtime()
-            time_stamp = calendar.timegm(current_GMT)
-            self.frame_count_yi += 1
-            try:
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Data_Collection/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_update_"+str(self.frame_count_yi)+".png", mask_crop.astype(np.uint8)*40)
-                cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
-            except:
-                pass
+        current_GMT = time.gmtime()
+        time_stamp = calendar.timegm(current_GMT)
+        self.frame_count_yi += 1
+        try:
+            cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/Data_Collection/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
+            cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"mask_update_"+str(self.frame_count_yi)+".png", mask_crop.astype(np.uint8)*40)
+            cv2.imwrite("/home/aurmr/workspaces/scenario_based_grasp_point_selection/src/segnetv2_mask2_former/Mask_Results/Yi/"+str(time_stamp)+"rgb_update_"+str(self.frame_count_yi)+".png", self.current['rgb'][bin.bounds[0]:bin.bounds[1], bin.bounds[2]:bin.bounds[3], 0:3].astype(np.uint8))
+        except:
+            pass
 
         if mask_crop is None:
             self.current = self.last

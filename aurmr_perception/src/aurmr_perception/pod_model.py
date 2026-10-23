@@ -52,7 +52,12 @@ class PodPerceptionROS:
         else:
             raise RuntimeError(f"Unknown camera type requested: {camera_type}")
         
-        self.points_sub = rospy.Subscriber(f'/{self.camera_name}/points2', PointCloud2, self.points_cb)
+        self.camera_depth_subscriber = message_filters.Subscriber(f'/camera/aligned_depth_to_color/image_raw', Image)
+        self.camera_rgb_subscriber = message_filters.Subscriber(f'/camera/color/image_raw', Image)
+        self.camera_info_subscriber = message_filters.Subscriber(f'/camera/color/camera_info', CameraInfo)
+        self.camera_frame = "camera_color_optical_frame"
+
+        self.points_sub = rospy.Subscriber(f'/camera/depth/color/points2', PointCloud2, self.points_cb)
 
         self.camera_synchronizer = message_filters.ApproximateTimeSynchronizer([
             self.camera_depth_subscriber, self.camera_rgb_subscriber, self.camera_info_subscriber], 10, 1)
@@ -93,6 +98,7 @@ class PodPerceptionROS:
         if self.points_msg is None:
             rospy.loginfo("Points Found")
         self.points_msg = request
+        # print(self.points_msg)
 
     def empty_pod_callback(self, request):
         import os
@@ -288,13 +294,14 @@ class DiffPodModel:
     def mask_pointcloud(self, points, mask):
         points = ros_numpy.numpify(points)
         np.save("/tmp/points1.npy", points)
+        print(mask.shape, points.shape)
         points_seg = points[mask.flatten() > 0]
         points_seg = np.vstack((points_seg['x'],points_seg['y'],points_seg['z']))
         points_seg = points_seg[:, np.invert(np.isnan(points_seg[2, :]))]
         return points_seg
 
     def backproject(self, depth_image, mask, camera_intrinsics):
-        points = rospy.wait_for_message(f'/camera_lower_right/points2', PointCloud2)
+        points = rospy.wait_for_message(f'/camera/depth/color/points2', PointCloud2)
         points = ros_numpy.numpify(points)
         np.save("/tmp/points1.npy", points)
         points_seg = points[mask.flatten() > 0]
@@ -366,7 +373,7 @@ class DiffPodModel:
             mask[np.where(labels != max_area_idx)] = 0.0    
         else:
             raise RuntimeError(f"Unknown segmentation method requested: {self.segmentation_method}")
-        points = rospy.wait_for_message(f'/camera_lower_right/points2', PointCloud2)
+        points = rospy.wait_for_message(f'/camera/depth/color/points2', PointCloud2)
         points = self.mask_pointcloud(points, mask)
 
         if bin_id not in self.points_table:
