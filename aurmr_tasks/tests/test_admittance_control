@@ -1,0 +1,104 @@
+#!/usr/bin/env python
+
+import smach_ros
+import std_msgs
+
+from smach import State, StateMachine
+
+import rospy
+
+from aurmr_tasks.common import states
+from aurmr_tasks.common.tahoma import Tahoma
+import aurmr_tasks.common.control_flow as cf
+from aurmr_tasks.common import motion
+import numpy as np
+from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
+from tf_conversions import transformations
+
+from aurmr_tasks.common import compliance_controller
+from aurmr_tasks import util
+
+BIN_APPROACH_POSES = []
+
+
+def main():
+    rospy.loginfo('Getting robot resources')
+    rospy.init_node("visit_all_bins")
+    simulation = rospy.get_param("/use_sim_time", False)
+    State.simulation = simulation
+    robot = Tahoma(simulation)
+
+    align_to_bin_orientation = transformations.quaternion_from_euler(-1.57, 0, 0)
+    align_to_bin_quat = Quaternion(x=align_to_bin_orientation[0], y=align_to_bin_orientation[1], z=align_to_bin_orientation[2], w=align_to_bin_orientation[3])
+    for i in range(4):
+        for letter in "fg":
+            frame_name = f"pod_bin_{i+1}{letter}"
+            BIN_APPROACH_POSES.append(PoseStamped(header=std_msgs.msg.Header(frame_id=frame_name), pose=Pose(position=Point(x=.125, y=-.25,z=.05), orientation=align_to_bin_quat)))
+    print("Determining approachable bins...")
+    REACHABLE_BIN_APPROACHES = []
+    for i, pose in enumerate(BIN_APPROACH_POSES):
+        solution = robot.compute_ik(pose, rospy.Duration(.1))
+        if solution:
+            REACHABLE_BIN_APPROACHES.append(pose)
+
+    print(f"{len(REACHABLE_BIN_APPROACHES)} of {len(BIN_APPROACH_POSES)} bins are approachable")
+
+    pick_sm = StateMachine(["succeeded", "preempted", "aborted"],
+                           input_keys=[],
+                           output_keys=[])
+    
+
+    pick_sm.userdata.target_pose = None
+    pick_sm.userdata.empty_target_pose = None
+
+    with pick_sm:
+        StateMachine.add_auto('SWAP_TO_MOVEIT_INIT', util.SwitchControllers(['scaled_pos_joint_traj_controller'], ['ur_cartesian_compliance_controller']), ["succeeded", "aborted"])
+
+        StateMachine.add_auto("CLEAR_SCENE", motion.ClearCollisionGeometry(robot), ["succeeded"])            
+        StateMachine.add_auto("SETUP_COLLISION_SCENE_PREMOVE", motion.AddFullPodCollisionGeometry(robot), ["succeeded", "aborted"])
+        # StateMachine.add_auto("SETUP_COLLISION_SCENE", motion.AddFullPodCollisionGeometry(robot), ["succeeded"])
+        cf.inject_userdata_auto("LOAD_POSES", "poses", REACHABLE_BIN_APPROACHES)
+        StateMachine.add("PICK_POSE", cf.IterateList("poses", "pose"),
+                         {"repeat": "MOVE_TO_POSE", "done": "aborted"})
+        StateMachine.add_auto('MOVE_TO_POSE',
+                              motion.MoveEndEffectorToPose(robot),
+                              ['succeeded',],
+                              {
+                                  'aborted': 'MOVE_TO_POSE'
+                              })
+        
+        
+        StateMachine.add_auto('SWAP_TO_COMPLIANCE', util.SwitchControllers(['ur_cartesian_compliance_controller'], ['scaled_pos_joint_traj_controller']), ["succeeded", "aborted"])
+        StateMachine.add_auto("DO_NOTHING_INIT_CONTROLLER", compliance_controller.MoveToOffset(robot, (0, 0, 0), 'arm_tool0', False), ["succeeded", "aborted"], remapping={'target_pose_in': "empty_target_pose"}),
+        StateMachine.add_auto("RETRACT_ARM2", compliance_controller.MoveToOffset(robot, (0, 0, -0.1), 'arm_tool0', True), ["succeeded", "aborted"], remapping={'target_pose_in': "empty_target_pose"})
+
+        StateMachine.add_auto("MOVE_TO_GRASP", compliance_controller.MoveToOffset(robot, (0, 0, 0.2), 'arm_tool0', True), ["succeeded", "aborted"], remapping={'starting_grasp_pose_out': "target_pose", 'target_pose_in': "empty_target_pose"})
+
+        # remove lift for now
+        #StateMachine.add_auto("LIFT_OBJ", compliance_controller.MoveToOffset(robot, (0.1, 0, 0.0), 'arm_tool0', False), ["succeeded", "aborted"])
+        StateMachine.add_auto("RETRACT_ARM", compliance_controller.MoveToOffset(robot, None, 'arm_tool0', False), ["succeeded", "aborted"],  remapping={'target_pose_in': "target_pose"})
+        StateMachine.add_auto('SWAP_TO_MOVEIT', util.SwitchControllers(['scaled_pos_joint_traj_controller'], ['ur_cartesian_compliance_controller']), ["succeeded", "aborted"])
+
+        StateMachine.add("PAUSE", states.Wait(2), {'succeeded': "PICK_POSE"})
+
+
+    # Create top state machine
+    sm = StateMachine(outcomes=['succeeded', "preempted", 'aborted'])
+
+    # Endless loop
+    with sm:
+        StateMachine.add('PLAY_POSE_SEQUENCE', pick_sm, {"succeeded": "PLAY_POSE_SEQUENCE", "aborted": "PLAY_POSE_SEQUENCE"})
+
+    rospy.loginfo('Beginning pick SM')
+
+    sis = smach_ros.IntrospectionServer('pick_sm', sm, '/pick')
+    sis.start()
+
+    outcome = sm.execute()
+
+    rospy.spin()
+    sis.stop()
+
+
+if __name__ == '__main__':
+    main()
