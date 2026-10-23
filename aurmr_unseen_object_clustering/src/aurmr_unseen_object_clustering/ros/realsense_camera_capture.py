@@ -21,8 +21,8 @@ class image_converter:
     except CvBridgeError as e:
       print(e)
     np.save("rgb_img.npy", cv_image)
-    # cv2.imshow("Image window", cv_image)
-    # cv2.waitKey(3)
+    cv2.imshow("Image window", cv_image)
+    cv2.waitKey(3)
 
   def callback_depth(self, data):
     try:
