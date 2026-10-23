@@ -70,7 +70,7 @@ class PodPerceptionROS:
         except:
             pass
     
-    def load_dataset(request):
+    def load_dataset(self, request):
         from aurmr_dataset.io import DatasetReader
         ds_reader = DatasetReader(request.path)
         dataset = ds_reader.load()
@@ -80,7 +80,6 @@ class PodPerceptionROS:
         net = SegNet(init_depth=first_entry.depth_image)
 
         init_depth = first_entry.depth_image
-        normalized_initdepth = init_depth/np.max(init_depth)
 
         bin_id_mapping = {"P-9-H051H030" : "1H",
             "P-6-H835J238" : "1G",
@@ -99,24 +98,16 @@ class PodPerceptionROS:
             'P-8-H758H653' : '4F',
             'P-8-H588H173' : '4E',}
         
-        pass 
         for idx, entry in enumerate(dataset.entries[1:]):
             rgb = entry.rgb_image
             depth = entry.depth_image
             pcd = entry.np_xyz_points
             pcd = np.nan_to_num(pcd)
             for k, v in entry.inventory.items():
-                bin_id = bin_id_mapping[v['bin_id']]
-                for bin_id in ['3F', '3D']:
-                    cur_bound = bin_bounds[bin_id]
-                    cur_rgb = rgb[cur_bound[0]:cur_bound[1], cur_bound[2]:cur_bound[3]]
-                    cur_depth = depth[cur_bound[0]:cur_bound[1], cur_bound[2]:cur_bound[3]]
-                    normalized_curdepth = cur_depth/np.max(cur_depth)
-                    cur_pcd = pcd[cur_bound[0]:cur_bound[1], cur_bound[2]:cur_bound[3]]
-                    cur_init_depth = init_depth[cur_bound[0]:cur_bound[1], cur_bound[2]:cur_bound[3]]
-                    scene = {"rgb" : rgb, 'depth' : pcd}
-                    net.bins[bin_id].bg_mask = np.abs(cur_depth - cur_init_depth) < net.bins[bin_id].config['min_bg_change']
-                    preds = net.segment(bin_id, scene=scene)
+                bin_id = bin_id_mapping[v.bin_id]
+                asin_id = v.asin_id
+                self.model.add_object(bin_id, asin_id, rgb, depth, K, pcd)
+
 
     def capture_object_callback(self, request):
         if not request.bin_id or not request.object_id:
