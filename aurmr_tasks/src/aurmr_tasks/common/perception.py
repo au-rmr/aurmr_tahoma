@@ -165,7 +165,7 @@ class GetGraspPose(State):
 
     def add_offset(self, offset, grasp_pose):
         v = qv_mult(
-            quat_msg_to_vec(grasp_pose.pose.orientation), (0, 0, offset))
+            quat_msg_to_vec(grasp_pose.pose.orientation), (offset[0], offset[1], offset[2]))
         offset_pose = deepcopy(grasp_pose)
         offset_pose.pose.position.x += v[0]
         offset_pose.pose.position.y += v[1]
@@ -191,10 +191,17 @@ class GetGraspPose(State):
             if not points_response.success:
                 userdata["status"] = "pass"
                 return "aborted"
-
+            
             grasp_response = self.get_grasp(points=points_response.points,
                                             mask=points_response.mask,
-                                            dist_threshold=self.pre_grasp_offset, bin_id=userdata['target_bin_id'])
+                                            mask_all=points_response.mask_all,
+                                            dist_threshold=self.pre_grasp_offset,
+                                            bin_id=userdata['target_bin_id'],
+                                            object_id=points_response.object_id)
+            
+            # grasp_response = self.get_grasp(points=points_response.points,
+            #                                 mask=points_response.mask,
+            #                                 dist_threshold=self.pre_grasp_offset, bin_id=userdata['target_bin_id'])
 
             if not grasp_response.success:
                 userdata["status"] = "pass"
@@ -204,12 +211,12 @@ class GetGraspPose(State):
             # As the arm_tool0 is 20cm in length w.r.t tip of suction cup thus adding 0.2m offset
             grasp_pose = grasp_response.poses[0]
 
-        grasp_pose = self.add_offset(-0.22, grasp_pose)
+        grasp_pose = self.add_offset([0, 0, -0.22], grasp_pose)
 
         userdata['grasp_pose'] = grasp_pose
 
         # adding 0.12m offset for pre grasp pose to prepare it for grasp pose which is use to pick the object
-        pregrasp_pose = self.add_offset(-self.pre_grasp_offset, grasp_pose)
+        pregrasp_pose = self.add_offset([0, 0, -0.1], grasp_pose)
 
         userdata['pre_grasp_pose'] = pregrasp_pose
 

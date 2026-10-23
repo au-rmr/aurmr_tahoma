@@ -283,7 +283,7 @@ class MoveEndEffectorToPose(State):
                           replan=True,
                           replan_attempts=20,
                           tolerance=0.01)
-        # input('check planning frame!!!!!!!!!!!!!!')
+        input('check planning frame!!!!!!!!!!!!!!')
         if success:
             return "succeeded"
         else:
@@ -785,122 +785,118 @@ class AddFullPodCollisionGeometry(State):
         NUM_COLUMNS = math.ceil(POD_BRACE_WIDTH / POD_BIN_WIDTH)
         X_AXIS_QUAT = Quaternion(x=0, y=0, z=0, w=1)
         
-        for i in range(NUM_COLUMNS + 1):
-            self.scene.add_box(f"col_{i+1:02d}", PoseStamped(header=Header(frame_id="pod_fabric_base"),
-                                                 pose=Pose(position=Point(x=i*POD_BIN_WIDTH, 
-                                                                          y=1/2*POD_BIN_DEPTH, 
-                                                                          z=1/2*POD_BINS_HEIGHT), orientation=X_AXIS_QUAT)), 
-                                                 (POD_BIN_WALL_THICKNESS, POD_BIN_DEPTH, POD_BINS_HEIGHT))
+        # for i in range(NUM_COLUMNS + 1):
+        #     self.scene.add_box(f"col_{i+1:02d}", PoseStamped(header=Header(frame_id="pod_fabric_base"),
+        #                                          pose=Pose(position=Point(x=i*POD_BIN_WIDTH, 
+        #                                                                   y=1/2*POD_BIN_DEPTH, 
+        #                                                                   z=1/2*POD_BINS_HEIGHT), orientation=X_AXIS_QUAT)), 
+        #                                          (POD_BIN_WALL_THICKNESS, POD_BIN_DEPTH, POD_BINS_HEIGHT))
         # ROWS
         POD_BIN_Z_OFFSET_LIST = [0.0] + self.pod_sizes[f"pod{pod_id}_bin_heights"]
         POD_BIN_NUM = len(POD_BIN_Z_OFFSET_LIST)
         POD_BIN_Z_OFFSET = 0
-        for POD_BIN_ID, POD_BIN_HEIGHT in enumerate(POD_BIN_Z_OFFSET_LIST, start=1):
-            POD_BIN_Z_OFFSET += POD_BIN_HEIGHT
-            if POD_BIN_ID != POD_BIN_NUM:
-                self.scene.add_box(f"row_{POD_BIN_ID:02d}", PoseStamped(header=Header(frame_id="pod_fabric_base"),
-                                                            pose=Pose(position=Point(x=1/2*POD_BRACE_WIDTH, 
-                                                                                    y=1/2*POD_BIN_DEPTH, 
-                                                                                    z=POD_BIN_Z_OFFSET), orientation=X_AXIS_QUAT)), 
-                                                            (POD_BRACE_WIDTH, POD_BIN_DEPTH, POD_BIN_BOTTOM_THICKNESS))
-                # FLAPS
-                self.scene.add_box(f"flap_{POD_BIN_ID:02d}", PoseStamped(header=Header(frame_id="pod_fabric_base"),
-                                                            pose=Pose(position=Point(x=1/2*POD_BRACE_WIDTH, 
-                                                                                     y=0, 
-                                                                                     z=POD_BIN_Z_OFFSET+1/2*POD_BIN_FLAP_HEIGHT), orientation=X_AXIS_QUAT)), 
-                                                            (POD_BRACE_WIDTH, POD_BIN_WALL_THICKNESS, POD_BIN_FLAP_HEIGHT))
-            else:
-                self.scene.add_box(f"row_{POD_BIN_ID:02d}", PoseStamped(header=Header(frame_id="pod_fabric_base"),
-                                                            pose=Pose(position=Point(x=1/2*POD_BRACE_WIDTH, 
-                                                                                    y=1/2*POD_BIN_DEPTH, 
-                                                                                    z=POD_BIN_Z_OFFSET), orientation=X_AXIS_QUAT)), 
-                                                            (POD_BRACE_WIDTH, POD_BIN_DEPTH, POD_BIN_WALL_THICKNESS))                
+        # for POD_BIN_ID, POD_BIN_HEIGHT in enumerate(POD_BIN_Z_OFFSET_LIST, start=1):
+        #     POD_BIN_Z_OFFSET += POD_BIN_HEIGHT
+        #     if POD_BIN_ID != POD_BIN_NUM:
+        #         self.scene.add_box(f"row_{POD_BIN_ID:02d}", PoseStamped(header=Header(frame_id="pod_fabric_base"),
+        #                                                     pose=Pose(position=Point(x=1/2*POD_BRACE_WIDTH, 
+        #                                                                             y=1/2*POD_BIN_DEPTH, 
+        #                                                                             z=POD_BIN_Z_OFFSET), orientation=X_AXIS_QUAT)), 
+        #                                                     (POD_BRACE_WIDTH, POD_BIN_DEPTH, POD_BIN_BOTTOM_THICKNESS))
+        #         # FLAPS
+        #         self.scene.add_box(f"flap_{POD_BIN_ID:02d}", PoseStamped(header=Header(frame_id="pod_fabric_base"),
+        #                                                     pose=Pose(position=Point(x=1/2*POD_BRACE_WIDTH, 
+        #                                                                              y=0, 
+        #                                                                              z=POD_BIN_Z_OFFSET+1/2*POD_BIN_FLAP_HEIGHT), orientation=X_AXIS_QUAT)), 
+        #                                                     (POD_BRACE_WIDTH, POD_BIN_WALL_THICKNESS, POD_BIN_FLAP_HEIGHT))
+        #     else:
+        #         self.scene.add_box(f"row_{POD_BIN_ID:02d}", PoseStamped(header=Header(frame_id="pod_fabric_base"),
+        #                                                     pose=Pose(position=Point(x=1/2*POD_BRACE_WIDTH, 
+        #                                                                             y=1/2*POD_BIN_DEPTH, 
+        #                                                                             z=POD_BIN_Z_OFFSET), orientation=X_AXIS_QUAT)), 
+        #                                                     (POD_BRACE_WIDTH, POD_BIN_DEPTH, POD_BIN_WALL_THICKNESS))                
 
-        self.scene.add_box(f"back_wall", PoseStamped(header=Header(frame_id="pod_fabric_base"),
-                                                     pose=Pose(position=Point(x=1/2*POD_BRACE_WIDTH, 
-                                                                              y=POD_BIN_DEPTH, 
-                                                                              z=1/2*POD_BINS_HEIGHT), orientation=X_AXIS_QUAT)), 
-                                                     (POD_BRACE_WIDTH, POD_BIN_WALL_THICKNESS, POD_BINS_HEIGHT))
+        # self.scene.add_box(f"back_wall", PoseStamped(header=Header(frame_id="pod_fabric_base"),
+        #                                              pose=Pose(position=Point(x=1/2*POD_BRACE_WIDTH, 
+        #                                                                       y=POD_BIN_DEPTH, 
+        #                                                                       z=1/2*POD_BINS_HEIGHT), orientation=X_AXIS_QUAT)), 
+        #                                              (POD_BRACE_WIDTH, POD_BIN_WALL_THICKNESS, POD_BINS_HEIGHT))
 
-        self.scene.add_box(f"pod_brace_leftside_frame", PoseStamped(header=Header(frame_id="pod_fabric_base"),
-                                                        pose=Pose(position=Point(x=1/2*POD_BRACE_FRAME_WIDTH, 
-                                                                                 y=1/2*POD_BRACE_FRAME_THICKNESS, 
-                                                                                 z=1/2*POD_BINS_HEIGHT), orientation=X_AXIS_QUAT)), 
-                                                        (POD_BRACE_FRAME_WIDTH, POD_BRACE_FRAME_THICKNESS, POD_BINS_HEIGHT))      
-        self.scene.add_box(f"pod_brace_rightside_frame", PoseStamped(header=Header(frame_id="pod_fabric_base"),
-                                                         pose=Pose(position=Point(x=POD_BRACE_WIDTH-1/2*POD_BRACE_FRAME_WIDTH, 
-                                                                                  y=1/2*POD_BRACE_FRAME_THICKNESS, 
-                                                                                  z=1/2*POD_BINS_HEIGHT), orientation=X_AXIS_QUAT)), 
-                                                         (POD_BRACE_FRAME_WIDTH, POD_BRACE_FRAME_THICKNESS, POD_BINS_HEIGHT)) 
+        # self.scene.add_box(f"pod_brace_leftside_frame", PoseStamped(header=Header(frame_id="pod_fabric_base"),
+        #                                                 pose=Pose(position=Point(x=1/2*POD_BRACE_FRAME_WIDTH, 
+        #                                                                          y=1/2*POD_BRACE_FRAME_THICKNESS, 
+        #                                                                          z=1/2*POD_BINS_HEIGHT), orientation=X_AXIS_QUAT)), 
+        #                                                 (POD_BRACE_FRAME_WIDTH, POD_BRACE_FRAME_THICKNESS, POD_BINS_HEIGHT))      
+        # self.scene.add_box(f"pod_brace_rightside_frame", PoseStamped(header=Header(frame_id="pod_fabric_base"),
+        #                                                  pose=Pose(position=Point(x=POD_BRACE_WIDTH-1/2*POD_BRACE_FRAME_WIDTH, 
+        #                                                                           y=1/2*POD_BRACE_FRAME_THICKNESS, 
+        #                                                                           z=1/2*POD_BINS_HEIGHT), orientation=X_AXIS_QUAT)), 
+        #                                                  (POD_BRACE_FRAME_WIDTH, POD_BRACE_FRAME_THICKNESS, POD_BINS_HEIGHT)) 
         
+        self.robot.scene.add_box("col_01", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=0.015, y=HALF_POD_SIZE, z=1.45),
+                                                                orientation=I_QUAT)), (SIDE_WALL_WIDTH, POD_SIZE, 2.3))
+        self.robot.scene.add_box("col_02", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=0.5*HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.45),
+                                                                orientation=I_QUAT)), (WALL_WIDTH, POD_SIZE, 2.3))                                                       
+        self.robot.scene.add_box("col_03", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.45),
+                                                                orientation=I_QUAT)), (WALL_WIDTH, POD_SIZE, 2.3))
+        self.robot.scene.add_box("col_04", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=1.5*HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.45),
+                                                                orientation=I_QUAT)), (WALL_WIDTH, POD_SIZE, 2.3))
+        self.robot.scene.add_box("col_05", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=POD_SIZE-0.025, y=HALF_POD_SIZE, z=1.45),
+                                                                orientation=I_QUAT)), (SIDE_WALL_WIDTH, POD_SIZE, 2.3))
+        self.robot.scene.add_box("row_01", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=0.34),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
+        self.robot.scene.add_box("row_02", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=0.56),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))                                           
+        self.robot.scene.add_box("row_03", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=0.70),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
+        self.robot.scene.add_box("row_04", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=0.89),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH)) 
+        self.robot.scene.add_box("row_05", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.04),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
+        self.robot.scene.add_box("row_06", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.16),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
+        self.robot.scene.add_box("row_07", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.38),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
+        self.robot.scene.add_box("row_08", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.51),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))                                                       
+        self.robot.scene.add_box("row_09", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.66),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
+        self.robot.scene.add_box("row_10", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.79),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
+        self.robot.scene.add_box("row_11", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.01),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH)) 
+        self.robot.scene.add_box("row_12", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.14),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
+        self.robot.scene.add_box("row_13", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.29),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
+        self.robot.scene.add_box("row_14", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.57),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
+        self.robot.scene.add_box("back_frame", PoseStamped(header=Header(frame_id="base_link"),
+                                                    pose=Pose(position=Point(x=-0.28, y=0, z=1.27),
+                                                              orientation=ROT_90_Z_QUAT)), (1.45, .2, 1.5))
 
-
-
-
-        # self.robot.scene.add_box("col_01", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=0.015, y=HALF_POD_SIZE, z=1.45),
-        #                                                         orientation=I_QUAT)), (SIDE_WALL_WIDTH, POD_SIZE, 2.3))
-        # self.robot.scene.add_box("col_02", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=0.5*HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.45),
-        #                                                         orientation=I_QUAT)), (WALL_WIDTH, POD_SIZE, 2.3))                                                       
-        # self.robot.scene.add_box("col_03", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.45),
-        #                                                         orientation=I_QUAT)), (WALL_WIDTH, POD_SIZE, 2.3))
-        # self.robot.scene.add_box("col_04", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=1.5*HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.45),
-        #                                                         orientation=I_QUAT)), (WALL_WIDTH, POD_SIZE, 2.3))
-        # self.robot.scene.add_box("col_05", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=POD_SIZE-0.025, y=HALF_POD_SIZE, z=1.45),
-        #                                                         orientation=I_QUAT)), (SIDE_WALL_WIDTH, POD_SIZE, 2.3))
-        # self.robot.scene.add_box("row_01", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=0.34),
-        #                                                         orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
-        # self.robot.scene.add_box("row_02", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=0.56),
-        #                                                         orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))                                           
-        # self.robot.scene.add_box("row_03", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=0.70),
-        #                                                         orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
-        # self.robot.scene.add_box("row_04", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=0.89),
-        #                                                         orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH)) 
-        # self.robot.scene.add_box("row_05", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.04),
-        #                                                         orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
-        # self.robot.scene.add_box("row_06", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.16),
-        #                                                         orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
-        # self.robot.scene.add_box("row_07", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.38),
-        #                                                         orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
-        # self.robot.scene.add_box("row_08", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.51),
-        #                                                         orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))                                                       
-        # self.robot.scene.add_box("row_09", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.66),
-        #                                                         orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
-        # self.robot.scene.add_box("row_10", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=1.79),
-        #                                                         orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
-        # self.robot.scene.add_box("row_11", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.01),
-        #                                                         orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH)) 
-        # self.robot.scene.add_box("row_12", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.14),
-        #                                                         orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))
-        # self.robot.scene.add_box("row_13", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.29),
-        #                                                         orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
-        # self.robot.scene.add_box("row_14", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE, z=2.57),
-        #                                                         orientation=I_QUAT)), (POD_SIZE, POD_SIZE, WALL_WIDTH))  
-        # self.robot.scene.add_box("back_frame", PoseStamped(header=Header(frame_id="base_link"),
-        #                                             pose=Pose(position=Point(x=-0.28, y=0, z=1.27),
-        #                                                       orientation=ROT_90_Z_QUAT)), (1.45, .2, 1.5))
-
-        # self.robot.scene.add_box("upper_pods_outer", PoseStamped(header=Header(frame_id="pod_base_link"),
-        #                                               pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE-0.1, z=1.66+0.6),
-        #                                                         orientation=I_QUAT)), (POD_SIZE, POD_SIZE, 1))  
+        self.robot.scene.add_box("upper_pods_outer", PoseStamped(header=Header(frame_id="pod_base_link"),
+                                                      pose=Pose(position=Point(x=HALF_POD_SIZE, y=HALF_POD_SIZE-0.1, z=1.66+0.6),
+                                                                orientation=I_QUAT)), (POD_SIZE, POD_SIZE, 1))  
 
         start = rospy.get_time()
         seconds = rospy.get_time()

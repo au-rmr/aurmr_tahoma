@@ -96,6 +96,15 @@
         <joint name="arm_wrist_2_joint" value="1.59"/>
         <joint name="arm_wrist_3_joint" value="4.83"/>
     </group_state>
+    <!-- 0.9660962263690394, -2.1829549274840296, 1.7201600074768066, 1.175778551692627, 1.7384529113769531, -1.6147297064410608 -->
+    <group_state name="init_pose_realsense_3F" group="manipulator">
+        <joint name="arm_elbow_joint" value="0.9660962263690394"/>
+        <joint name="arm_shoulder_lift_joint" value="-2.1829549274840296"/>
+        <joint name="arm_shoulder_pan_joint" value="1.7201600074768066"/>
+        <joint name="arm_wrist_1_joint" value="1.175778551692627"/>
+        <joint name="arm_wrist_2_joint" value="1.7384529113769531"/>
+        <joint name="arm_wrist_3_joint" value="-1.6147297064410608"/>
+    </group_state>
     <!--VIRTUAL JOINT: Purpose: this element defines a virtual joint between a robot link and an external frame of reference (considered fixed with respect to the robot)-->
     <virtual_joint name="fixed_base" type="fixed" parent_frame="world" child_link="base_link"/>
     <!--DISABLE COLLISIONS: By default it is assumed that any link of the robot could potentially come into collision with any other link in the robot. This tag disables collision checking between a specified pair of links. -->
