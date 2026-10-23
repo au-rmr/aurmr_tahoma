@@ -255,7 +255,7 @@ def main():
             StateMachine.add_auto("MOVE_TO_GRASP", motion.grasp_move_to_offset(robot, (0, 0, 0.8)), ["succeeded", "aborted", "preempted"])
             StateMachine.add_auto("LIFT_OBJ", motion.robust_move_to_offset(robot, (0, 0, 0.2), 'base_link'), ["succeeded", "aborted", "preempted"])
             StateMachine.add_auto("CLEAR_SCENE_PRESTOW", motion.ClearCollisionGeometry(robot), ["succeeded", "aborted"])
-            StateMachine.add_auto("SETUP_COLLISION_SCENE_PRESTOW", motion.AddFullPodCollisionGeometryTableDropHide(robot), ["succeeded", "aborted"])
+            StateMachine.add_auto("SETUP_COLLISION_SCENE_PRESTOW", motion.AddFullPodCollisionGeometryTablePreStow(robot), ["succeeded", "aborted"])
             StateMachine.add("CHECK_FOR_ITEM", motion.CheckGripperItem(robot), {'item_detected': "MOVE_TO_PRESTOW", 'no_item_detected':"OPEN_GRIPPER_IF_FAIL"})
             StateMachine.add("OPEN_GRIPPER_IF_FAIL", motion.OpenGripper(robot), {"succeeded": "MOVE_TO_VIEW_TABLE", "preempted": "MOVE_TO_VIEW_TABLE", "aborted": "MOVE_TO_VIEW_TABLE"})
 
