@@ -163,11 +163,18 @@ if __name__ == '__main__':
         # u2,v2 = distorted_point((u2,v2), mtx, dist)
         # rgb_img = cv2.circle(rgb_img, (int(u2/4), int(v2/4)), 2, (255,0,0), 3)
         cv2.rectangle(rgb_img, (int(u2/4), int(v2/4)), (int(u1/4), int(v1/4)), (128, 0, 0), 2)
-
-        bin_DM_pixel_coords[bin[3:]] = np.array([int(v2), int(v1), int(u2), int(u1)])
+        
+        '''
+        Need to add other diagonal points which are upper left and bottom right points but the TF which is provided in the urdf is of the other diagonal
+        The coordinate system in the urdf of the pod is flipped with respect to the perception peipline used in segmetnation_net.py file
+        '''
+        bin_DM_pixel_coords[bin[3:]] = np.array([int(v2), int(v1), int(u1), int(u2)])
 
     print(bin_DM_pixel_coords)
 
+
+    bin_DM_pixel_coords = {k[5:].upper(): v for k, v in bin_DM_pixel_coords.items()}
+    print(bin_DM_pixel_coords)
     with open('/tmp/calibration_pixel_coords_pod.pkl', 'wb') as f:
         pickle.dump(bin_DM_pixel_coords, f)
     
