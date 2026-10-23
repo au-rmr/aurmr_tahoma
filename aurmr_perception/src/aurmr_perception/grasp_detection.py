@@ -10,7 +10,7 @@ from aurmr_perception.srv import DetectGraspPoses
 from geometry_msgs.msg import PoseStamped, Quaternion, Pose, Point, Vector3
 from tf_conversions import transformations
 from aurmr_perception.visualization import create_gripper_pose_markers
-from sensor_msgs.msg import PointCloud2 
+from sensor_msgs.msg import PointCloud2
 
 # See moveit_grasps for inspiration on improved grasp ranking and filtering:
 # https://ros-planning.github.io/moveit_tutorials/doc/moveit_grasps/moveit_grasps_tutorial.html
@@ -42,7 +42,7 @@ class HeuristicGraspDetector:
         :return:
         """
         # compute the average point of the pointcloud
-        
+
         points_sort_z = np.flip(points[points[:, 2].argsort()], axis=0)
         POINTS_TO_KEEP_FACTOR = .8
         keep_idxs = np.arange(int(points.shape[0]*(1-POINTS_TO_KEEP_FACTOR)), points.shape[0])
@@ -50,7 +50,7 @@ class HeuristicGraspDetector:
         rospy.loginfo(points.shape)
         rospy.loginfo(points_lowered.shape)
         center = np.mean(points_lowered, axis=0)
-    
+
         # stamped_transform = self.tf2_buffer.lookup_transform("base_link", "rgb_camera_link", rospy.Time(0),
         #                                                 rospy.Duration(1))
         # camera_to_target_mat = ros_numpy.numpify(stamped_transform.transform)
@@ -87,7 +87,7 @@ class GraspDetectionROS:
             self.detect_grasps_normal = rospy.Service('~detect_grasps', DetectGraspPoses, self.detect_grasps__normal_cb)
         elif(grasp_method == "centroid"):
             self.detect_grasps = rospy.Service('~detect_grasps', DetectGraspPoses, self.detect_grasps_cb)
-        
+
         self.dections_viz_pub = rospy.Publisher("~detected_grasps", MarkerArray, latch=True, queue_size=1)
         self.points_viz_pub = rospy.Publisher("~detected_pts", PointCloud2, latch=True, queue_size=5)
         self.camera_depth_subscriber = rospy.Subscriber('/camera_lower_right/depth_to_rgb/image_raw', Image, self.depth_callback)
@@ -109,7 +109,7 @@ class GraspDetectionROS:
             # self.depth_img = self.depth_img.astype(np.float32)
         except CvBridgeError as e:
             print(e)
-    
+
     def rgb_callback(self, data):
         try:
             self.rgb_img = self.bridge.imgmsg_to_cv2(data, "bgr8")
@@ -127,7 +127,7 @@ class GraspDetectionROS:
     def get_quaternion_from_euler(self, roll, pitch, yaw):
         """
         Convert an Euler angle to a quaternion.
-        
+
         Input
             :param roll: The roll (rotation around x-axis) angle in radians.
             :param pitch: The pitch (rotation around y-axis) angle in radians.
@@ -140,7 +140,7 @@ class GraspDetectionROS:
         qy = np.cos(roll/2) * np.sin(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.cos(pitch/2) * np.sin(yaw/2)
         qz = np.cos(roll/2) * np.cos(pitch/2) * np.sin(yaw/2) - np.sin(roll/2) * np.sin(pitch/2) * np.cos(yaw/2)
         qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
- 
+
         return [qx, qy, qz, qw]
 
     def transfor_pose(self, pose_stamped, to_frame):
@@ -149,7 +149,7 @@ class GraspDetectionROS:
             return output_pose_stemped
         except(tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             raise
-        
+
     def clamp(self, num, min_value, max_value):
         clamp_value = num
         if(num < 0):
@@ -189,7 +189,7 @@ class GraspDetectionROS:
     def detect_grasps__normal_cb(self, request):
         cv_image = self.bridge.imgmsg_to_cv2(request.mask, desired_encoding='passthrough')
         # cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/grasp_pre_mask.png", cv_image)
-        
+
         # convert point cloud to mask
         fx, fy = 1940.1367, 1940.1958
         cx, cy = 2048.7397, 1551.3889
@@ -203,7 +203,7 @@ class GraspDetectionROS:
                         pts['y'],
                         pts['z']], axis=1)
         points_sort_z = np.flip(pts[pts[:, 2].argsort()], axis=0)
-        
+
         # POINTS_TO_KEEP_FACTOR = .8
         # keep_idxs = np.arange(int(pts.shape[0]*(1-POINTS_TO_KEEP_FACTOR)), pts.shape[0])
         # points_lowered = points_sort_z[keep_idxs]
@@ -212,7 +212,7 @@ class GraspDetectionROS:
         # 1536.9160707029534 -294.14115334486473
         # for i in points_lowered:
         #     # print(i)
-           
+
         #     # [-0.246, -0.012, 1.410]
         #     z = i[0]+0.246
         #     v = ((-i[1]+0.012)*fx) / z
@@ -220,7 +220,7 @@ class GraspDetectionROS:
 
         #     pixel_pos_x = (int)(u + cx)
         #     pixel_pos_y = (int)(v + cy)
-        #     cv_image_new[int(cx-pixel_pos_x)][int(cy-pixel_pos_y)] = 1 
+        #     cv_image_new[int(cx-pixel_pos_x)][int(cy-pixel_pos_y)] = 1
         # print("xyz", i[0],i[1] , i[2])
         # print("uv ", pixel_pos_x, pixel_pos_y)
         # cv2.imwrite("/home/aurmr/workspaces/uois_soofiyan_ws/src/segnetv2_mask2_former/Mask_Results/new_cv_image_mask.png", cv_image_new)
@@ -247,7 +247,7 @@ class GraspDetectionROS:
         # cv2.imshow("mask", cv_image1)
         # cv2.waitkey(0)
 
-        
+
 
         # transform from base link to rgb camera link
         inference_object = run_normal_std()
@@ -267,7 +267,7 @@ class GraspDetectionROS:
 
         # Comment this if you want to use the normal of the object
         clamped_euler_angles = [0., 0., 0.]
-        
+
         # clamped_euler_angles[1] = 0.0
         print("post euler angles", clamped_euler_angles[0]*180/math.pi, clamped_euler_angles[1]*180/math.pi)
         # transform from the 3d pose to rgb_camera_link
@@ -281,7 +281,7 @@ class GraspDetectionROS:
         t_header.frame_id = 'rgb_camera_link_offset'
         vis_pose = PoseStamped(header=t_header, pose=as_pose_pose)
         self.grasp_viz_perception.publish(vis_pose)
-        
+
         # transform from base ink to 3d pose
         # position in base_line
         output_pose_stamped = self.transfor_pose(vis_pose, 'base_link')

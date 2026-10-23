@@ -9,7 +9,7 @@ import numpy as np
 from actionlib import SimpleActionClient
 from actionlib_msgs.msg import GoalStatusArray, GoalStatus
 from control_msgs.msg import FollowJointTrajectoryAction, GripperCommandAction, GripperCommandGoal
-from vacuum_gripper_action_server.msg import GripperCommandInput
+# from vacuum_gripper_action_server.msg import GripperCommandInput
 from control_msgs.msg import FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectoryPoint
 from std_msgs.msg import Bool
@@ -44,6 +44,7 @@ JOINT_TRAJ_CONTROLLER = 'scaled_pos_joint_traj_controller'
 JOINT_TRAJ_CONTROLLER_SIM = 'pos_joint_traj_controller'
 GRIPPER_ACTION_SERVER = '/gripper_controller/gripper_cmd'
 MOVE_GROUP_ACTION_SERVER = 'move_group'
+CURRENT_POSE = "/current_pose"
 TIME_FROM_START = 5
 
 CONFLICTING_CONTROLLERS = [JOINT_TRAJ_CONTROLLER, JOINT_TRAJ_CONTROLLER_SIM, JOINT_GROUP_CONTROLLER]
@@ -127,6 +128,7 @@ class Tahoma:
         self._joint_traj_client = actionlib.SimpleActionClient(
             JOINT_ACTION_SERVER, control_msgs.msg.FollowJointTrajectoryAction)
         self._gripper_client = actionlib.SimpleActionClient(GRIPPER_ACTION_SERVER, GripperCommandAction)
+        self._gripper_linear_actuators_client = actionlib.SimpleActionClient('gripper_controller/linear_actuator_cmd', GripperCommandAction)
         server_reached = self._joint_traj_client.wait_for_server(rospy.Duration(10))
         if not server_reached:
             print('Unable to connect to arm action server. Timeout exceeded. Exiting...')
@@ -173,12 +175,16 @@ class Tahoma:
         eef_link = self.move_group.get_end_effector_link()
         group_names = self.commander.get_group_names()
 
+        self.gripper_pose = rospy.Publisher("/gripper_pose", PoseStamped, queue_size=1)
         self.wrench_listener = rospy.Subscriber("/wrench", WrenchStamped, self.wrench_cb)
         #self.gripper_status_listener = rospy.Subscriber("/gripper_control/status", vacuum_gripper_input, self.gripper_status_cb)
         self.custom_gripper_status_listener = rospy.Subscriber("/vacuum_gripper_control/status", vacuum_gripper_input, self.custom_gripper_status_cb)
         self.custom_gripper_blowoff_listener = rospy.Subscriber("/vacuum_gripper_control/status", vacuum_gripper_input, self.custom_gripper_blowoff_cb)
         self.gripper_listener = rospy.Subscriber('/gripper_fingers/active', Bool, self.gripper_fingers_cb)
+        self.gripper_publisher = rospy.Publisher("/gripper_fingers/turn_on", Bool, queue_size=1, latch=False)
         self.traj_status_listener = rospy.Subscriber("/scaled_pos_joint_traj_controller/follow_joint_trajectory/status", GoalStatusArray, self.goal_status_cb)
+
+        self.gripper_current_pose = None
         self.force_mag = 0
         self.torque_mag = 0
         self.object_detected = False
@@ -197,14 +203,18 @@ class Tahoma:
         self.force_mag = math.sqrt(msg.wrench.force.x**2 + msg.wrench.force.y**2+ msg.wrench.force.z**2)
         self.torque_mag = math.sqrt(msg.wrench.torque.x**2 + msg.wrench.torque.y**2+ msg.wrench.torque.z**2)
 
+        self.gripper_current_pose = self.move_group.get_current_pose()
+        if self.gripper_current_pose is not None:
+            self.gripper_pose.publish(self.gripper_current_pose)
+
     def gripper_status_cb(self, msg: vacuum_gripper_input):
         self.object_detected = (msg.gPO < 95)
 
     def custom_gripper_status_cb(self, msg: vacuum_gripper_input):
-        self.object_detected = msg.SYSTEM_VACUUM > 450 # because it is in mbar and is returned as an int
+        self.object_detected = msg.SYSTEM_VACUUM[0] > 450 # because it is in mbar and is returned as an int
 
     def custom_gripper_blowoff_cb(self, msg: vacuum_gripper_input):
-        self.object_detected_blowoff = msg.SYSTEM_VACUUM > 10 # because it is in mbar and is returned as an int
+        self.object_detected_blowoff = msg.SYSTEM_VACUUM[0] > 10 # because it is in mbar and is returned as an int
 
     def gripper_fingers_cb(self, msg):
         self.fingers_active = msg.data
@@ -274,44 +284,80 @@ class Tahoma:
             to_check = JOINT_TRAJ_CONTROLLER_SIM
         return to_check in self.active_controllers
 
-    # TODO Change to custom action server
-    def open_gripper(self, return_before_done=False, ejectors:list=[5,0,1,1,0], fingers:int=0):
+    def extend_finger(self, return_before_done=False, ejectors:list=[3,0,0,0,0], fingers:int=0):
+
         goal = GripperCommandGoal()
         goal.command.position = int(''.join(map(str, ejectors)))
-        goal.command.max_effort = fingers
-        self._gripper_client.send_goal(goal)
+
+        self._gripper_linear_actuators_client.send_goal(goal)
         if not return_before_done:
-            self._gripper_client.wait_for_result()
+            rospy.loginfo(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++Linear actuators")
+            self._gripper_linear_actuators_client.wait_for_result()
 
-        rospy.loginfo(f"Fingers active {fingers}")
+    def retract_finger(self, return_before_done=False, ejectors:list=[2,0,0,0,0], fingers:int=0):
 
-        while not self.fingers_active and fingers == 1:
-            rospy.sleep(.01)
-            rospy.loginfo(f"self.fingers_active {self.fingers_active}")
+        goal = GripperCommandGoal()
+        goal.command.position = int(''.join(map(str, ejectors)))
 
-        if fingers == 1:
-            timeout = 5
-            steps = 0
-            while self.fingers_active:
-                rospy.sleep(.01)
-                steps = steps + .01
+        self._gripper_linear_actuators_client.send_goal(goal)
+        if not return_before_done:
+            rospy.loginfo(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++Linear actuators")
+            self._gripper_linear_actuators_client.wait_for_result()
+
+    # TODO Change to custom action server
+    def open_gripper(self, return_before_done=False, ejectors:list=[5,0,0,0,0], fingers:int=0):
+        # print(f'^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^{ejectors}')
+
+        goal = GripperCommandGoal()
+        goal.command.position = int(''.join(map(str, ejectors)))
+        # goal.command.max_effort = fingers
+
+        self._gripper_linear_actuators_client.send_goal(goal)
+        if not return_before_done:
+            rospy.loginfo(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++Linear actuators")
+            self._gripper_linear_actuators_client.wait_for_result()
+
+        # rospy.loginfo(f"Fingers active {fingers}")
+        # msg = Bool()
+        # msg.data = True
+        # self.gripper_publisher.publish(msg)
+        # rospy.sleep(1)
+
+        # while not self.fingers_active and fingers == 1:
+        #     rospy.sleep(.01)
+            # rospy.loginfo(f"self.fingers_active {self.fingers_active}")
+
+        # if fingers == 1:
+        #     timeout = 5
+        #     steps = 0
+        #     while self.fingers_active:
+        #         msg = Bool()
+        #         msg.data = True
+        #         self.gripper_publisher.publish(msg)
+        #         rospy.sleep(.01)
+        #         steps = steps + .01
+
+        #     msg = Bool()
+        #     msg.data = False
+        #     self.gripper_publisher.publish(msg)
 
     def check_gripper_item(self):
         return self.object_detected
 
     # TODO Change to custom action server
-    def blow_off_gripper(self, return_before_done=False, ejectors:list=[5,2,2,2,2], fingers:int=0):
+    def blow_off_gripper(self, return_before_done=False, ejectors:list=[4,2,2,2,2], fingers:int=0):
         goal = GripperCommandGoal()
         goal.command.position = int(''.join(map(str, ejectors)))
         goal.command.max_effort = fingers
-        self._gripper_client.send_goal(goal)
-        if not return_before_done:
-            self._gripper_client.wait_for_result()
-        rospy.sleep(3)
-        while self.object_detected_blowoff:
-            pass
 
-        self.open_gripper()
+        self._gripper_linear_actuators_client.send_goal(goal)
+        # if not return_before_done:
+        #     self._gripper_client.wait_for_result()
+        # rospy.sleep(3)
+        # while self.object_detected_blowoff:
+        #     pass
+
+        # self.close_gripper()
         return
 
     # TODO Change to custom action server
@@ -816,7 +862,8 @@ class Tahoma:
                               jump_threshold=6.0,
                               avoid_collisions=True,
                               use_force=False,
-                              use_gripper=False):
+                              use_gripper=False,
+                              just_wait=True):
         """Moves the end-effector to a pose in a straight line.
 
         Args:
@@ -831,6 +878,7 @@ class Tahoma:
         Returns:
             string describing the error if an error occurred, else None.
         """
+        self.move_group.set_goal_position_tolerance(tolerance)
         prev_force_limit = self.force_mag
         self.move_group.set_end_effector_link("arm_tool0")
         goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.planning_frame, rospy.Duration(1))
@@ -846,15 +894,17 @@ class Tahoma:
             rospy.logwarn(f"Not moving in cartesian path. Only {fraction} waypoints reached")
             # return False
 
-        wait = not (use_force or use_gripper)
+        wait = use_force or use_gripper or just_wait
         rospy.loginfo("Waiting?: " + str(wait))
         old_goal_stamp = self.goal_stamp
 
+
+        self.goal_finished = False
         ret = self.move_group.execute(plan, wait=wait)
         if use_gripper:
             self.close_gripper(return_before_done=True)
 
-        if not wait:
+        if wait:
             timeout = 1
             steps = 0
             while steps < timeout and (self.goal_stamp == old_goal_stamp):
@@ -868,8 +918,9 @@ class Tahoma:
             rospy.loginfo("Waiting?: " + str(wait) + " " + str(self.goal_finished))
             timeout = 5
             steps = 0
+            self.goal_finished = False
             while steps < timeout and not self.goal_finished:
-                # rospy.loginfo("Waiting for feedback or goal finishing")
+                rospy.loginfo("Waiting for feedback or goal finishing")
                 if use_force and abs(self.force_mag-prev_force_limit) > force_limit:
                     rospy.loginfo(f" Force values: {abs(self.force_mag-prev_force_limit)}")
                     self.move_group.stop()

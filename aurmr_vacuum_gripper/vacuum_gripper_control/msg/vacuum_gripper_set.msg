@@ -1,0 +1,11 @@
+float32 SUPPLY_PRESSURE # float32 Length 1 rw
+
+uint16[16] SETPOINT_H1 # UINT16 Length 16 x 2 rw
+uint16[16] HYSTERESIS_h1 # UINT16 Length 16 x 2 rw
+uint16[16] SETPOINT_H2 # UINT16 Length 16 x 2 rw
+uint16[16] HYSTERESIS_h2 # UINT16 Length 16 x 2 rw
+
+int8[4] EJECTOR_CONTROL_UNIT # UINT8
+int8[4] EJECTOR_CONTROL_VALUE # UINT8
+
+uint8 FINGERS # Activate 1 Deactivate 0
