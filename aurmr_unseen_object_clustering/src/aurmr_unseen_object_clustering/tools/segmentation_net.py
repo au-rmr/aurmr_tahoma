@@ -65,22 +65,22 @@ warnings.filterwarnings("ignore", category=UserWarning)
 #1268 1184 1628 1412
 
 bin_bounds = {
-          '1H':[297*4, 353*4, 315*4, 406*4],
-          '2H':[300*4, 355*4, 409*4, 514*4],
-          '3H':[303*4, 356*4, 515*4, 620*4],
-          '4H':[302*4, 355*4, 619*4, 711*4],
-          '1G':[365*4, 409*4, 315*4, 405*4],
-          '2G':[367*4, 407*4, 407*4, 512*4],
-          '3G':[370*4, 411*4, 513*4, 619*4],
-          '4G':[371*4, 412*4, 619*4, 711*4],
-          '1F':[420*4, 514*4, 314*4, 405*4],
-          '2F':[424*4, 511*4, 407*4, 512*4],
-          '3F':[425*4, 515*4, 515*4, 620*4],    
-          '4F':[426*4, 514*4, 621*4, 714*4],
-          '1E':[527*4, 572*4, 311*4, 405*4],
-          '2E':[529*4, 571*4, 407*4, 513*4],
-          '3E':[527*4, 574*4, 515*4, 620*4],
-          '4E':[531*4, 574*4, 622*4, 714*4],
+          '1H':[294*4, 349*4, 326*4, 416*4],
+          '2H':[296*4, 349*4, 416*4, 521*4],
+          '3H':[295*4, 351*4, 522*4, 628*4],
+          '4H':[298*4, 350*4, 628*4, 721*4],
+          '1G':[362*4, 404*4, 325*4, 415*4],
+          '2G':[364*4, 403*4, 416*4, 522*4],
+          '3G':[366*4, 405*4, 522*4, 629*4],
+          '4G':[367*4, 406*4, 629*4, 720*4],
+          '1F':[418*4, 508*4, 324*4, 416*4],
+          '2F':[420*4, 505*4, 415*4, 520*4],
+          '3F':[420*4, 511*4, 524*4, 629*4],    
+          '4F':[421*4, 510*4, 629*4, 723*4],
+          '1E':[521*4, 566*4, 323*4, 415*4],
+          '2E':[526*4, 563*4, 414*4, 523*4],
+          '3E':[524*4, 564*4, 523*4, 630*4],
+          '4E':[523*4, 569*4, 632*4, 724*4],
             }
 
 # bin_bounds = {
@@ -383,9 +383,12 @@ class SegNet:
         # mask, embed = self.uois_segmentation(reshaped_img, rgb_segment.shape[0], rgb_segment.shape[1])
         mask, embed = self.uois_segmentation(bin_id)
 
-        mask = np.asarray(mask).astype(np.uint8).reshape(rgb_segment.shape[0], rgb_segment.shape[1])
+        try:
+            mask = np.asarray(mask).astype(np.uint8).reshape(rgb_segment.shape[0], rgb_segment.shape[1])
+        except:
+            mask = np.zeros((rgb_segment.shape[0], rgb_segment.shape[1]), dtype = np.uint8)
         embed = np.asarray(embed).astype(np.float64)
-        print(embed)
+        # print(embed)
         if(np.max(mask) > 0):
             embed = embed.reshape(int(len(embed)/256), 256)
         
@@ -462,7 +465,7 @@ class SegNet:
                     mask_recs[i, j] = score
                 except:
                     print(np.max(mask1), np.max(mask2))
-                    print(embed1, embed2)
+                    # print(embed1, embed2)
                     print(score)
                 if(score > max_score):
                     max_score = score
