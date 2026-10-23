@@ -18,8 +18,8 @@ from visualization_msgs.msg import MarkerArray, Marker
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import sys
-#sys.path.append("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/UIE_main/mask2former_frame/")
-#from normal_std.inference_grasp_main import run_normal_std
+sys.path.append("/home/aurmr/workspaces/aurmr_demo_perception/src/segnetv2_mask2_former/UIE_main/mask2former_frame/")
+from normal_std.inference_grasp_main import run_normal_std
 
 from scipy.spatial.transform import Rotation as R
 from copy import deepcopy
@@ -101,6 +101,9 @@ class GraspDetectionROS:
         self.bridge = CvBridge()
         self.grasp_viz_perception = rospy.Publisher("selected_grasp_pose_perception", geometry_msgs.msg.PoseStamped,
                                         queue_size=1, latch=True)
+        
+        self.tf_buffer = tf2_ros.Buffer()
+        self.listener = tf2_ros.TransformListener(self.tf_buffer)
 
     def depth_callback(self, data):
         try:
@@ -252,6 +255,20 @@ class GraspDetectionROS:
         # transform from base link to rgb camera link
         inference_object = run_normal_std()
         point, euler_angles = inference_object.inference(self.rgb_img, self.depth_img, cv_image)
+        
+
+        transform= self.tf_buffer.lookup_transform('base_link', 'pod_base_link', rospy.Time())
+        transform_camera_to_base_link= self.tf_buffer.lookup_transform('base_link', 'rgb_camera_link', rospy.Time())
+        POD_OFFSET = 0.1
+        RGB_TO_DEPTH_FRAME_OFFSET = 0.015
+        DEPTH_TILT = -transform.transform.translation.z-0.03
+        # center[2] += center[0]*np.sin(DEPTH_TILT)
+        # point[2] += DEPTH_TILT
+
+        point[2] = transform.transform.translation.x - POD_OFFSET - transform_camera_to_base_link.transform.translation.x
+        point[1] -= point[2]*np.sin(DEPTH_TILT)
+        point[0] -= RGB_TO_DEPTH_FRAME_OFFSET
+        
         print("points", point)
 
         # clamp euler englaes within 15 and 45 but if less than 15 it will be 0
