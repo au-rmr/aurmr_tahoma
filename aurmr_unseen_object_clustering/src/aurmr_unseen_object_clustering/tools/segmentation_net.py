@@ -56,6 +56,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 bin_bounds = rospy.get_param("bin_bounds")
 
+
 print(bin_bounds)
 
 def_config = {
@@ -265,6 +266,7 @@ class SegNet:
         rospy.wait_for_service('segmentation_with_embeddings')
         try:
             uois_client = rospy.ServiceProxy('segmentation_with_embeddings', GetSegmentationUOIS)
+<<<<<<< Updated upstream
 
             path = f"{workspace_path}/src/uois_service_multi_demo/dataset/"
             sequence = path+str(bin_id)+"/"
@@ -282,6 +284,10 @@ class SegNet:
                 sequence_imgs.append(ros_numpy.msgify(sensor_msgs.msg.Image, img, 'rgb8'))
 
             req = uois_client(sequence_imgs)
+=======
+            print(bin_id)
+            req = uois_client(bin_id)
+>>>>>>> Stashed changes
             return req.out_label, req.embeddings
         except rospy.ServiceException as e:
             print("Service call failed: %s"%e)
@@ -711,6 +717,8 @@ class SegNet:
     #       1. No object is stored. Covered using depth difference in bin.new_object_detected CODE NO_OBJ_STORED
     #       2. Fewer than n objects are segmented (undersegmentation). Covered in refine_masks CODE UNDERSEGMENTATION
     def stow(self, bin_id, obj_id, rgb_raw, depth_raw=None,info=None, points_raw=None):
+
+        print(f"adding {bin_id} to {obj_id}")
         # Grabs the current bin
         bin = self.bins[bin_id]
 

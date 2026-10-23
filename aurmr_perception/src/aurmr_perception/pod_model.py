@@ -139,6 +139,11 @@ class PodPerceptionROS:
         self.model.net = self.net
 
         for entry in dataset.entries:
+        for entry in dataset.entries[1:]:
+            rgb_image = entry.rgb_image
+            depth_image = entry.depth_image
+            for i in entry.inventory():
+                pass
 
             camera_data = entry.camera_data[self.camera_name]
 
