@@ -81,10 +81,87 @@ class VacuumGripper:
             # message.LEAKAGE_RATE = self.get_leakage_rate() # what is the leakage rate supposed to give
             # message.FREE_FLOW_VACUUM = self.get_free_flow_vacuum() #what is the free flow supposed to give
             # message.MAX_VACUUM_REACHED = self.get_max_vacuum_range() # what is this max vacuum supposed to give
+            # print(f'&&&&&&&&&&&&&&&&&& {self.get_system_vacuum()}')
             message.SYSTEM_VACUUM = self.get_system_vacuum()
         else:
             raise RuntimeError(f"Unknown gripper type requested: {self.gripper_type}")
         return message
+
+    # This method decodes a hex byte message and returns a python List of the byte message
+    # in binary as strings. Primarily used for a true-false status measurement.
+    # This method is needed if our data length exceeds the length of a BYTE
+    # or else we could request data_type = BYTE in our message
+    def decodingMessageBinary(self, message):
+        stringOfByte = bin(int.from_bytes(message, byteorder='big'))[2:]
+        binaryStep = []
+        binary = ''
+        counter = 0
+        for i in range(len(stringOfByte), 0, -1):
+            counter += 1
+            binary = stringOfByte[i-1] + binary
+            if counter % 8 == 0:
+                counter = 0
+                binaryStep.append(binary)
+                binary = ''
+        if len(binary) < 8:
+            binaryStep.append('0'*(8-len(binary)) + binary)
+        while (len(binaryStep) < len(message)):
+                binaryStep.append('00000000')
+        binaryStep.reverse()
+        return binaryStep
+
+    # this method decodes bytes and returns a python List of the byte messages as decimals
+    def decodingByteMessageToInt(self, message):
+        return [message[byte] for byte in range(len(message))] #apparently calling a byte in a list converts it automatically
+
+    def decodingBytesMessageToInt(self, message): #started thsis but might not need....
+        result = []
+        for i in range(len(message)):
+            result.append(int.from_bytes(message[i:i+1], byteorder='little'))
+        return result
+
+    # converts a single integer value to a binary 8-bit value as a string
+    def decodingIntToBinary(self, decimalInt):
+        if decimalInt == 0:
+            return "00000000"
+        binary_result = ""
+        while decimalInt > 0:
+            binary_result = str(decimalInt % 2) + binary_result
+            decimalInt //= 2
+        while len(binary_result) < 8:
+            binary_result = "0" + binary_result
+        return binary_result
+
+    # reading the CIP driver offset instance and returns the data in the representation of the dataType
+    # if None then the output is a byte representation
+    def get_message(self, offsetReadOnlyInstance, dataType):
+        try:
+            message = self.cip_driver.generic_message(
+                service = Services.get_attribute_single,
+                class_code= 0xA2,
+                instance = offsetReadOnlyInstance,
+                attribute = 5,
+                data_type = dataType
+            )
+        except exceptions.CommError:
+            if self.restablishConnection():
+                message = self.cip_driver.generic_message(
+                    service = Services.set_attribute_single,
+                    class_code= 0xA2,
+                    instance = offsetReadOnlyInstance,
+                    attribute = 5,
+                    data_type = dataType
+                )
+        except AttributeError:
+            if self.restablishConnection():
+                message = self.cip_driver.generic_message(
+                    service = Services.set_attribute_single,
+                    class_code= 0xA2,
+                    instance = offsetReadOnlyInstance,
+                    attribute = 5,
+                    data_type = dataType
+                )
+        return message.value
 
     def vacuum(self, pressure, release):
         var_dict = dict([(self.GTO, 0)]) # GTO is gripper regulation -- similar to ejector control
@@ -119,6 +196,7 @@ class VacuumGripper:
     def actuate_valves(self, valve_states):
 
         array = []
+        print('*****************************************', valve_states)
         for i in valve_states:
             if i == 1:
                 array = array + [0b00000001]
@@ -129,7 +207,7 @@ class VacuumGripper:
         request_data = bytearray(array + [0b00000000] * 12)
         try:
             self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=request_data)
-            # self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000001] + [0b00000000]*15))
+            # self.cip_driver.generic_message(service=Servic[es.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000001] + [0b00000000]*15))
         except exceptions.CommError:
             if not self.open_connection():
                 raise exceptions.CommError
@@ -229,18 +307,43 @@ class VacuumGripper:
 
     def get_leakage_rate(self):
         msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=LEAKAGE_RATE, attribute=5)
-        return USINT.decode(msg.value)
-
-    def get_system_vacuum(self):
-        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SYSTEM_VACUUM, attribute=5)
+        output = [0, 0, 0, 0]
         try:
             # output = UINT.decode(msg.value[0:2])
-            output = UINT.decode(msg.value[4:6])
+            output[0] = UINT.decode(msg.value[0:2])
+            output[1] = UINT.decode(msg.value[2:4])
+            output[2] = UINT.decode(msg.value[4:6])
+            output[3] = UINT.decode(msg.value[6:8])
             # print(f'output 1: {UINT.decode(msg.value[4:6])}')
             # print(f'output 2: {UINT.decode(msg.value[6:8])}')
         except exceptions.BufferEmptyError:
-            return 0
+            return [0, 0, 0, 0]
         return output
+
+    def get_system_vacuum(self):
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=SYSTEM_VACUUM, attribute=5)
+        output = [0, 0, 0, 0]
+        try:
+            # output = UINT.decode(msg.value[0:2])
+            output[0] = UINT.decode(msg.value[0:2])
+            output[1] = UINT.decode(msg.value[2:4])
+            output[2] = UINT.decode(msg.value[4:6])
+            output[3] = UINT.decode(msg.value[6:8])
+            # print(f'output 1: {UINT.decode(msg.value[4:6])}')
+            # print(f'output 2: {UINT.decode(msg.value[6:8])}')
+        except exceptions.BufferEmptyError:
+            return [0, 0, 0, 0]
+        return output
+    # # gets the current vacuum in individual ejectors in mbars, returns an int list of the active ejectors
+    # # integers in the list represent the vacuum mbars, the index represents the ejector unit
+    # def get_system_vacuum(self):
+    #     msg = self.decodingByteMessageToInt(self.get_message(SYSTEM_VACUUM, None))
+    #     systemVacuum = []
+    #     for i in range (1, len(msg), 2):
+    #         binary = self.decodingIntToBinary(msg[i]) + self.decodingIntToBinary(msg[i-1])
+    #         intSystemVacuum = int(binary, 2)
+    #         systemVacuum.append(intSystemVacuum)
+    #     return systemVacuum
 
 
     def get_SetPointH1(self):

@@ -17,6 +17,10 @@ from geometry_msgs.msg import PoseStamped, WrenchStamped
 from robotiq_2f_gripper_control.msg import vacuum_gripper_input as VacuumGripperStatus
 from control_msgs.msg import FollowJointTrajectoryAction, GripperCommandAction, GripperCommandGoal
 from moveit_msgs.msg import Constraints, JointConstraint
+
+from pycomm3 import CIPDriver, Services, configure_default_logger, LOG_VERBOSE, exceptions, SINT, UINT, USINT
+import time
+
 class MoveEndEffectorToPose_Storm(State):
     def __init__(self, default_pose=None):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
@@ -107,6 +111,9 @@ class MoveEndEffectorInLine_Storm(State):
         self._gripper_client.send_goal(goal)
         if not return_before_done:
             self._gripper_client.wait_for_result()
+
+
+
 
     def wrench_cb(self, msg: WrenchStamped):
         self.force_msg = math.sqrt(msg.wrench.force.x**2 + msg.wrench.force.y**2+ msg.wrench.force.z**2)
@@ -215,6 +222,47 @@ class OpenGripperStorm(State):
     def execute(self, ud):
         self.open_gripper(return_before_done=self.return_before_done)
         return "succeeded"
+
+class SuctionToObject(State):
+    def __init__(self, robot, return_before_done=False, fingers:int=0):
+        State.__init__(self, input_keys=[], outcomes=['succeeded', 'preempted', 'aborted'])
+        self.robot = robot
+        self.return_before_done = return_before_done
+        self.fingers = fingers
+        ip = '192.168.137.2'
+        self.cip_driver = CIPDriver(ip)
+        self.cip_driver.open()
+
+    def get_status(self, instance):
+        """
+        Takes in an int instance and returns the value that
+        instance is associated with the vacuum ejector unit
+        as a byte array.
+        """
+        message = self.cip_driver.generic_message(
+            service = Services.get_attribute_single,
+            class_code= 0xA2,
+            instance = instance,
+            attribute = 5,
+            data_type=None
+        )
+        return message.value
+
+    def execute(self, ud):
+        """
+        needs to change succeeded, aborted, preempted
+        use vacuum valve 2 for suction
+        """
+        start_time = time.time()
+        suction_cup = self.get_status(515)[4:6]
+        suction_value = int.from_bytes(suction_cup, "little")
+        suction_message = bytearray([0b00000000]*2 + [0b00000001] + [0b00000000]*13)
+        while (time.time() - start_time) <= 5 and suction_value < 400:
+            self.cip_driver.generic_message(service=Services.set_attribute_single,
+                                       class_code=0xA2, instance=13, attribute=5,
+                                       request_data=suction_message)
+        return "succeeded"
+
 
 class MoveToBinHome(State):
     def __init__(self, robot):
@@ -350,7 +398,7 @@ class MoveEndEffectorToPose(State):
     def __init__(self, robot):
         State.__init__(self, input_keys=['pose'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
-        self.target_pose_visualizer = rospy.Publisher("end_effector_target", geometry_msgs.msg.PoseStamped,
+        self.target_pose_visualizer = rospy.Publisher("", geometry_msgs.msg.PoseStamped,
                                                       queue_size=1, latch=True)
 
     def execute(self, userdata):
@@ -422,13 +470,14 @@ class MoveEndEffectorToPoseLinear(State):
 
 
 class MoveEndEffectorToOffset(State):
-    def __init__(self, robot, offset, frame=None, use_force=False, use_gripper=False):
+    def __init__(self, robot, offset, frame=None, use_force=False, use_gripper=False, tolerance=0.01):
         State.__init__(self, input_keys=['offset'], outcomes=['succeeded', 'preempted', 'aborted'])
         self.robot = robot
         self.offset = offset
         self.offset_frame = frame
         self.use_force = use_force
         self.use_gripper = use_gripper
+        self.tolerance = tolerance
 
     def execute(self, userdata):
         offset = self.offset
@@ -440,7 +489,7 @@ class MoveEndEffectorToOffset(State):
         # In base_link by default
         current = self.robot.move_group.get_current_pose()
         target_pose = apply_offset_to_pose(current, offset, offset_frame, self.robot.tf2_buffer)
-        succeeded = self.robot.straight_move_to_pose(target_pose, ee_step = 0.01, avoid_collisions=True, jump_threshold=6.0, use_force=self.use_force, use_gripper=self.use_gripper)
+        succeeded = self.robot.straight_move_to_pose(target_pose, tolerance = self.tolerance, ee_step = 0.01, avoid_collisions=True, jump_threshold=6.0, use_force=self.use_force, use_gripper=self.use_gripper)
 
         if succeeded:
             return "succeeded"
@@ -610,12 +659,12 @@ class GraspObject(State):
 
 
 
-def robust_move_to_offset(robot, offset, frame=None):
+def robust_move_to_offset(robot, offset, frame=None, tolerance=0.01):
     sm = StateMachine(["succeeded", "preempted", "aborted"])
     if frame is None:
         frame = "arm_tool0"
     with sm:
-        StateMachine.add_auto("TRY_CARTESIAN_MOVE", MoveEndEffectorToOffset(robot, offset, frame, use_force=True, use_gripper=False), ["aborted"],
+        StateMachine.add_auto("TRY_CARTESIAN_MOVE", MoveEndEffectorToOffset(robot, offset, frame, use_force=True, use_gripper=False, tolerance=tolerance), ["aborted"],
                               transitions={"succeeded": "succeeded"})
         # Generous allowances here to try and get some motion
         # StateMachine.add_auto("TRY_SERVO_MOVE", ServoEndEffectorToOffset(robot, offset, 0.02, 0.3, frame=frame), ["aborted"],
@@ -686,6 +735,29 @@ class OpenGripper(State):
     def execute(self, ud):
         self.robot.open_gripper(return_before_done=self.return_before_done, fingers=self.fingers)
         return "succeeded"
+
+class ExtendFinger(State):
+    def __init__(self, robot, return_before_done=False, fingers:int=0):
+        State.__init__(self, input_keys=[], outcomes=['succeeded', 'preempted', 'aborted'])
+        self.robot = robot
+        self.return_before_done = return_before_done
+        self.fingers = fingers
+
+    def execute(self, ud):
+        self.robot.extend_finger(return_before_done=self.return_before_done, fingers=self.fingers)
+        return "succeeded"
+
+class RetractFinger(State):
+    def __init__(self, robot, return_before_done=False, fingers:int=0):
+        State.__init__(self, input_keys=[], outcomes=['succeeded', 'preempted', 'aborted'])
+        self.robot = robot
+        self.return_before_done = return_before_done
+        self.fingers = fingers
+
+    def execute(self, ud):
+        self.robot.retract_finger(return_before_done=self.return_before_done, fingers=self.fingers)
+        return "succeeded"
+
 
 class BlowOffGripper(State):
     def __init__(self, robot, return_before_done=False, fingers:int=0):
