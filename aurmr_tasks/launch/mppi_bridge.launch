@@ -1,0 +1,30 @@
+<launch>
+  <arg name="planner_address" default="tcp://192.168.10.107:4242"/>
+  <arg name="control_rate"    default="20"/>
+  <arg name="max_velocity"    default="0.1"/>
+  <arg name="force_limit"     default="60.0"/>
+  <arg name="goal_tolerance"  default="0.01"/>
+  <arg name="in_sim"          default="false"/>
+  <arg name="publish_rate"    default="500"/>
+  <arg name="command_timeout" default="0.15"/>
+  <arg name="smoothing_alpha" default="0.2"/>
+  <arg name="refined_tag_timeout" default="5.0"/>
+
+  <node pkg="aurmr_tasks" type="mppi_bridge_node.py" name="mppi_bridge_node"
+        output="screen" required="true">
+    <param name="planner_address" value="$(arg planner_address)"/>
+    <param name="control_rate"    value="$(arg control_rate)"/>
+    <param name="max_velocity"    value="$(arg max_velocity)"/>
+    <param name="force_limit"     value="$(arg force_limit)"/>
+    <param name="goal_tolerance"  value="$(arg goal_tolerance)"/>
+    <param name="in_sim"          value="$(arg in_sim)"/>
+    <param name="publish_rate"    value="$(arg publish_rate)"/>
+    <param name="command_timeout" value="$(arg command_timeout)"/>
+    <param name="object_tracking_startup_timeout" value="2.0"/>
+
+    <rosparam file="$(find aurmr_tasks)/config/object_tracking.yaml" command="load"/>
+    <!-- Overrides the yaml's refined_tag_timeout — must come after the rosparam
+         load above so this value wins. -->
+    <param name="object_tracking/refined_tag_timeout" value="$(arg refined_tag_timeout)"/>
+  </node>
+</launch>

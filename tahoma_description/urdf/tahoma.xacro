@@ -44,6 +44,29 @@
       <child link="stand"/>
     </joint>
 
+    <link name="table">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.8 1.5 0.05"/>
+        </geometry>
+        <material name="table_color">
+          <color rgba="0.8 0.6 0.4 0.5"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.8 1.5 0.05"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="base_link_table_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="table"/>
+      <origin xyz="0.0 0.0 0.75" rpy="0 0 0"/>
+    </joint>
+
     <joint name="robot_plate_arm_base_link_joint" type="fixed">
       <parent link="robot_plate"/>
       <child link="arm_base_link"/>

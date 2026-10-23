@@ -215,9 +215,9 @@ ur_cartesian_compliance_controller:
     gravity: 9.81
 
     stiffness:  # w.r.t. compliance_ref_link coordinates
-        trans_x: 100.0
-        trans_y: 100.0
-        trans_z: 100.0
+        trans_x: 200.0
+        trans_y: 200.0
+        trans_z: 200.0
         rot_x: 5.0
         rot_y: 5.0
         rot_z: 5.0

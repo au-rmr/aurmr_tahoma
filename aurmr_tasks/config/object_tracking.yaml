@@ -1,0 +1,132 @@
+# Object tracking configuration for the MPPI bridge node.
+# Load with: rosparam load <path>/object_tracking.yaml /mppi_bridge_node
+# Or include in your launch file:
+#   <rosparam file="$(find aurmr_tasks)/config/object_tracking.yaml"
+#             command="load" ns="mppi_bridge_node" />
+
+object_tracking:
+  # 'foundationpose' (default) or 'apriltag'
+  tracker_type: apriltag
+
+  # Frame that the camera publishes detections in (same for both tracker types).
+  camera_frame: base_link
+
+  # Frame used as the world frame for object poses (must match Isaac world frame).
+  world_frame: base_link
+
+  # --- FoundationPose settings -------------------------------------------
+  # Address of the ZMQ PUSH socket in the Docker container.
+  # Use tcp://localhost:<port> when the container runs with --network host.
+  zmq_address: tcp://192.168.10.102:5555
+
+  # One entry per tracked object.
+  #   id:            must match the 'id' field in run_realsense.py objects config.
+  #   isaac_index: position in sim.objects[] (determines order in planner state).
+  # objects: #[]
+  #   - id: 0
+  #     isaac_index: 0
+  #   - id: 1
+  #     isaac_index: 1
+    # - id: 2
+    #   isaac_index: 2
+    # - id: 3
+    #   isaac_index: 3
+  # add more objects as needed:
+  #   - id: 1
+  #     isaac_index: 1
+
+  # --- AprilTag settings (only used when tracker_type: apriltag) ----------
+  cube_size: 0.05
+
+  # Gap left above the lower cube when a stacked-cube vertical-overlap
+  # correction is applied (meters).
+  stack_margin: 0.0
+
+  # Gripper-mounted (arducam) refined tag tracking — preferred over the fixed
+  # cameras above for any tag it currently sees. Published directly into the TF
+  # tree as refined_tag_<id>, using the same tag IDs as the cubes/tags config below.
+  refined_tag_timeout: 0.5   # seconds before a refined_tag_<id> TF is stale
+  refined_tag_rate: 30.0     # Hz, how often to poll refined_tag_<id> TF frames
+
+  # cubes: []
+  cubes:
+    - isaac_index: 0 # Target
+      tags:
+        - {id: 0, face: "+x"}
+        - {id: 2, face: "-x"}
+        - {id: 1, face: "+y"}
+        - {id: 3, face: "-y"}
+        - {id: 4, face: "+z"}
+        - {id: 5, face: "-z"}
+    - isaac_index: 1
+      tags:
+        - {id: 6, face: "+x"}
+        - {id: 7, face: "-x"}
+        - {id: 8, face: "+y"}
+        - {id: 9, face: "-y"}
+        - {id: 10, face: "+z"}
+        - {id: 11, face: "-z"}
+    - isaac_index: 2
+      tags:
+        - {id: 12, face: "+x"}
+        - {id: 13, face: "-x"}
+        - {id: 14, face: "+y"}
+        - {id: 15, face: "-y"}
+        - {id: 16, face: "+z"}
+        - {id: 17, face: "-z"}
+    - isaac_index: 3
+      tags:
+        - {id: 18, face: "+x"}
+        - {id: 19, face: "-x"}
+        - {id: 20, face: "+y"}
+        - {id: 21, face: "-y"}
+        - {id: 22, face: "+z"}
+        - {id: 23, face: "-z"}
+    - isaac_index: 4
+      tags:
+        - {id: 24, face: "+x"}
+        - {id: 25, face: "-x"}
+        - {id: 26, face: "+y"}
+        - {id: 27, face: "-y"}
+        - {id: 28, face: "+z"}
+        - {id: 29, face: "-z"}
+    - isaac_index: 5
+      tags:
+        - {id: 30, face: "+x"}
+        - {id: 31, face: "-x"}
+        - {id: 32, face: "+y"}
+        - {id: 33, face: "-y"}
+        - {id: 34, face: "+z"}
+        - {id: 35, face: "-z"}
+    # - isaac_index: 6
+    #   tags:
+    #     - {id: 46, face: "+x"}
+    #     - {id: 47, face: "-x"}
+    #     - {id: 48, face: "+y"}
+    #     - {id: 49, face: "-y"}
+    #     - {id: 50, face: "+z"}
+    #     - {id: 51, face: "-z"}
+    # - isaac_index: 7
+    #   tags:
+    #     - {id: 64, face: "+x"}
+    #     - {id: 65, face: "-x"}
+    #     - {id: 66, face: "+y"}
+    #     - {id: 67, face: "-y"}
+    #     - {id: 68, face: "+z"}
+    #     - {id: 69, face: "-z"}
+    - isaac_index: 8 # Bin back
+      tags:
+        - {id: 36, face: "+x"}
+        # - {id: 112, face: "-x"}
+        # - {id: 113, face: "+y"}
+        # - {id: 114, face: "-y"}
+        # - {id: 115, face: "+z"}
+        # - {id: 116, face: "-z"}
+    - isaac_index: 9 # Bin far
+      tags:
+        # - {id: 70, face: "+x"}
+        # - {id: 2, face: "-x"}
+        - {id: 70, face: "+y"}
+        # - {id: 4, face: "-y"}
+        # - {id: 5, face: "+z"}
+        # - {id: 6, face: "-z"}

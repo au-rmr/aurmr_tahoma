@@ -5,6 +5,7 @@ find_package(catkin REQUIRED COMPONENTS
     roslint
     message_generation
     std_msgs
+    geometry_msgs
 )
 
 catkin_python_setup()
@@ -12,6 +13,8 @@ catkin_python_setup()
 add_message_files(
   FILES
   PickStatus.msg
+  AprilTagDetection.msg
+  AprilTagDetectionArray.msg
 )
 
 
@@ -24,6 +27,7 @@ add_service_files(
 
 generate_messages(
   DEPENDENCIES
+  geometry_msgs
   std_msgs
 )
 
