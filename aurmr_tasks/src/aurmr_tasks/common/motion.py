@@ -250,6 +250,8 @@ class MoveToJointAngles(State):
         else:
             target = ud["position"]
         to_log = target
+        print(to_log)
+        target = "init_pose_realsense_"+self.robot.bin_id
         if isinstance(target, JointState):
             to_log = target.position
         rospy.loginfo(f"Moving to {to_log}")
@@ -284,7 +286,7 @@ class MoveEndEffectorToPose(State):
                           replan=True,
                           replan_attempts=8,
                           tolerance=0.01)
-        # input('check planning frame!!!!!!!!!!!!!!')
+        input('check planning frame!!!!!!!!!!!!!!')
         if success:
             return "succeeded"
         else:
@@ -761,9 +763,9 @@ class AddFullPodCollisionGeometryDropHide(State):
         WALL_WIDTH = 0.003
         SIDE_WALL_WIDTH = 0.033
         
-        self.robot.scene.add_box("front_frame", PoseStamped(header=Header(frame_id="pod_base_link"),
-                                                    pose=Pose(position=Point(x=POD_SIZE/2, y=0., z=1.34),
-                                                              orientation=I_QUAT)), (1.8, .05, 3.0))
+        # self.robot.scene.add_box("front_frame", PoseStamped(header=Header(frame_id="pod_base_link"),
+        #                                             pose=Pose(position=Point(x=POD_SIZE/2, y=0., z=1.34),
+        #                                                       orientation=I_QUAT)), (1.8, .05, 3.0))
         
         self.robot.scene.add_box("left_side_frame", PoseStamped(header=Header(frame_id="base_link"),
                                                     pose=Pose(position=Point(x=0.25, y=1.00, z=1.34),
@@ -825,7 +827,6 @@ class AddFullPodCollisionGeometry(State):
             import tf
             listener = tf.TransformListener()
             (trans, rot) = listener.lookupTransform('base_link', 'pod_bin_4h', rospy.Time())
-            print("############################################################################", trans)
         except:
             try:
                 bin_id = ud['target_bin_id']

@@ -113,7 +113,7 @@ class Tahoma:
         self.in_sim = in_sim
         self.joint_state = None
         self.point_cloud = None
-
+        self.bin_id = "3F"
         self.tf2_buffer = tf2_ros.Buffer()
         self.tf2_listener = tf2_ros.TransformListener(self.tf2_buffer)
         self.wrist_position = None
@@ -276,7 +276,7 @@ class Tahoma:
             pass
 
         self.open_gripper()
-        return 
+        return
 
     def close_gripper(self, return_before_done=False):
         goal = GripperCommandGoal()
@@ -375,10 +375,8 @@ class Tahoma:
 
         joint_values = joints
 
-        print("######################################",joint_values)
         if isinstance(joints, str):
             joint_values = self.get_joint_values_for_name(joints)
-            print(joint_values)
             self.move_group.set_named_target(joints)
         else:
             self.move_group.set_joint_value_target(joints)
