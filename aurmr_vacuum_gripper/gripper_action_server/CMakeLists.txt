@@ -6,11 +6,23 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib_msgs
   control_msgs
   roscpp
+  rospy
+  std_msgs
+  message_generation
+)
+
+add_message_files(
+  FILES
+  GripperCommandInput.msg
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
 )
 
 catkin_package(
-  # INCLUDE_DIRS include
-  CATKIN_DEPENDS actionlib actionlib_msgs control_msgs vacuum_gripper_control roscpp
+  CATKIN_DEPENDS actionlib actionlib_msgs control_msgs vacuum_gripper_control roscpp message_runtime std_msgs
 )
 
 # include_directories(include)

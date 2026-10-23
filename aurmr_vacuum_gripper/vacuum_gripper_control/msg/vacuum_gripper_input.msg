@@ -5,9 +5,3 @@ uint16 LEAKAGE_RATE # UINT16 Length 16 x 2 ro
 uint16 FREE_FLOW_VACUUM # UINT16 Length 16 x 2 ro
 uint16 MAX_VACUUM_REACHED # UINT16 Length 16 x 2 ro
 uint16 SYSTEM_VACUUM # UINT16 Length 16 x 2 ro
-
-List[uint8] EJECTOR_STATUS_LIST # UINT8 Length 16 bytes ro
-List[uint16] LEAKAGE_RATE_LIST # UINT16 Length 16 x 2 ro
-List[uint16] FREE_FLOW_VACUUM_LIST # UINT16 Length 16 x 2 ro
-List[uint16] MAX_VACUUM_REACHED_LIST # UINT16 Length 16 x 2 ro
-List[uint16] SYSTEM_VACUUM_LIST # UINT16 Length 16 x 2 ro

@@ -1,0 +1,15 @@
+2024-04-08 15:24:51,401 [INFO] pycomm3.cip_driver.CIPDriver.generic_message(): Sending generic message: generic
+2024-04-08 15:24:51,401 [VERBOSE] pycomm3.cip_driver.CIPDriver._send(): >>> SEND >>> 
+(0000) 70 00 2e 00 50 3b 05 88 00 00 00 00 5f 70 79 63     p•.•P;••••••_pyc
+(0010) 6f 6d 6d 5f 00 00 00 00 00 00 00 00 0a 00 02 00     omm_••••••••••••
+(0020) a1 00 04 00 bf 0e c4 d1 b1 00 1a 00 05 00 0e 03     ••••••••••••••••
+(0030) 20 a2 24 0c 30 05 00 00 01 01 00 00 00 00 00 00      •$•0•••••••••••
+(0040) 00 00 00 00 00 00                                   ••••••
+2024-04-08 15:24:51,401 [DEBUG] pycomm3.cip_driver.CIPDriver.send(): Sent: GenericConnectedRequestPacket(message=[b'\x05\x00', b'\x0e', b'\x03 \xa2$\x0c0\x05', bytearray(b'\...\x00\x00\x00')])
+2024-04-08 15:24:51,407 [VERBOSE] pycomm3.cip_driver.CIPDriver._receive(): <<< RECEIVE <<< 
+(0000) 70 00 1b 00 50 3b 05 88 00 00 00 00 5f 70 79 63     p•••P;••••••_pyc
+(0010) 6f 6d 6d 5f 00 00 00 00 00 00 00 00 0a 00 02 00     omm_••••••••••••
+(0020) a1 00 04 00 0e ff 48 df b1 00 07 00 05 00 8e 00     ••••••H•••••••••
+(0030) 00 00 00                                            •••
+2024-04-08 15:24:51,407 [DEBUG] pycomm3.cip_driver.CIPDriver.send(): Received: GenericConnectedResponsePacket(service=b'\x0e', command=b'p\x00', error=None)
+2024-04-08 15:24:51,407 [INFO] pycomm3.cip_driver.CIPDriver.generic_message(): Generic message 'generic' completed

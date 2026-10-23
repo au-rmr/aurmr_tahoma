@@ -15,6 +15,8 @@ add_message_files(
   FILES
   vacuum_gripper_input.msg
   vacuum_gripper_output.msg
+  vacuum_gripper_set.msg
+  vacuum_gripper_get.msg
 )
 
 # catkin_python_setup()

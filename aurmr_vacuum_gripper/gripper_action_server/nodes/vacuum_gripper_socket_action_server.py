@@ -7,6 +7,7 @@ import actionlib
 from control_msgs.msg import GripperCommandAction, GripperCommandGoal, GripperCommandResult, GripperCommandFeedback
 # from robotiq_2f_gripper_control.msg import Robotiq2FGripper_robot_input, Robotiq2FGripper_robot_output
 from vacuum_gripper_control.msg import vacuum_gripper_input, vacuum_gripper_output
+from vacuum_gripper_action_server import GripperCommandInput
 
 class GripperActionServer(object):
     _feedback = GripperCommandFeedback()
@@ -34,27 +35,28 @@ class GripperActionServer(object):
 
     def update_status(self, msg):
         self._status = msg
-      
+
     def execute_cb(self, goal: GripperCommandGoal):
 
         # helper variables
         r = rospy.Rate(10)
         success = True
-        
+
         # publish info to the console for the user
         rospy.loginfo('%s: Moving gripper to %f with effort %f' % (
         self._action_name, goal.command.position, goal.command.max_effort))
         if self.gripper_type == "vacuum":
             command = self.output_msg()
-            print(goal.command.position)
-            if goal.command.position == 0:
-                command.EJECTOR_CONTROL = 0
-            elif goal.command.position == 1:
-                command.EJECTOR_CONTROL = 1
-            elif goal.command.position == 2:
-                command.EJECTOR_CONTROL = 2
+            command.EJECTOR_CONTROL = goal.EJECTOR_CONTROL
+            # print(goal.command.position)
+            # if goal.command.position == 0:
+            #     command.EJECTOR_CONTROL = 0
+            # elif goal.command.position == 1:
+            #     command.EJECTOR_CONTROL = 1
+            # elif goal.command.position == 2:
+            #     command.EJECTOR_CONTROL = 2
         self.command_pub.publish(command)
-        
+
         # TODO(Jack, 6/21): Find a better way around the sleep to check when the gripper has actually recieved the command
         rospy.sleep(1)
 
@@ -74,13 +76,13 @@ class GripperActionServer(object):
         #     self._as.publish_feedback(self._feedback)
         #     # this step is not necessary, the sequence is computed at 1 Hz for demonstration purposes
         #     r.sleep()
-          
+
         if success:
             self._result.position = self._feedback.position
             self._result.reached_goal = success
             rospy.loginfo('%s: Succeeded' % self._action_name)
             self._as.set_succeeded(self._result)
-        
+
 if __name__ == '__main__':
     rospy.init_node('gripper_action_server')
     gripper_type = rospy.get_param("~gripper_type", "finger")

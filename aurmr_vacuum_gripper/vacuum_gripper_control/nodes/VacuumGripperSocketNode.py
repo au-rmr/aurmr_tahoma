@@ -2,11 +2,12 @@
 # Driver for Schmalz vacuum ejectors. Manual can be found at chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.schmalz.com/site/binaries/content/assets/media/01_vacuum-technology-automation/SCTSi/en/BAL_10.02.99.10501_en-EN_02.pdf
 
 import os
-from pycomm3 import CIPDriver, Services, configure_default_logger, LOG_VERBOSE, exceptions, SINT, UINT, USINT
+from pycomm3 import CIPDriver, Services, configure_default_logger, LOG_VERBOSE, exceptions, SINT, UINT, USINT #import BOOL or others for differnt data types
 from logging import WARNING
 import socket
 from vacuum_gripper_control.msg import vacuum_gripper_input, vacuum_gripper_output
 import rospy
+import numpy as np
 
 
 LOG_FILE_PATH = '/home/aurmr/workspaces/ToF/logs/vacuum_gripper_control/pycomm3.log'
@@ -32,7 +33,9 @@ LEAKAGE_RATE = 160 # UINT16 Length 16 x 2 ro
 FREE_FLOW_VACUUM = 161 # UINT16 Length 16 x 2 ro
 MAX_VACUUM_REACHED = 164 # UINT16 Length 16 x 2 ro
 SYSTEM_VACUUM = 515 # UINT16 Length 16 x 2 ro
-EJECTOR_ONE_EXTENDED = 11000 # UINT16, Note that
+EJECTOR_ONE_EXTENDED = 11000 # UINT16, referencing the first vacuum
+EJECTOR_THREE_EXTENDED = 11002 # UINT16, referencing the third vacuum
+EJECTOR_FOUR_EXTENDED = 11004 # UINT16, referencing the four vacuum
 CU_ERRORS = 130
 
 class VacuumGripper:
@@ -85,51 +88,15 @@ class VacuumGripper:
             raise RuntimeError(f"Unknown gripper type requested: {self.gripper_type}")
         return message
 
-    # # CHECK can a command be done with the following?
-    # # Robotiq socket does: sendCommand -- sends pressure value --> vacuum -- sends dictionary with new register values --> _set_vars -- sets the variables for the specific registers
-    # def sendCommand(self, pressure):
-    #     self.close_valve(self)
-    #     while self.get_ejector_control != 0b10:
-    #         rospy.sleep(0.005)
-    #     print(self.get_ejector_control)
-    #     self.set_vacuum_gripper(self, pressure)
-    #     self.close_valve(self)
-    #         # IDEAS:
-    #         # var_dict = {EJECTOR_CONTROL: 0b10} # bit 2 is for ejector blow off, is there another GTO equivalent?
-    #         # The Switching Points switches the ejector on and off,
-    #         # based on monitoring the frequency - is this the same as using pressure?
-
-    #         # How can we access the values that these variables hold rather than changing
-    #         # their addresses?
-
     def sendCommand(self, command):
-        #if self.gripper_type == RobotiqCModelURCap.GripperType.VACUUM:
-            #self.vacuum(command.rPR, command.rATR)
-            #rPR is the register for pressure on the vacuum
-            #rATR is the register for auto release on the vacuum
-            #don't need gripper mocip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000000] + [0b00000000] + [0b00000001] + [0b00000001] + [0b00000000]*12))de, max-pressure
-        # EJECTOR_CONTROL is an instance so it should not be set to 0,
-        # is there a way to to make this gripper be regulated to 0 - meaning off
-        # var_dict = {EJECTOR_CONTROL, 0} # this is the instance - I need a varible that does the same thing
-        # while(EJECTOR_CONTROL != 0):
-            # rospy.sleep(0.005)
-
-        # print(var_dict)
-        # var_dict = {
-            #self.MOD: 0b01
-            #set the max pressure
-            #set the timeout
-            #in our case this would be the H1 and h1 values?
-            #regulate gripper on
-        # }
-        if command.EJECTOR_CONTROL == 1:
-            self.open_valve(1)
-        elif command.EJECTOR_CONTROL == 0:
-            self.close_valve(1)
-        elif command.EJECTOR_CONTROL == 2:
-            self.blow_off(1)
-# request = cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=13, attribute=5, request_data=bytearray([0b00000011] * 16))
-# request = cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=13, attribute=5, request_data=bytearray([0x00] * 16))
+            ejectors = np.array(command.EJECTOR_CONTROL)
+            self.actuate_valves(ejectors)
+            # if np.any(ejectors == 1):
+            #     self.open_valves(ejectors)
+            # elif np.any(ejectors == 0):
+            #     self.close_valves(ejectors)
+            # elif np.any(ejectors == 2):
+            #     self.blow_off(ejectors)
 
     def close_valves(self):
         pass
@@ -139,6 +106,25 @@ class VacuumGripper:
         try:
             self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000000] + [0b00000000] + [0b00000000] + [0b00000000] + [0b00000000]*12))
             # self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000000] + [0b00000000]*15))
+        except exceptions.CommError:
+            if not self.open_connection():
+                raise exceptions.CommError
+        except AttributeError:
+            print('No such attribute found. You may need to open a connection first.')
+
+    def actuate_valves(self, valve_states:list):
+        array = []
+        for i in valve_states:
+            if i == 1:
+                array = array + [0b00000001]
+            elif i == 2:
+                array = array + [0b00000010]
+            else:
+                array = array + [0b00000000]
+        request_data = bytearray(array)
+        try:
+            self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=request_data)
+            # self.cip_driver.generic_message(service=Services.set_attribute_single, class_code=0xA2, instance=EJECTOR_CONTROL, attribute=5, request_data=bytearray([0b00000001] + [0b00000000]*15))
         except exceptions.CommError:
             if not self.open_connection():
                 raise exceptions.CommError
@@ -191,7 +177,7 @@ class VacuumGripper:
         #Byte 2:3: Air consumption (in l/min)
         #Byte 4:5: Leakage of last cycle (in mbar/s) Byte 6:7: Evacuation time T1 (in ms)
         #Byte 8:9: Last free flow vacuum (in mbar)
-        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=EJECTOR_ONE_EXTENDED, attribute=5)
+        msg = self.cip_driver.generic_message(service=Services.get_attribute_single, class_code=0xA2, instance=EJECTOR_THREE_EXTENDED, attribute=5)
         extended_values_dict = {
             "system_vacuum" : (msg.value[1] << 8) | msg.value[0],
             "air_consumption" : (msg.value[3] << 8) | msg.value[2],
