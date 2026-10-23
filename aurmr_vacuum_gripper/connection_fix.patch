@@ -1,0 +1,16 @@
+diff --git a/aurmr_vacuum_gripper/vacuum_gripper_control/nodes/VacuumGripperSocketNode.py b/aurmr_vacuum_gripper/vacuum_gripper_control/nodes/VacuumGripperSocketNode.py
+index a97f5cc..4912068 100755
+--- a/aurmr_vacuum_gripper/vacuum_gripper_control/nodes/VacuumGripperSocketNode.py
++++ b/aurmr_vacuum_gripper/vacuum_gripper_control/nodes/VacuumGripperSocketNode.py
+@@ -319,7 +319,10 @@ def mainLoop(ur_address, gripper_type):
+   while not rospy.is_shutdown():
+     # Get and publish the Gripper status
+     # gripper.set_SetPointH1(850)
+-    status = gripper.getStatus()
++    try:
++        status = gripper.getStatus()
++    except CommError:
++        rospy.logerr("Communication error while getting status. Ignoring and looping")
+     pub.publish(status)
+     # Wait a little
+     rospy.sleep(0.1)
