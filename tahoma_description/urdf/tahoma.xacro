@@ -212,7 +212,7 @@
     <xacro:arg name="add_plug" default="false" />
     <xacro:arg name="use_mesh" default="true" />
     <xacro:include filename="$(find tahoma_description)/urdf/_l515.urdf.xacro" />
-    
+
     <!-- D435 Realsense Camera -->
     <!-- <xacro:sensor_d435 parent="base_link" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
       <origin xyz="-0.217 0.013 1.354" rpy="0 0 0"/>
@@ -238,7 +238,7 @@
         </geometry>
       </visual>
     </link>
-    
+
     <xacro:sensor_l515 parent="coupling" use_nominal_extrinsics="$(arg use_nominal_extrinsics)" add_plug="$(arg add_plug)" use_mesh="$(arg use_mesh)">
       <origin xyz="0.0 0.046 0.06" rpy="${pi} -${0.5 * pi} ${0.5 * pi}"/>
     </xacro:sensor_l515>
@@ -286,7 +286,7 @@
 
       <xacro:sensor_l515 name="camera_upper_left" parent="camera_upper_left_mount" use_nominal_extrinsics="${use_nominal_camera_extrinsics}">
         <origin xyz="0 0 0" rpy="0 0 0"/>
-      </xacro:sensor_l515> 
+      </xacro:sensor_l515>
     </xacro:if>
   </xacro:macro>
 
@@ -300,5 +300,3 @@
   </joint>
 
 </robot>
-
-

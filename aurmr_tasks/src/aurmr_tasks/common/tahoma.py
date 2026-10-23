@@ -16,6 +16,7 @@ import tf2_ros
 import actionlib
 import control_msgs.msg
 import trajectory_msgs.msg
+
 import rospy
 
 from tf2_geometry_msgs import from_msg_msg
@@ -29,6 +30,8 @@ from moveit_msgs.srv import GetPositionIK, GetPositionIKRequest
 import moveit_commander
 from controller_manager_msgs.srv import ListControllers, SwitchController
 from tahoma_moveit_config.msg import ServoToPoseAction, ServoToPoseGoal
+from moveit_msgs.msg import DisplayTrajectory, RobotTrajectory
+import moveit_commander.conversions as conversions
 import numpy as np
 
 
@@ -41,6 +44,7 @@ JOINT_TRAJ_CONTROLLER_SIM = 'pos_joint_traj_controller'
 GRIPPER_ACTION_SERVER = '/gripper_controller/gripper_cmd'
 MOVE_GROUP_ACTION_SERVER = 'move_group'
 TIME_FROM_START = 5
+CUROBO = '/curobo/trajectory_plan'
 
 CONFLICTING_CONTROLLERS = [JOINT_TRAJ_CONTROLLER, JOINT_TRAJ_CONTROLLER_SIM, JOINT_GROUP_CONTROLLER]
 
@@ -173,6 +177,10 @@ class Tahoma:
         #self.gripper_status_listener = rospy.Subscriber("/gripper_control/status", vacuum_gripper_input, self.gripper_status_cb)
         self.custom_gripper_status_listener = rospy.Subscriber("/vacuum_gripper_control/status", vacuum_gripper_input, self.custom_gripper_status_cb)
         self.custom_gripper_blowoff_listener = rospy.Subscriber("/vacuum_gripper_control/status", vacuum_gripper_input, self.custom_gripper_blowoff_cb)
+        # Topics for curobo trajectory planner
+        self.curobo_listener = rospy.Subscriber(CUROBO, DisplayTrajectory, self.curobo_plan_cb)
+        self.curobo_plan = None
+
         self.traj_status_listener = rospy.Subscriber("/scaled_pos_joint_traj_controller/follow_joint_trajectory/status", GoalStatusArray, self.goal_status_cb)
         self.force_mag = 0
         self.torque_mag = 0
@@ -193,13 +201,17 @@ class Tahoma:
         self.torque_mag = math.sqrt(msg.wrench.torque.x**2 + msg.wrench.torque.y**2+ msg.wrench.torque.z**2)
 
     def gripper_status_cb(self, msg: vacuum_gripper_input):
-        self.object_detected = (msg.gPO < 95) 
+        self.object_detected = (msg.gPO < 95)
 
     def custom_gripper_status_cb(self, msg: vacuum_gripper_input):
         self.object_detected = msg.SYSTEM_VACUUM > 450 # because it is in mbar and is returned as an int
 
     def custom_gripper_blowoff_cb(self, msg: vacuum_gripper_input):
         self.object_detected_blowoff = msg.SYSTEM_VACUUM > 10 # because it is in mbar and is returned as an int
+
+    def curobo_plan_cb(self, msg: DisplayTrajectory):
+        print('In curobo_plan_cb--------------------------------')
+        self.curobo_plan = msg
 
     def goal_status_cb(self, msg: GoalStatusArray):
         latest_time = 0
@@ -275,8 +287,8 @@ class Tahoma:
             self._gripper_client.wait_for_result()
 
     def check_gripper_item(self):
-        return self.object_detected 
-    
+        return self.object_detected
+
     def blow_off_gripper(self, return_before_done=False):
         goal = GripperCommandGoal()
         goal.command.position = 2
@@ -289,7 +301,7 @@ class Tahoma:
             pass
 
         self.open_gripper()
-        return 
+        return
 
     def close_gripper(self, return_before_done=False):
         goal = GripperCommandGoal()
@@ -344,7 +356,7 @@ class Tahoma:
         values = self.move_group.get_joint_value_target()
         return values
 
-    
+
 
     @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_joint_angles(self,
@@ -412,7 +424,7 @@ class Tahoma:
         #     self.move_group.set_trajectory_constraints(old_trajectory_constraints)
         current_joints = self.move_group.get_current_joint_values()
         return all_close(joint_values, current_joints, tolerance)
-    
+
 
     @requires_controller(JOINT_TRAJ_CONTROLLER)
     def move_to_pose(self,
@@ -424,7 +436,7 @@ class Tahoma:
                           replan=True,
                           replan_attempts=5,
                           tolerance=0.01):
-                          
+
         """Moves the end-effector to a pose, using motion planning.
 
         Args:
@@ -496,7 +508,7 @@ class Tahoma:
                           replan=True,
                           replan_attempts=5,
                           tolerance=0.01):
-        
+
         """Moves the end-effector to a pose, using motion planning.
 
         Args:
@@ -522,6 +534,8 @@ class Tahoma:
         """
 
         pose_stamped = from_msg_msg(pose_stamped )
+        pose_stamped.pose.position.x += .01
+        print(pose_stamped)
 
         goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.move_group.get_planning_frame(),
                                        rospy.Duration(1))
@@ -533,7 +547,7 @@ class Tahoma:
         self.move_group.allow_replanning(replan)
         self.move_group.set_goal_position_tolerance(tolerance)
         max_manipulability = 0
-        
+
         for index in range(5):
             success, plan, planning_time, error_code = self.move_group.plan()
             if success:
@@ -551,19 +565,19 @@ class Tahoma:
                     den = 4 * (joint_limit - joint_angles_target[i])**2 * (joint_angles_target[i] - (-joint_limit))**2
                     gradient = np.abs(num/den)
                     # print("gradient", gradient)
-                    
+
                     if(np.abs(joint_angles_target[i] - (-joint_limit)) > np.abs(joint_limit - joint_angles_target[i])):
                         neg_pen_term_joint = np.append(neg_pen_term_joint, 1)
                         pos_pen_term_joint = np.append(pos_pen_term_joint, 1/np.sqrt(1+gradient))
                     else:
                         neg_pen_term_joint = np.append(neg_pen_term_joint, 1/np.sqrt(1+gradient))
                         pos_pen_term_joint = np.append(pos_pen_term_joint, 1)
-                    
+
                     if((current_joint_angles[i] - joint_angles_target[i]) > 0):
                         hyperoctant_direction = np.append(hyperoctant_direction, -1)
                     else:
                         hyperoctant_direction = np.append(hyperoctant_direction, 1)
-                        
+
 
                 # print("manipuability analysis: ", joint_angles_target, current_joint_angles, hyperoctant_direction)
                 Penalization_Matrix = np.identity(6)
@@ -610,6 +624,74 @@ class Tahoma:
 
         # Now, we call the planner to compute the plan and execute it.
         ret = self.move_group.execute(main_plan, wait=True)
+        # Calling `stop()` ensures that there is no residual movement
+        self.move_group.stop()
+        # It is always good to clear your targets after planning with poses.
+        # Note: there is no equivalent function for clear_joint_value_targets()
+        self.move_group.clear_pose_targets()
+
+        current_pose = self.move_group.get_current_pose()
+        rospy.loginfo(f"Pose dist: {pose_dist(goal_in_planning_frame, current_pose)}")
+        return all_close(goal_in_planning_frame, current_pose, tolerance)
+
+    @requires_controller(JOINT_TRAJ_CONTROLLER)
+    def move_to_pose_manipulable_curobo_trajectory(self,
+                          pose_stamped,
+                          allowed_planning_time=10.0,
+                          execution_timeout=15.0,
+                          num_planning_attempts=20,
+                          orientation_constraint=None,
+                          replan=True,
+                          replan_attempts=5,
+                          tolerance=0.01):
+
+        """Moves the end-effector to a pose, using motion planning.
+
+        Args:
+            pose: geometry_msgs/PoseStamped. The goal pose for the gripper.
+            allowed_planning_time: float. The maximum duration to wait for a
+                planning result.
+            execution_timeout: float. The maximum duration to wait for an arm
+                motion to execute (or for planning to fail completely), in
+                seconds.
+            num_planning_attempts: int. The number of times to compute the same
+                plan. The shortest path is ultimately used. For random
+                planners, this can help get shorter, less weird paths.
+            orientation_constraint: moveit_msgs/OrientationConstraint. An
+                orientation constraint for the entire path.
+            replan: bool. If True, then if an execution fails (while the arm is
+                moving), then come up with a new plan and execute it.
+            replan_attempts: int. How many times to replan if the execution
+                fails.
+            tolerance: float. The goal tolerance, in meters.
+
+        Returns:
+            string describing the error if an error occurred, else None.
+        """
+
+        # pose_stamped = from_msg_msg(pose_stamped )
+
+        goal_in_planning_frame = self.tf2_buffer.transform(pose_stamped, self.move_group.get_planning_frame(),
+                                       rospy.Duration(1))
+
+        print(f'[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]')
+
+        rospy.sleep(2)
+        if self.curobo_plan:
+            print('^^^^^^^^^^^^^^^^^^^^ GOT PLAN')
+            display_trajectory = self.curobo_plan
+            main_plan = self.curobo_plan.trajectory[0]
+        else:
+            print('^^^^^^^^^^^^^^^^^^^^^^^^ NO PLAN')
+            return False
+
+        # Publish
+        self.display_trajectory_publisher.publish(display_trajectory)
+
+        # Now, we call the planner to compute the plan and execute it.
+        ret = self.move_group.execute(main_plan, wait=True)
+        # Clear plan
+        self.curobo_plan = None
         # Calling `stop()` ensures that there is no residual movement
         self.move_group.stop()
         # It is always good to clear your targets after planning with poses.
@@ -696,7 +778,7 @@ class Tahoma:
                 rospy.sleep(.01)
                 steps = steps + .01
 
- 
+
         current_pose = self.move_group.get_current_pose()
         rospy.loginfo(f"Pose dist: {pose_dist(goal_in_planning_frame, current_pose)}")
         return early_stop or all_close(goal_in_planning_frame, current_pose, tolerance)
