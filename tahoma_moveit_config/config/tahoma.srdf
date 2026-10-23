@@ -242,7 +242,7 @@
     <disable_collisions link1="gripper_camera" link2="coupling" reason="User"/>
     <disable_collisions link1="gripper_camera" link2="epick_end_effector" reason="User"/>
     <disable_collisions link1="gripper_camera" link2="gripper_base_link" reason="Adjacent"/>
-    <disable_collisions link1="gripper_camera" link2="gripper_camera_mount" reason="Adjacent"/>
+    <disable_collisions link1="gripper_camera" link2="gripper_camera_mount" reason="Adjacent"/> 
     <disable_collisions link1="camera_lower_left_mount" link2="coupling" reason="User"/>
     <disable_collisions link1="camera_lower_left_mount" link2="gripper_base_link" reason="User"/>
     <disable_collisions link1="camera_lower_left_mount" link2="gripper_camera_mount" reason="User"/>

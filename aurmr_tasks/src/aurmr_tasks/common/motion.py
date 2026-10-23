@@ -85,7 +85,7 @@ class MoveEndEffectorToPose(State):
             pose = userdata["pose"]
         success = self.robot.move_to_pose(
                           pose,
-                          allowed_planning_time=20.0,
+                          allowed_planning_time=15.0,
                           execution_timeout=15.0,
                           num_planning_attempts=40,
                           orientation_constraint=None,
@@ -117,7 +117,7 @@ class MoveEndEffectorToPoseManipulable(State):
                           orientation_constraint=None,
                           replan=True,
                           replan_attempts=8,
-                          tolerance=0.01)
+                          tolerance=0.02)
         if success:
             return "succeeded"
         else:

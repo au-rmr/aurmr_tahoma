@@ -11,6 +11,8 @@ from smach import State, StateMachine
 from controller_manager_msgs.srv import SwitchController
 
 from aurmr_perception.util import qv_mult, quat_msg_to_vec
+from tf.transformations import quaternion_matrix, quaternion_from_matrix
+import numpy as np
 
 
 def apply_offset_to_pose(pose, offset, offset_frame=None, tf_buffer=None):
@@ -28,14 +30,55 @@ def apply_offset_to_pose(pose, offset, offset_frame=None, tf_buffer=None):
     offset_pose = tf_buffer.transform(offset_pose, pose.header.frame_id, rospy.Duration(1))
     return offset_pose
 
-def add_offset(offset, grasp_pose):
+def add_offset(offset, grasp_pose, direction=(0,0,1)):
     v = qv_mult(
-        quat_msg_to_vec(grasp_pose.pose.orientation), (0, 0, offset))
+        quat_msg_to_vec(grasp_pose.pose.orientation), (direction[0] * offset, direction[1] * offset, direction[2] * offset))
     offset_pose = deepcopy(grasp_pose)
     offset_pose.pose.position.x += v[0]
     offset_pose.pose.position.y += v[1]
     offset_pose.pose.position.z += v[2]
     return offset_pose
+
+
+def add_rotation_offset(offset_x, offset_y, pose):
+    # Convert pose orientation (quaternion) to a rotation matrix
+    original_quat = [
+        pose.pose.orientation.x,
+        pose.pose.orientation.y,
+        pose.pose.orientation.z,
+        pose.pose.orientation.w
+    ]
+    original_matrix = quaternion_matrix(original_quat)
+
+    # Create rotation matrices for X and Y rotations
+    x_rot_matrix = np.array([
+        [1, 0, 0, 0],
+        [0, np.cos(offset_x), -np.sin(offset_x), 0],
+        [0, np.sin(offset_x), np.cos(offset_x), 0],
+        [0, 0, 0, 1]
+    ])
+
+    y_rot_matrix = np.array([
+        [np.cos(offset_y), 0, np.sin(offset_y), 0],
+        [0, 1, 0, 0],
+        [-np.sin(offset_y), 0, np.cos(offset_y), 0],
+        [0, 0, 0, 1]
+    ])
+
+    # Apply the rotation matrices to the original rotation matrix
+    rotated_matrix = np.dot(original_matrix, np.dot(x_rot_matrix, y_rot_matrix))
+
+    # Convert the resulting rotation matrix back to a quaternion
+    new_quat = quaternion_from_matrix(rotated_matrix)
+
+    # Create a new PoseStamped message with the updated orientation
+    updated_pose = deepcopy(pose)
+    updated_pose.pose.orientation.x = new_quat[0]
+    updated_pose.pose.orientation.y = new_quat[1]
+    updated_pose.pose.orientation.z = new_quat[2]
+    updated_pose.pose.orientation.w = new_quat[3]
+
+    return updated_pose
 
 
 
@@ -108,7 +151,7 @@ def pose_dist(goal, actual):
         return (d, cos_phi_half)
     else:
         return None
-    
+
 
 class SwitchControllers(State):
     def __init__(self, start_controllers, stop_controllers):
@@ -125,7 +168,7 @@ class SwitchControllers(State):
             # Call the service with the provided arguments
             response = switch_controller_service(self.start_controllers, self.stop_controllers, 1, False, 0.0)
             print(f"Service call response: {response}")
-            
+
             return 'succeeded'
         except rospy.ServiceException as e:
             print(f"Service call failed: {e}")

@@ -123,7 +123,7 @@ def main():
     robot = Tahoma(in_sim=simulation, camera_name="camera_lower_right")
     while not robot.wait_for_controllers(5) and not rospy.is_shutdown():
         rospy.logerr("Did not find controllers. Are they active?")
-        return
+        continue
     demo_sm = StateMachine(["done"], input_keys=[], output_keys=[])
     pick_sm = StateMachine(["done"], input_keys=["request"], output_keys=["status"])
     pick_success_cleanup_sm = StateMachine(["succeeded"], input_keys=['target_bin_id', 'target_object_id', 'target_object_asin'], output_keys=[])
@@ -140,13 +140,13 @@ def main():
             cf.splat_auto("SPLAT_PICK", "request", ["target_bin_id", "target_object_id", "target_object_asin"])
             # StateMachine.add_auto("ADD_IN_HAND_COLLISION_BOX_PRE_GRASP", planning_scene.AddInHandCollisionGeometry(robot), ["succeeded", "aborted"])
 
-            """StateMachine.add("GET_OBJECT_POINTS", perception.GetObjectPoints(),
-                            {"succeeded": "GET_GRASP_POSE", "aborted":"ASK_HUMAN_SEGMENTATION", "preempted":"NOTE_PASS"})"""
-            StateMachine.add("GET_OBJECT_POINTS", hri.UserPromptForSegmentation(robot, rospy.get_param("bin_bounds"), robot.tf2_buffer),
-                            {"succeeded": "GET_GRASP_POSE", "aborted":"ASK_HUMAN_SEGMENTATION", "preempted":"NOTE_PASS"})
+            StateMachine.add("GET_OBJECT_POINTS", perception.GetObjectPoints(),
+                            {"succeeded": "GET_GRASP_POSE", "aborted":"NOTE_PASS", "preempted":"NOTE_PASS"})
+            """StateMachine.add("GET_OBJECT_POINTS", hri.UserPromptForSegmentation(robot, rospy.get_param("bin_bounds"), robot.tf2_buffer),
+                            {"succeeded": "GET_GRASP_POSE", "aborted":"NOTE_PASS", "preempted":"NOTE_PASS"})"""
             StateMachine.add("ASK_HUMAN_SEGMENTATION", hri.UserPromptForSegmentation(robot, rospy.get_param("bin_bounds"), robot.tf2_buffer), {"succeeded": "GET_GRASP_POSE", "aborted": "NOTE_PASS", "preempted": "NOTE_PASS"})
             StateMachine.add("GET_GRASP_POSE", perception.GetGraspPose(robot.tf2_buffer, pre_grasp_offset=.015),
-                            {"succeeded": "REMAP_PRE_GRASP_POSE", "aborted":"ASK_HUMAN_GRASP_POSE", "preempted":"NOTE_PASS"})
+                            {"succeeded": "REMAP_PRE_GRASP_POSE", "aborted":"NOTE_PASS", "preempted":"NOTE_PASS"})
             StateMachine.add("ASK_HUMAN_GRASP_POSE", hri.UserPromptGraspPose(robot, rospy.get_param("bin_bounds"), robot.tf2_buffer), {"succeeded": "REMAP_PRE_GRASP_POSE", "aborted": "NOTE_PASS", "preempted": "NOTE_PASS"})
 
             cf.inject_userdata("NOTE_PASS", "done", "status", PickRequestResponse.OUTCOME_PERCEPTION_FAILURE)

@@ -1,4 +1,4 @@
-from aurmr_tasks.util import apply_offset_to_pose, all_close
+from aurmr_tasks.util import apply_offset_to_pose, all_close, pose_dist
 import rospy
 from smach import State
 from geometry_msgs.msg import PoseStamped
